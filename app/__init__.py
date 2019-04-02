@@ -1,7 +1,6 @@
 # Initial tutorial: https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
 
 from flask import Flask
+from flask.ext.login import LoginManager
 
-mFlask = Flask(__name__)
-
-from app import routes
+app = Flask(__name__)

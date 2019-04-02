@@ -1,0 +1,94 @@
+*{
+    /* From http://www.kendraschaefer.com/2012/06/chinese-standard-web-fonts-the-ultimate-guide-to-css-font-family-declarations-for-web-design-in-simplified-chinese/ */
+    font-family: Georgia, "Times New Roman", "KaiTi", "楷体", STKaiti, "华文楷体", serif;
+}
+
+html{
+    height: 100%;
+}
+body {
+    min-height: 100%;
+}
+
+.navbar-inverse .navbar-brand:hover, 
+.navbar-inverse .navbar-brand:focus {
+    background-color: transparent;
+    color: #000;
+}
+
+.navbar-inverse .navbar-brand,
+.navbar-inverse .navbar-brand {
+    background-color: transparent;
+    color: #000;
+}
+
+
+.sentence {
+    font-size: 30px;
+}
+
+.paragraph {
+    font-size: 24px;
+}
+
+.title {
+    font-size: 24px;
+}
+
+.word {
+    padding-left: 6px;
+    padding-right: 6px;
+    display: inline-block;
+    letter-spacing:-2px;
+}
+
+.punctuation {
+
+}
+
+.highlight {
+    background-color: #FFFFBB;
+}
+
+.character {
+
+}
+
+.tone0 {
+
+}
+
+.tone1 {
+    color: #FF3300;
+}
+
+.tone2 {
+    color: #FF9900;
+}
+
+.tone3 {
+    color: #00CC00;
+}
+
+.tone4 {
+    color: #3333FF;
+
+}
+
+.pos-NR {
+    border-bottom: 2px solid #999;
+
+}
+
+.not-in-vocab {
+    border-bottom: 1px dashed #666;
+}
+
+.not-in-vocab.pos-NR {
+    border-bottom: 2px dashed #999;
+}
+
+.word.non-chinese.not-in-vocab {
+    border-bottom: 0px;
+}
+
