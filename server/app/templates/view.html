@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block title %}中文读机{% endblock %}
+
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1> {{ render_document(document.title_markup) | safe }}</h1>
+        {% if document.original_url %}
+        </h2><a href="{{ document.original_url }}">{{ document.original_url }}</a></h2>
+        {% endif %}
+        <hr />
+        {{ render_document(document.markup) | safe }}
+
+    </div>
+</div>
+{% endblock %}
