@@ -30,11 +30,9 @@ def printAll():
 
 @app.route('/uploadText',methods=['POST'])
 def postMethod(): # https://stackoverflow.com/questions/42893826/flask-listen-to-post-request
-    data = request.get_json()
-    print("Made it here")
-    print(data)
-    print("and there")
-    # add to db
+    data = request.get_json(force=True) # this is still NULL
+    textList.append(data) # add to db
+    # textList.append({"got":"here"})
     return jsonify(data)
 
 # Add route to pull-up most recent document

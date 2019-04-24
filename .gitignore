@@ -1,4 +1,5 @@
 *.DS_Store
 *.pyc
 server/app/__pycache__
-server/data/*
+server/data/db/*
+.idea/*

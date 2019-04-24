@@ -1,4 +1,11 @@
 # Get MongoDB to work in Python
+
+import mongoengine
+import time
+
+mongoengine.connect(alias='core')
+
+"""
 # Tutorial Link: http://api.mongodb.com/python/3.6.0/tutorial.html
 from pymongo import MongoClient
 # import datetime as dt
@@ -17,3 +24,4 @@ for doc in collection.find():  # Bulk query
 # test_id = collection.insert_one(test).inserted_id
 # print(test_id)
 # print(collection.find_one({"_id":test_id}))
+"""
