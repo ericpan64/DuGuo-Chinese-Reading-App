@@ -1,0 +1,7 @@
+Flask
+flask_wtf
+flask_forms
+flask_login
+mongoengine
+bs4
+argparse

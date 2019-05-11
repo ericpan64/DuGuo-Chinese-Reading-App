@@ -9,13 +9,10 @@ Output: New tab displaying selected text with pinyin and ability to save article
 This feature will be built on top of the existing Zhongwen Google Chrome extension.
 
 FINAL TO-DO:
-1) Get Post Request to Work
-1.5) Understand previous code
-2) Integrate with previous code
+1) Integrate with previous code
   - Update db to Mongodb
   - Get working instance on local server
-3) Figure-out where/how to add pinyin + toggle "Learning Mode"
-4) SHIP!
+2) Figure-out where/how to add pinyin + toggle "Learning Mode"
 
 Technical Notes
 - Context Menu (Chrome) -- right click menu options

@@ -3,3 +3,4 @@
 server/app/__pycache__
 server/data/db/*
 .idea/*
+server/stanford-nlp
