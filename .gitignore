@@ -3,5 +3,7 @@
 server/app/__pycache__
 server/data/db/*
 .idea/*
+server/.idea/*
+playgnd/.idea/*
 server/stanford-nlp
 ChineseReadingMachine_v3.6.2
