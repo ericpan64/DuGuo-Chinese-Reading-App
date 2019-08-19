@@ -8,7 +8,7 @@ from flask import Flask
 from flask import render_template, request, jsonify, redirect
 from flask_login import LoginManager
 import argparse
-from models import * # imports all objects from models
+from models import *
 # === Server start-up ===
 """
 Run once, this starts mongoDB on default port 27017
@@ -32,17 +32,15 @@ login_manager.login_view = 'login'
 
 login_manager.init_app(app)
 
-# Load CC-CEDICT function definition
+# Load CEDICT function definition
 def loadCEDICT():
     """
     Loads CEDICT collection into database
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--cedict', default='cedict_ts.u8')
-
     args = parser.parse_args()
-
-    CEDICT.objects.delete()  # Clear the dictionary first.
+    CEDICT.objects.delete()  # Clear the dictionary first
 
     print("Loading CEDICT - this takes a few seconds...")
     with open(args.cedict) as f:
@@ -53,11 +51,17 @@ def loadCEDICT():
                 continue
 
             trad, simp, rest = [tok for tok in line.split(' ', 2)]
-            print(trad,simp,rest)
+            print(trad,len(trad),simp,rest)
             close_bracket = rest.find(']')  # close bracket on pinyin
-
             pinyin = rest[1:close_bracket]
             defn = rest[close_bracket+2:]
+
+            # Create as zwPhrase (iterates trad first)
+            t_list = [zwWord(word=t, is_simplified=False) for t in trad]
+            s_list = [zwWord(word=s, is_simplified = True) for s in simp]
+
+            trad = zwPhrase(phrase=t_list, pinyin=pinyin, definition=defn, is_simplified=False)
+            simp = zwPhrase(phrase=s_list, pinyin=pinyin, definition=defn, is_simplified=False)
 
             entry_list.append(CEDICT(traditional=trad, simplified=simp, pinyin=pinyin, definition=defn))
         print("Loaded. Sending to db...")
@@ -67,7 +71,7 @@ def loadCEDICT():
 
 # === Context processor ===
 @app.context_processor
-def jinja_functions():
+def lib_functions():
     """
     Provides library functions available to rest of templates
     :return: dict of functions to use
@@ -78,7 +82,7 @@ def jinja_functions():
         render_document=render_document
     )
 
-# === Views (newly implemented) ===
+# === Views ===
 @app.route('/') # Default landing page
 @app.route('/index')
 def landing():
@@ -95,12 +99,23 @@ Example post data
 """
 
 @app.route('/uploadText',methods=['POST'])
-def postMethod(): # https://stackoverflow.com/questions/42893826/flask-listen-to-post-request
-    # TODO: Have this upload to database (for given user), then redirect to page with the loaded data
+def postMethod():
+    """
+    Post method to receive text data
+    :return: Redirect to URL
+
+    References:
+        https://stackoverflow.com/questions/42893826/flask-listen-to-post-request
+        https://stackoverflow.com/questions/10434599/get-the-data-received-in-a-flask-request
+    """
+
+    # TODO: Take POST data and upload DB. Reload to
     data = request.get_json(force=True)
     newDoc = zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
     newDoc.save()
-    return jsonify(data)
+
+    # TODO: How to redirect to original URL?
+    return render_template('view.html')
 
 # === Main function ===
 if __name__ == '__main__':

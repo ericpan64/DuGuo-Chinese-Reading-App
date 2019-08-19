@@ -1,6 +1,6 @@
 """
 Author: Martin Kess
-Description: Utility functions. Queries
+Description: Utility functions.
 
 Parts I changed:
     CEDICT queries adjusted to query NoSQL instead of SQL
@@ -19,7 +19,7 @@ from app import CEDICT # mongoDB collection containing CEDICT dictionary
 
 def get_pinyin(chinese_word):
     """
-    :param chinese_word: chinese word
+    :param chinese_word: chinese word (array of 1-to-n chinese characters)
     :return: pinyin array=[word,pinyin,is_chinese]
     """
     if len(chinese_word) == 0:
@@ -68,7 +68,6 @@ def get_pinyin(chinese_word):
             else:
                 pinyin = []
                 # Otherwise, just do each letter
-                # TODO(mkess): could be more clever here... greedy match?
                 for char in word:
                     entry = CEDICT.objects(simplified=char).as_pymongo()[0]
                     pinyin.append(entry['pinyin'])
