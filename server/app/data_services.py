@@ -13,7 +13,7 @@ def inputSecScan(input,lang):
     :param lang:
     :return:
     """
-    # TODO Add input checking for Python code
+    # TODO - lp, Add input checking for Python code
     if lang == "Python":
         input.replace("\"","") # Removes quotation comments
         input.replace("#","") # Remove comment lines

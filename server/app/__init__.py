@@ -109,7 +109,7 @@ def postMethod():
         https://stackoverflow.com/questions/10434599/get-the-data-received-in-a-flask-request
     """
 
-    # TODO: Take POST data and upload DB. Reload to
+    # TODO: Take POST data and upload DB
     data = request.get_json(force=True)
     newDoc = zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
     newDoc.save()
