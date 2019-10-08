@@ -1,6 +1,9 @@
 """
 Authors: Eric Pan, Martin Kess
 Description: Initiates server (Flask app, mongoDB connection). Also contains website views
+
+Notes / Links:
+    - Context manager: https://stackoverflow.com/questions/20036520/what-is-the-purpose-of-flasks-context-stacks
 """
 
 import mongoengine
@@ -16,8 +19,8 @@ Local copy -- multi-server hosting requires more params (passed in **args)
 """
 
 # Setting-up mongoDB connection
-alias = 'core'
-name = 'zwDBconnect'
+alias = 'db'
+name = 'CRM-db'
 mongoengine.register_connection(alias=alias,name=name)
 client = mongoengine.connect(name)  # http://docs.mongoengine.org/guide/connecting.html
 db = client.zwDatabaseMain # Establishing main db
@@ -108,16 +111,18 @@ def postMethod():
         https://stackoverflow.com/questions/42893826/flask-listen-to-post-request
         https://stackoverflow.com/questions/10434599/get-the-data-received-in-a-flask-request
     """
-
+    # TODO: Identify and validate user to upload to DB
     # TODO: Take POST data and upload DB
     data = request.get_json(force=True)
     newDoc = zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
     newDoc.save()
 
-    # TODO: How to redirect to original URL?
+    # TODO: How to redirect to original URL? --> Route to index?
     return render_template('view.html')
 
 # === Main function ===
 if __name__ == '__main__':
-    loadCEDICT()
+    loadCEDICT() # initiates at startup
     app.run(debug=True,use_reloader=False)
+
+    # Drop DB here for debugging?

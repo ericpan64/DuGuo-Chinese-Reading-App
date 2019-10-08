@@ -25,6 +25,8 @@ class zwDocument(Document):
     date_saved = DateTimeField(default=datetime.datetime.now)
     comment = StringField() # Optional user-added comment
 
+    meta = {'allow_inheritance' : True}
+
 class zwWord(EmbeddedDocument):
     """ Represents single chinese character part of a phrase """
     # Required

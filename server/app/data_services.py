@@ -6,14 +6,14 @@ Description: Helper functions interacting with database
 from models import zwUser
 from bcrypt import gensalt,hashpw
 
-def inputSecScan(input,lang):
+def inputSecScan(input,lang="Python"):
     """
-
-    :param input:
-    :param lang:
+    Sanitizes user input
+    :param input: String to parse
+    :param lang: Programming language (default: Python)
     :return:
     """
-    # TODO - lp, Add input checking for Python code
+    # TODO - Add input checking for Python code (security)
     if lang == "Python":
         input.replace("\"","") # Removes quotation comments
         input.replace("#","") # Remove comment lines
