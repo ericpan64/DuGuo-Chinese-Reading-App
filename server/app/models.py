@@ -65,6 +65,7 @@ class zwUser(Document):
     name = StringField()
     registered_date = DateTimeField(default=datetime.datetime.now) # passing now function, not now value
     phrase_dict = EmbeddedDocumentListField(zwPhrase) # user's "phrase dictionary"
+    context_titles = DictField()
 
     meta = {
         'db_alias':'core',
