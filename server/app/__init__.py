@@ -6,12 +6,13 @@ Notes / Links:
     - Context manager: https://stackoverflow.com/questions/20036520/what-is-the-purpose-of-flasks-context-stacks
 """
 
+
 import mongoengine
 from flask import Flask
 from flask import render_template, request, jsonify, redirect
 from flask_login import LoginManager
 import argparse
-from models import *
+from models import CEDICT, zwPhrase, zwWord, zwDocument
 # === Server start-up ===
 """
 Run once, this starts mongoDB on default port 27017

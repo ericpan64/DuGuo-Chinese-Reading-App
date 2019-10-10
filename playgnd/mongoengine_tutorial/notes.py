@@ -18,6 +18,8 @@ MongoDB Crash Course:
             More suited for Document-Database / MongoDB
 
     Demo App: Example 'Snake BnB'
+        Registering multi-server connections, provide:
+            username, password, host, port, authentication_source, authentication method, ssl, ssl certs
 """
 
 

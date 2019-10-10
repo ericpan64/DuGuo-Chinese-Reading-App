@@ -8,7 +8,7 @@ Next-steps (create + test):
 """
 
 
-from models import zwPhrase, zwWord
+from server.app.models import zwWord, zwPhrase
 
 word = "點心"
 word2 = "ab"
