@@ -8,7 +8,7 @@ CEDICT reference dictionary used for independent lookup
 """
 
 from mongoengine import Document, StringField, DateTimeField, EmbeddedDocumentListField, DictField
-import zwPhrase
+from models import zwChars as z
 import datetime
 
 class zwUser(Document):
@@ -21,7 +21,7 @@ class zwUser(Document):
     # Optional
     name = StringField()
     registered_date = DateTimeField(default=datetime.datetime.now) # passing now function, not now value
-    phrase_dict = EmbeddedDocumentListField(zwPhrase) # user's "phrase dictionary"
+    phrase_dict = EmbeddedDocumentListField(z.zwPhrase) # user's "phrase dictionary"
     context_titles = DictField()
 
     meta = {
