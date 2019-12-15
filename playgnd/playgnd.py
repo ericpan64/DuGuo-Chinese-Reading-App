@@ -8,7 +8,7 @@ Next-steps (create + test):
 """
 
 
-from server.app.models import zwWord, zwPhrase
+from server.app.models import zwChars as z
 
 word = "點心"
 word2 = "ab"
@@ -16,9 +16,9 @@ word2 = "ab"
 for i in word, word2:
     print(i)
 
-word = zwWord(word="點", is_simplified=True, pinyin="test2")
-word2 = zwWord(word="", is_simplified=True, pinyin="test3")
+word = z.zwWord(word="點", is_simplified=True, pinyin="test2")
+word2 = z.zwWord(word="", is_simplified=True, pinyin="test3")
 w_list = [word, word2]
-zPhrase = zwPhrase(phrase=w_list, is_simplified=True, pinyin="test2test3", definition="Creating phrase")
+zPhrase = z.zwPhrase(phrase=w_list, is_simplified=True, pinyin="test2test3", definition="Creating phrase")
 
 print(zPhrase.phrase)
