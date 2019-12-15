@@ -1,9 +1,6 @@
 """
 Authors: Eric Pan, Martin Kess
 Description: Initiates server (Flask app, mongoDB connection). Also contains website views
-
-Notes / Links:
-    - Context manager: https://stackoverflow.com/questions/20036520/what-is-the-purpose-of-flasks-context-stacks
 """
 
 
@@ -12,7 +9,7 @@ from flask import Flask
 from flask import render_template, request, jsonify, redirect
 from flask_login import LoginManager
 import argparse
-from models import CEDICT, zwPhrase, zwWord, zwDocument
+from models import zwChars as z
 # === Server start-up ===
 """
 Run once, this starts mongoDB on default port 27017
@@ -44,7 +41,7 @@ def loadCEDICT():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cedict', default='cedict_ts.u8')
     args = parser.parse_args()
-    CEDICT.objects.delete()  # Clear the dictionary first
+    z.CEDICT.objects.delete()  # Clear the dictionary first
 
     print("Loading CEDICT - this takes a few seconds...")
     with open(args.cedict) as f:
@@ -61,15 +58,15 @@ def loadCEDICT():
             defn = rest[close_bracket+2:]
 
             # Create as zwPhrase (iterates trad first)
-            t_list = [zwWord(word=t, is_simplified=False) for t in trad]
-            s_list = [zwWord(word=s, is_simplified = True) for s in simp]
+            t_list = [z.zwWord(word=t, is_simplified=False) for t in trad]
+            s_list = [z.zwWord(word=s, is_simplified = True) for s in simp]
 
-            trad = zwPhrase(phrase=t_list, pinyin=pinyin, definition=defn, is_simplified=False)
-            simp = zwPhrase(phrase=s_list, pinyin=pinyin, definition=defn, is_simplified=False)
+            trad = z.zwPhrase(phrase=t_list, pinyin=pinyin, definition=defn, is_simplified=False)
+            simp = z.zwPhrase(phrase=s_list, pinyin=pinyin, definition=defn, is_simplified=False)
 
-            entry_list.append(CEDICT(traditional=trad, simplified=simp, pinyin=pinyin, definition=defn))
+            entry_list.append(z.CEDICT(traditional=trad, simplified=simp, pinyin=pinyin, definition=defn))
         print("Loaded. Sending to db...")
-        CEDICT.objects.insert(entry_list)
+        z.CEDICT.objects.insert(entry_list)
         print("Completed")
     pass
 
@@ -115,7 +112,7 @@ def postMethod():
     # TODO: Identify and validate user to upload to DB
     # TODO: Take POST data and upload DB
     data = request.get_json(force=True)
-    newDoc = zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
+    newDoc = z.zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
     newDoc.save()
 
     # TODO: How to redirect to original URL? --> Route to index?

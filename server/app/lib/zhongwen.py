@@ -15,7 +15,7 @@ Parts I changed:
 from stanford import segment_text, get_parts_of_speech
 from flask_login import current_user
 from bs4 import BeautifulSoup
-from app import CEDICT # mongoDB collection containing CEDICT dictionary
+from app.models import zwChars as z # mongoDB collection containing CEDICT dictionary
 
 def get_pinyin(chinese_word):
     """
@@ -31,7 +31,7 @@ def get_pinyin(chinese_word):
     current_token = chinese_word[0]
 
     for char in chinese_word:
-        entry = CEDICT.objects(simplified=char) # Queries simplified Chinese only
+        entry = z.CEDICT.objects(simplified=char) # Queries simplified Chinese only
         if current_chinese is None:
             # First character
             current_chinese = entry is not None
@@ -62,14 +62,14 @@ def get_pinyin(chinese_word):
         if is_chinese:
             # Try to get pinyin
             # Not the cleanest below, but it works (converts to dict)
-            entry = CEDICT.objects(simplified=word).as_pymongo()[0]
+            entry = z.CEDICT.objects(simplified=word).as_pymongo()[0]
             if entry is not None:
                 res.append((word, entry['pinyin'], is_chinese))
             else:
                 pinyin = []
                 # Otherwise, just do each letter
                 for char in word:
-                    entry = CEDICT.objects(simplified=char).as_pymongo()[0]
+                    entry = z.CEDICT.objects(simplified=char).as_pymongo()[0]
                     pinyin.append(entry['pinyin'])
                 res.append((word, ' '.join(pinyin), is_chinese))
         else:
@@ -88,8 +88,8 @@ def get_tone(py):
 
 def render_chinese_word(chinese_word,pos=''):
     """
-    :param chinese_word: Chinese word
-    :param pos:
+    :param chinese_word: Chinese word to render
+    :param pos: part of speech (optional)
     :return: HTML syntax code for given Chinese
     """
     ''' Generates HTML for the given Chinese word. For example:
@@ -118,7 +118,7 @@ def render_chinese_word(chinese_word,pos=''):
             res.append(word)
             res.append('</span>')
         else:
-            entry = CEDICT.objects(simplified=word).as_pymongo()[0]
+            entry = zwWords.objects(simplified=word).as_pymongo()[0]
 
             definition = None
             if entry is None:

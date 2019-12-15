@@ -11,7 +11,8 @@ TODO: reimplement adding schema
 from __init__ import app
 from flask import render_template, redirect, flash, url_for, request, jsonify, make_response
 from forms import LoginForm, SignupForm, EditDocumentForm, VocabFileForm
-from models import zwUser,zwDocument,CEDICT,zwPhrase,zwWord
+from models import zwUser,zwDocument
+from models import zwChars as z
 from lib.zhongwen import annotate_text
 
 from flask_login import login_user,login_required,logout_user,current_user
@@ -163,7 +164,7 @@ def vocab():
 
             tokens = s.split('\t')
             if len(tokens) > 0:
-                entries = CEDICT.objects(simplified=tokens).as_pymongo()[0]
+                entries = z.CEDICT.objects(simplified=tokens).as_pymongo()[0]
                 if len(entries) == 0:
                     pass
                 else: 
@@ -191,7 +192,7 @@ def define(word=None):
     if word is None:
         word = request.args.get('word', None)
 
-    entries = CEDICT.objects(simplified=word).as_pymongo()[0]
+    entries = z.CEDICT.objects(simplified=word).as_pymongo()[0]
 
     if entries is None:
         response =  jsonify({'error': 'could not find definition for {}'.format(word)})
