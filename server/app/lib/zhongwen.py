@@ -62,7 +62,7 @@ def get_pinyin(chinese_word):
         if is_chinese:
             # Try to get pinyin
             # Not the cleanest below, but it works (converts to dict)
-            entry = z.CEDICT.objects(simplified=word).as_pymongo()[0]
+            entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
             if entry is not None:
                 res.append((word, entry['pinyin'], is_chinese))
             else:
@@ -118,7 +118,7 @@ def render_chinese_word(chinese_word,pos=''):
             res.append(word)
             res.append('</span>')
         else:
-            entry = zwWords.objects(simplified=word).as_pymongo()[0]
+            entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
 
             definition = None
             if entry is None:

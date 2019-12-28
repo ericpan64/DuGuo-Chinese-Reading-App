@@ -58,11 +58,12 @@ def loadCEDICT():
             defn = rest[close_bracket+2:]
 
             # Create as zwPhrase (iterates trad first)
-            t_list = [z.zwWord(word=t, is_simplified=False) for t in trad]
-            s_list = [z.zwWord(word=s, is_simplified = True) for s in simp]
+            # t_list = [z.zwWord(word=t, is_simplified=False) for t in trad]
+            # s_list = [z.zwWord(word=s, is_simplified = True) for s in simp]
 
-            trad = z.zwPhrase(phrase=t_list, pinyin=pinyin, definition=defn, is_simplified=False)
-            simp = z.zwPhrase(phrase=s_list, pinyin=pinyin, definition=defn, is_simplified=False)
+
+            trad = z.zwPhrase(phrase=trad, pinyin=pinyin, definition=defn, is_simplified=False)
+            simp = z.zwPhrase(phrase=simp, pinyin=pinyin, definition=defn, is_simplified=False)
 
             entry_list.append(z.CEDICT(traditional=trad, simplified=simp, pinyin=pinyin, definition=defn))
         print("Loaded. Sending to db...")
