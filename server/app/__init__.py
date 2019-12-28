@@ -44,7 +44,7 @@ def loadCEDICT():
     z.CEDICT.objects.delete()  # Clear the dictionary first
 
     print("Loading CEDICT - this takes a few seconds...")
-    with open(args.cedict) as f:
+    with open(args.cedict, encoding="utf8") as f:
         entry_list = []
         for line in f:
             line = line.strip()
