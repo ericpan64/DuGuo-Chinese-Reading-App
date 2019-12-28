@@ -121,7 +121,8 @@ def postMethod():
 
 # === Main function ===
 if __name__ == '__main__':
-    loadCEDICT() # initiates at startup
+    # loadCEDICT() # initiates at startup
+    from views import *
     app.run(debug=True,use_reloader=False)
 
     # Drop DB here for debugging?

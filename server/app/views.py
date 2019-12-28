@@ -188,23 +188,23 @@ def vocab():
 @app.route('/api/define')
 @app.route('/api/define/<word>')
 def define(word=None):
+
     ''' Return the CEDICT definition(s) for the word. '''
     if word is None:
         word = request.args.get('word', None)
 
-    entries = z.CEDICT.objects(simplified=word).as_pymongo()[0]
+    entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
 
-    if entries is None:
-        response =  jsonify({'error': 'could not find definition for {}'.format(word)})
+    if entry is None:
+        response = jsonify({'error': 'could not find definition for {}'.format(word)})
         response.status_code = 404
         return response
 
     definitions = []
-    for entry in entries:
-        definitions.append({
-            'pinyin' : entry.pinyin,
-            'definitions' : [e for e in entry.definition.split('/') if len(e) > 0]
-            })
+    definitions.append({
+        'pinyin' : entry['pinyin'],
+        'definitions' : [e for e in entry['definition'].split('/') if len(e) > 0]
+        })
 
     return jsonify({'definitions' : definitions})
 
