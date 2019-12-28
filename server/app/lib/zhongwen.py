@@ -17,6 +17,25 @@ from flask_login import current_user
 from bs4 import BeautifulSoup
 from app.models import zwChars as z # mongoDB collection containing CEDICT dictionary
 
+
+def query_cedict(phrase):
+    """
+    :param phrase: String of the zwPhrase
+    :return: Returns first value that exists:
+        - Simplified CEDICT entry
+        - Traditional CEDICT entry
+        - None
+    """
+    res = None
+    # Query simplified words
+    res = z.CEDICT.objects(simplified__phrase=phrase)
+
+    # If no simplified found, query traditional words
+    if res == None:
+        res = z.CEDICT.objects(traditional__phrase=phrase)
+
+    return res
+
 def get_pinyin(chinese_word):
     """
     :param chinese_word: chinese word (array of 1-to-n chinese characters)
@@ -31,7 +50,7 @@ def get_pinyin(chinese_word):
     current_token = chinese_word[0]
 
     for char in chinese_word:
-        entry = z.CEDICT.objects(simplified=char) # Queries simplified Chinese only
+        entry = query_cedict(char) # Queries simplified Chinese only
         if current_chinese is None:
             # First character
             current_chinese = entry is not None
@@ -61,15 +80,15 @@ def get_pinyin(chinese_word):
     for word, is_chinese in tokens:
         if is_chinese:
             # Try to get pinyin
-            # Not the cleanest below, but it works (converts to dict)
-            entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
+            # "as_pymongo()[0]" returns the CEDICT object as a dict (JSON-like)
+            entry = query_cedict(word).as_pymongo()[0]
             if entry is not None:
                 res.append((word, entry['pinyin'], is_chinese))
             else:
                 pinyin = []
                 # Otherwise, just do each letter
                 for char in word:
-                    entry = z.CEDICT.objects(simplified=char).as_pymongo()[0]
+                    entry = query_cedict(word).as_pymongo()[0]
                     pinyin.append(entry['pinyin'])
                 res.append((word, ' '.join(pinyin), is_chinese))
         else:
@@ -118,7 +137,7 @@ def render_chinese_word(chinese_word,pos=''):
             res.append(word)
             res.append('</span>')
         else:
-            entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
+            entry = query_cedict(word).as_pymongo()[0]
 
             definition = None
             if entry is None:

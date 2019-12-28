@@ -13,7 +13,7 @@ from flask import render_template, redirect, flash, url_for, request, jsonify, m
 from forms import LoginForm, SignupForm, EditDocumentForm, VocabFileForm
 from models import zwUser,zwDocument
 from models import zwChars as z
-from lib.zhongwen import annotate_text
+from lib.zhongwen import annotate_text, query_cedict
 
 from flask_login import login_user,login_required,logout_user,current_user
 
@@ -164,7 +164,7 @@ def vocab():
 
             tokens = s.split('\t')
             if len(tokens) > 0:
-                entries = z.CEDICT.objects(simplified=tokens).as_pymongo()[0]
+                entries = query_cedict(tokens).as_pymongo()[0]
                 if len(entries) == 0:
                     pass
                 else: 
@@ -193,7 +193,7 @@ def define(word=None):
     if word is None:
         word = request.args.get('word', None)
 
-    entry = z.CEDICT.objects(simplified__phrase=word).as_pymongo()[0]
+    entry = query_cedict(word).as_pymongo()[0]
 
     if entry is None:
         response = jsonify({'error': 'could not find definition for {}'.format(word)})
