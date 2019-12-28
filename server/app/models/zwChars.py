@@ -23,7 +23,7 @@ class zwWord(EmbeddedDocument):
 class zwPhrase(EmbeddedDocument):
     """ Represents Chinese phrase saved by user. Only exists within zwUser."""
     # Required
-    phrase = EmbeddedDocumentListField(zwWord, required=True) # Actual text
+    phrase = StringField(required=True) # Actual text
     pinyin = StringField(required=True)
     definition = StringField(required=True)
     is_simplified = BooleanField(required=True)
