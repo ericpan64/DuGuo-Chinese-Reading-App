@@ -17,7 +17,6 @@ from bson import json_util
 from mongoengine.base import ObjectIdField
 from mongoengine.queryset.base import BaseQuerySet
 
-
 # === Server start-up ===
 """
 Run once, this starts mongoDB on default port 27017
@@ -30,6 +29,8 @@ name = 'CRM-db'
 mongoengine.register_connection(alias=alias,name=name)
 client = mongoengine.connect(name)  # http://docs.mongoengine.org/guide/connecting.html
 db = client.zwDatabaseMain # Establishing main db
+
+
 
 # Setting-up Flask instance
 app = Flask(__name__)
@@ -135,7 +136,13 @@ def load_user(user_id):
 # === Main function ===
 if __name__ == '__main__':
     # loadCEDICT() # initiates at startup
+
+    # # ==Testing=== Create Dummy User
+    # zUser = zwUser(email="dummyuser@me.com", pw_hash="aaa", pw_salt="bbb")
+    # zUser.save()
+
+    # Running the app
     from views import *
     app.run(debug=True,use_reloader=False)
 
-    # Drop DB here for debugging?
+

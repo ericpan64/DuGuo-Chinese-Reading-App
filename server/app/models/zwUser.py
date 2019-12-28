@@ -25,9 +25,5 @@ class zwUser(Document, UserMixin):
     name = StringField()
     registered_date = DateTimeField(default=datetime.datetime.now) # passing now function, not now value
     phrase_dict = EmbeddedDocumentListField(z.zwPhrase) # user's "phrase dictionary"
-    context_titles = DictField()
 
-    meta = {
-        'db_alias':'db',
-        'collection':'ZW_Users' # Sets name of collection
-    }
+    context_titles = DictField() # maps URL to Title of context
