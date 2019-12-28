@@ -11,9 +11,11 @@ TODO: reimplement adding schema
 from __init__ import app
 from flask import render_template, redirect, flash, url_for, request, jsonify, make_response
 from forms import LoginForm, SignupForm, EditDocumentForm, VocabFileForm
-from models import zwUser,zwDocument
+from models.zwUser import zwUser
+from models.zwDocument import zwDocument
 from models import zwChars as z
 from lib.zhongwen import annotate_text, query_cedict
+import flask_bcrypt
 
 from flask_login import login_user,login_required,logout_user,current_user
 
@@ -43,7 +45,7 @@ def signup():
     form = SignupForm()
 
     if form.validate_on_submit():
-        user = zwUser(form.email.data, form.password.data)
+        user = zwUser(email=form.email.data, pw_hash=flask_bcrypt.generate_password_hash(form.password.data).decode('utf8'))
         user.save() # add user to zwUser collection
         login_user(user, remember=form.remember_me.data)
         flash('Account created - welcome {}'.format(form.email.data))
@@ -63,7 +65,10 @@ def logout():
 @login_required
 def home():
     ''' Display the user's documents. '''
-    docs = current_user.documents.all()
+    try:
+        docs = current_user.documents.all()
+    except:
+        docs = []
     return render_template('home.html', documents=docs)
 
 @app.route('/edit', methods=['GET', 'POST'])

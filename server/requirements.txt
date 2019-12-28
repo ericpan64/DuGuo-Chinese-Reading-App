@@ -5,3 +5,4 @@ flask_login
 mongoengine
 bs4
 argparse
+flask-bcrypt

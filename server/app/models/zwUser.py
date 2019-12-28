@@ -7,16 +7,18 @@ Document (linked to user via user_id)
 CEDICT reference dictionary used for independent lookup
 """
 
-from mongoengine import Document, StringField, DateTimeField, EmbeddedDocumentListField, DictField
+from mongoengine import Document, StringField, DateTimeField, BooleanField, EmbeddedDocumentListField, DictField, ListField
 from models import zwChars as z
+from models.zwDocument import zwDocument
+from flask_login import UserMixin
 import datetime
 
-class zwUser(Document):
+class zwUser(Document, UserMixin):
     """ Represents user """
     # Required
     email = StringField(required=True)
     pw_hash = StringField(required=True) # Hash of user password
-    pw_salt = StringField(required=True)
+    # pw_salt = StringField(required=True)
 
     # Optional
     name = StringField()
@@ -25,6 +27,6 @@ class zwUser(Document):
     context_titles = DictField()
 
     meta = {
-        'db_alias':'core',
+        'db_alias':'db',
         'collection':'ZW_Users' # Sets name of collection
     }

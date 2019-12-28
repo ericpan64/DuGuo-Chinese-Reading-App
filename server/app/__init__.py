@@ -7,9 +7,17 @@ Description: Initiates server (Flask app, mongoDB connection). Also contains web
 import mongoengine
 from flask import Flask
 from flask import render_template, request, jsonify, redirect
+from flask.json import JSONEncoder
 from flask_login import LoginManager
 import argparse
 from models import zwChars as z
+from models.zwUser import zwUser
+from flask.json import JSONEncoder
+from bson import json_util
+from mongoengine.base import ObjectIdField
+from mongoengine.queryset.base import BaseQuerySet
+
+
 # === Server start-up ===
 """
 Run once, this starts mongoDB on default port 27017
@@ -118,6 +126,11 @@ def postMethod():
 
     # TODO: How to redirect to original URL? --> Route to index?
     return render_template('view.html')
+
+# needed to load User
+@login_manager.user_loader
+def load_user(user_id):
+    return zwUser.objects(id=user_id).first()
 
 # === Main function ===
 if __name__ == '__main__':

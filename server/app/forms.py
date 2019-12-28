@@ -9,7 +9,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField,BooleanField,PasswordField,ValidationError,TextAreaField,FileField
 from wtforms.validators import DataRequired,Email,EqualTo
 
-from models import zwUser # Modified
+from models.zwUser import zwUser # Modified
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
