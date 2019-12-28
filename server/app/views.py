@@ -222,30 +222,36 @@ def vocab_contains(phrase=None):
         # 'contains': CEDICT.query.filter_by(user_id=current_user.id, phrase=phrase).count() > 0
         })
 
-
-# TODO: fix vocab adding hierarchy and convert queries to NoSQL
-"""
 @app.route('/api/vocab/add', methods=['POST'])
 def vocab_add():
-    ''' Add a phrase to the current user's vocabulary list '''
+    """
+    Adds value to current User's phrase dictionary
+    :input: POST request
+        'phrase' --> 1 or more phrases
+    :return: True if succeeds, False otherwise
+    """
     if not current_user.is_authenticated:
         response = jsonify({'error': 'User not logged in'})
         response.status_code = 400
         return response
 
+    # Get phrase from POST request
     phrase = request.form.get('phrase')
 
-    definitions = CEDICT.objects(simplified=phrase).as_pymongo()[0]
-    # definitions = CEDICT.query.filter_by(simplified=phrase).all()
+    # Query database
+    definitions = query_cedict(phrase).as_pymongo()[0]
 
-    
+    # If found in CEDICT, add phrase to user dictionary
     if len(definitions) > 0:
-        for definition in definitions:
-            v = zwPhrase(phrase,)
-            v.save()
+        # For each CEDICT entry, add to phrase dictionary (simplified)
+        for d in definitions:
+            # Create zwPhrase
+            is_simp = True if d['simplified']['phrase'] == phrase else False
+            p = z.zwPhrase(phrase=phrase,pinyin=d['pinyin'],definition=d['definition'],is_simplified=is_simp)
+            # Add phrase to current user's phrase dict
+            current_user.update(add_to_set__phrase_dict=p.to_mongo())
 
-        db.session.commit()
-
+        current_user.save()
         return jsonify({
             'success': True
             })
@@ -259,12 +265,17 @@ def vocab_add():
 @login_required
 def vocab_delete():
     phrase = request.form.get('phrase')
-    for entry in current_user.vocab.filter_by(simplified=phrase).all():
-        db.session.delete(entry)
-    db.session.commit()
+    # Initiate as zwPhrase
+
+    zw_phrase = query_cedict(phrase,True)
+    # TODO Delete all instances of the phrase in the list
+    current_user.update(pull_all__phrase_dict=zw_phrase.as_pymongo())
+    current_user.save()
 
     return jsonify({'success': True})
 
+# TODO Wrap-up the rest of the API calls below (referencing zwUser phrase_dict)
+"""
 @app.route('/api/vocab/all')
 def vocab_all():
     ''' Get all of a user's vocab '''

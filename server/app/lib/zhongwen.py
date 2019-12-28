@@ -18,21 +18,28 @@ from bs4 import BeautifulSoup
 from app.models import zwChars as z # mongoDB collection containing CEDICT dictionary
 
 
-def query_cedict(phrase):
+def query_cedict(phrase, as_zwPhrase=False):
     """
     :param phrase: String of the zwPhrase
-    :return: Returns first value that exists:
+    :param as_zwPhrase (OPT): True if a zwPhrase object should be returned
+    :return: Returns first value that exists
         - Simplified CEDICT entry
         - Traditional CEDICT entry
         - None
+        By default, a CEDICT object will be returned.
     """
-    res = None
+    simp = True
     # Query simplified words
     res = z.CEDICT.objects(simplified__phrase=phrase)
 
     # If no simplified found, query traditional words
     if res == None:
+        simp = False
         res = z.CEDICT.objects(traditional__phrase=phrase)
+
+    if as_zwPhrase and res != None:
+        res_phrase = z.zwPhrase(phrase=phrase,pinyin=res.pinyin,definition=res.definition,is_simplified=simp)
+        return res_phrase
 
     return res
 
