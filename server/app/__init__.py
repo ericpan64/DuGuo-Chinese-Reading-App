@@ -63,7 +63,7 @@ def loadCEDICT():
 
 
             trad = z.zwPhrase(phrase=trad, pinyin=pinyin, definition=defn, is_simplified=False)
-            simp = z.zwPhrase(phrase=simp, pinyin=pinyin, definition=defn, is_simplified=False)
+            simp = z.zwPhrase(phrase=simp, pinyin=pinyin, definition=defn, is_simplified=True)
 
             entry_list.append(z.CEDICT(traditional=trad, simplified=simp, pinyin=pinyin, definition=defn))
         print("Loaded. Sending to db...")
