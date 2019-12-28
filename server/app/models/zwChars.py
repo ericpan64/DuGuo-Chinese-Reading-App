@@ -9,21 +9,10 @@ from mongoengine import Document, EmbeddedDocumentField, StringField
 from mongoengine import EmbeddedDocument, BooleanField, DictField, EmbeddedDocumentListField, DateTimeField
 import datetime
 
-class zwWord(EmbeddedDocument):
-    """ Represents single chinese character part of a phrase """
-    # Required
-    word = StringField(required=True) # raw text received
-    is_simplified = BooleanField(required=True) # True if simplified, else is traditional
-    pinyin = StringField(required=True)
-
-    # Optional
-    definition = StringField()
-    radicals = DictField()
-
 class zwPhrase(EmbeddedDocument):
     """ Represents Chinese phrase saved by user. Only exists within zwUser."""
     # Required
-    phrase = EmbeddedDocumentListField(zwWord, required=True) # Actual text
+    phrase = StringField(required=True) # Actual text
     pinyin = StringField(required=True)
     definition = StringField(required=True)
     is_simplified = BooleanField(required=True)
@@ -33,6 +22,7 @@ class zwPhrase(EmbeddedDocument):
     context_title = DictField() # Store context for ALL occurrences of the phrase
     context_URL = DictField()
     date_saved = DateTimeField(default=datetime.datetime.now)
+    radicals = DictField()
 
     comment = StringField() # Optional user-added comment
 
