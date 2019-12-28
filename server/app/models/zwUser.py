@@ -19,6 +19,7 @@ class zwUser(Document, UserMixin):
     email = StringField(required=True)
     pw_hash = StringField(required=True) # Hash of user password
     # pw_salt = StringField(required=True)
+    documents = EmbeddedDocumentListField(zwDocument)
 
     # Optional
     name = StringField()

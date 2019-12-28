@@ -1,7 +1,7 @@
-from mongoengine import Document, StringField, DateTimeField
+from mongoengine import EmbeddedDocument, StringField, DateTimeField
 import datetime
 
-class zwDocument(Document):
+class zwDocument(EmbeddedDocument):
     """ Represents user imported text for a given session. Linked to zwUser via user_id """
     # Mainly saves context. This could also be broken down into phrases for metadata purposes
     # Required

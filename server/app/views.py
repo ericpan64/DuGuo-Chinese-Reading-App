@@ -65,10 +65,7 @@ def logout():
 @login_required
 def home():
     ''' Display the user's documents. '''
-    try:
-        docs = current_user.documents.all()
-    except:
-        docs = []
+    docs = current_user.documents
     return render_template('home.html', documents=docs)
 
 @app.route('/edit', methods=['GET', 'POST'])
