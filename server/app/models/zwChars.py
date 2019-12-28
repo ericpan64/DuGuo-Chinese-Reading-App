@@ -6,7 +6,7 @@ Contains Words (atomic level), Phrases (sets of words), and CEDICT dictionary (s
 """
 
 from mongoengine import Document, EmbeddedDocumentField, StringField
-from mongoengine import EmbeddedDocument, BooleanField, DictField, EmbeddedDocumentListField, DateTimeField
+from mongoengine import EmbeddedDocument, BooleanField, DictField, DateTimeField
 import datetime
 
 class zwPhrase(EmbeddedDocument):

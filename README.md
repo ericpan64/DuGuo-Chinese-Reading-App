@@ -11,8 +11,12 @@ This feature will be built on top of the existing Zhongwen Google Chrome extensi
 === To-Do (updated 12/15/19) ===
 
 = Flask Server =
-* Get running instance with new mongoDB database
---> Fix queries in lib/zhongwen.py (z.CEDICT.objects(simplified=char))
+✓ Get running instance with new mongoDB database
+✓ Fix queries in lib/zhongwen.py (z.CEDICT.objects(simplified=char))
+* Implement login/user functionality (Flask forms)
+* Fix API calls in views.py
+* Get the CoreNLP jar file working
+* Get the PoS jar file working
 * Figure-out where/how to add pinyin + toggle "Learning Mode"
 * Get running Flask instance (mini-PRD)
 * Bug fixes
@@ -23,6 +27,8 @@ This feature will be built on top of the existing Zhongwen Google Chrome extensi
 * Clean-up current errors when running extension
 * Figure-out how to add OAuth integration
 
+= Nice-to-have =
+* Track the number of times a button is called/pressed per user session (help usability)
 
 Misc Technical Notes
 - Context Menu (Chrome) -- right click menu options
