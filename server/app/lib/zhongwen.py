@@ -21,7 +21,7 @@ from app.models import zwChars as z # mongoDB collection containing CEDICT dicti
 def query_cedict(phrase, as_zwPhrase=False):
     """
     :param phrase: String of the zwPhrase
-    :param as_zwPhrase (OPT): True if a zwPhrase object should be returned
+    :param as_zwPhrase (optional): True if a zwPhrase object should be returned
     :return: Returns first value that exists
         - Simplified CEDICT entry
         - Traditional CEDICT entry

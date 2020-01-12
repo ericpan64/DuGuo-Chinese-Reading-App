@@ -70,7 +70,6 @@ def loadCEDICT():
             # t_list = [z.zwWord(word=t, is_simplified=False) for t in trad]
             # s_list = [z.zwWord(word=s, is_simplified = True) for s in simp]
 
-
             trad = z.zwPhrase(phrase=trad, pinyin=pinyin, definition=defn, is_simplified=False)
             simp = z.zwPhrase(phrase=simp, pinyin=pinyin, definition=defn, is_simplified=True)
 
@@ -112,6 +111,7 @@ Example post data
 @app.route('/uploadText',methods=['POST'])
 def postMethod():
     """
+    TODO function: Validate user and POST data, upload to DB
     Post method to receive text data
     :return: Redirect to URL
 
@@ -119,8 +119,6 @@ def postMethod():
         https://stackoverflow.com/questions/42893826/flask-listen-to-post-request
         https://stackoverflow.com/questions/10434599/get-the-data-received-in-a-flask-request
     """
-    # TODO: Identify and validate user to upload to DB
-    # TODO: Take POST data and upload DB
     data = request.get_json(force=True)
     newDoc = z.zwDocument(user_id=data["user"],body=data["body"],context_title=data["title"],context_url=data["URL"])
     newDoc.save()
