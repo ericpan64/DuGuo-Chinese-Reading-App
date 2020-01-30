@@ -17,30 +17,21 @@ from bson import json_util
 from mongoengine.base import ObjectIdField
 from mongoengine.queryset.base import BaseQuerySet
 
-# === Server start-up ===
+# === Database start-up functions ===
 """
 Run once, this starts mongoDB on default port 27017
 Local copy -- multi-server hosting requires more params (passed in **args)
 """
 
-# Setting-up mongoDB connection
-alias = 'db'
-name = 'CRM-db'
-mongoengine.register_connection(alias=alias,name=name)
-client = mongoengine.connect(name)  # http://docs.mongoengine.org/guide/connecting.html
-db = client.zwDatabaseMain # Establishing main db
-
-
-
-# Setting-up Flask instance
-app = Flask(__name__)
-app.config.from_object('config')
-
-login_manager = LoginManager()
-login_manager.session_protection = 'strong'
-login_manager.login_view = 'login'
-
-login_manager.init_app(app)
+def connectMongoDB():
+    """
+    Sets-up mongoDB connection
+    """
+    alias = 'db'
+    name = 'CRM-db'
+    mongoengine.register_connection(alias=alias,name=name)
+    client = mongoengine.connect(name)  # http://docs.mongoengine.org/guide/connecting.html
+    db = client.zwDatabaseMain # Establishing main db
 
 # Load CEDICT function definition
 def loadCEDICT():
@@ -78,6 +69,22 @@ def loadCEDICT():
         z.CEDICT.objects.insert(entry_list)
         print("Completed")
     pass
+
+
+# === Flask start-up ===
+
+"""
+Sets-up Flask instance
+"""
+app = Flask(__name__)
+app.config.from_object('config')
+
+login_manager = LoginManager()
+login_manager.session_protection = 'strong'
+login_manager.login_view = 'login'
+
+login_manager.init_app(app)
+
 
 # === Context processor ===
 @app.context_processor
@@ -133,7 +140,9 @@ def load_user(user_id):
 
 # === Main function ===
 if __name__ == '__main__':
-    # loadCEDICT() # initiates at startup
+    # initiates at startup
+    connectMongoDB()
+    loadCEDICT()
 
     # # ==Testing=== Create Dummy User
     # zUser = zwUser(email="dummyuser@me.com", pw_hash="aaa", pw_salt="bbb")
