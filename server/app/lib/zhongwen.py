@@ -114,11 +114,7 @@ def get_tone(py):
 
 def render_chinese_word(chinese_word,pos=''):
     """
-    :param chinese_word: Chinese word to render
-    :param pos: part of speech (optional)
-    :return: HTML syntax code for given Chinese
-    """
-    ''' Generates HTML for the given Chinese word. For example:
+    Generates HTML for the given Chinese word. For example:
     render_chinese_word(u'2009你好')
     <span>
         2009
@@ -132,10 +128,13 @@ def render_chinese_word(chinese_word,pos=''):
 
     The part of speech is added as the class `pos-XX` (ie. pos-NR for proper nouns) attribute
     of the word span. This way, CSS can properly mark up the text.
-    '''
+
+    :param chinese_word: Chinese word to render
+    :param pos: part of speech (optional)
+    :return: HTML syntax code for given Chinese
+    """
 
     res = []
-
     pinyin = get_pinyin(chinese_word)
 
     for word, py, is_chinese in pinyin:
@@ -146,7 +145,6 @@ def render_chinese_word(chinese_word,pos=''):
         else:
             entry = query_cedict(word).as_pymongo()[0]
 
-            definition = None
             if entry is None:
                 definition = u'Could not find definition for "{}"'.format(word)
             else:
@@ -155,8 +153,6 @@ def render_chinese_word(chinese_word,pos=''):
             defn_html = '<ul>'
             defn_html += ''.join('<li>' + defn + '</li>' for defn in definition.split('/') if defn != '')
             defn_html += '</ul>'
-
-            title_html = u'{} [{}]'.format(word, py)
 
             res.append(u'<span class="word pos-{} {}" tabindex="0" data-word="{}">'.format(pos, '' if is_chinese else 'non-chinese', word))
             if is_chinese:
@@ -178,6 +174,12 @@ def render_chinese_word(chinese_word,pos=''):
     return '\n'.join(res)
 
 def generate_html(pos_text):
+    """
+    Takes article text, parses using BeautifulSoup for 'word' and returns HTML
+    :called by: annotate_text
+    :param pos_text: article text (post POS tagger)
+    :returns: Single string containing segmented HTML
+    """
     res = []
 
     bs = BeautifulSoup.BeautifulStoneSoup(pos_text)
@@ -191,14 +193,21 @@ def generate_html(pos_text):
     return ''.join(res)
 
 def annotate_text(data):
+    """
+    Takes text data and converts to HTML output
+    :param data: data element from EditDocumentForm()
+    :returns: Segmented HTML (post POS tagger)
+    """
+
+    # Converts text to segmented HTML. Each line in data -> a paragraph
     data = data.splitlines()
     processed = []
     for line in data:
         segmented_text = segment_text(line)
         pos_text = get_parts_of_speech(segmented_text)
-
         processed.append(generate_html(pos_text))
 
+    # Mark each paragraph as separate HTML segments
     res = []
     for paragraph in processed:
         res.append('<div class="paragraph">')
@@ -208,6 +217,9 @@ def annotate_text(data):
     return ''.join(res)
 
 def render_document(doc):
+    """
+    *esp 1/20/2020: Not in-use? Only in jinja functions and import, though no other calls in server code
+    """
     bs = BeautifulSoup.BeautifulSoup(doc)
     for div in bs.findAll('div'):
         for span in div.findAll('span'):

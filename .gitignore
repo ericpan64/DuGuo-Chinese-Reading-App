@@ -7,4 +7,5 @@ server/.idea/
 playgnd/
 playgnd/.idea/
 server/stanford-nlp
-ChineseReadingMachine_v3.6.2
+server/stanford-corenlp-full-2018-10-05
+venv
