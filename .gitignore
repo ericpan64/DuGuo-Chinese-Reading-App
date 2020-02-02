@@ -4,8 +4,7 @@ server/app/__pycache__
 server/data/db/
 .idea/
 server/.idea/
-playgnd/
-playgnd/.idea/
+playgnd
 server/stanford-nlp
 server/stanford-corenlp-full-2018-10-05
 venv
