@@ -29,7 +29,7 @@ def login():
     if form.validate_on_submit():
         user = zwUser.objects(email=form.email.data).first()
         # user = User.query.filter_by(email=form.email.data).scalar()
-        if user and user.check_password(form.password.data):
+        if user and flask_bcrypt.check_password_hash(user.pw_hash, form.password.data):
             login_user(user, remember=form.remember_me.data)
             flash('Welcome back, {}'.format(form.email.data))
             return redirect(url_for('home'))
@@ -57,7 +57,8 @@ def signup():
 def logout():
     logout_user()
     flash('You have been logged out')
-    return redirect(url_for('index'))
+    return render_template('index.html')
+    # return redirect(url_for('index'))
 
 
 # == Document Handling ==
