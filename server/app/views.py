@@ -1,5 +1,5 @@
 """
-Author: Eric Pan
+Author: Eric Pan, Francis Lin
 Description: Contains website views
 
 The sections marked as === Views (previous...) === are code written by Martin Kess and adjusted to match the NoSQL schema
@@ -269,28 +269,27 @@ def vocab_delete():
     # Initiate as zwPhrase
 
     zw_phrase = query_cedict(phrase,True)
-    # TODO Delete all instances of the phrase in the list
     current_user.update(pull_all__phrase_dict=zw_phrase.as_pymongo())
     current_user.save()
 
     return jsonify({'success': True})
 
-# TODO Wrap-up the rest of the API calls below (referencing zwUser phrase_dict)
-"""
-@app.route('/api/vocab/all')
-def vocab_all():
-    ''' Get all of a user's vocab '''
-    # TODO(mkess): Should this be paged? And if so... how?
-    return jsonify({
-        'vocab' : current_user.vocab.all()
-    })
+# TODO Reimplement these API calls
 
-@app.route('/api/vocab/download_txt')
-@login_required
-def vocab_download_txt():
-    txt = '\n'.join(entry.cedict.simplified for entry in current_user.vocab.all())
-    response = make_response(txt)
-    response.headers['Content-Disposition'] = 'attachment; filename=vocab.txt;'
+# @app.route('/api/vocab/all')
+# def vocab_all():
+#     ''' Get all of a user's vocab '''
+#     # TODO(mkess): Should this be paged? And if so... how?
+#     return jsonify({
+#         'vocab' : current_user.vocab.all()
+#     })
+#
+# @app.route('/api/vocab/download_txt')
+# @login_required
+# def vocab_download_txt():
+#     txt = '\n'.join(entry.cedict.simplified for entry in current_user.vocab.all())
+#     response = make_response(txt)
+#     response.headers['Content-Disposition'] = 'attachment; filename=vocab.txt;'
+#
+#     return response
 
-    return response
-"""
