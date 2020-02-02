@@ -12,10 +12,10 @@ Parts I changed:
 
 ''' Utility functions for rendering Chinese text. '''
 
-from stanford import segment_text, get_parts_of_speech
+from lib.stanford import segment_text, get_parts_of_speech
 from flask_login import current_user
 from bs4 import BeautifulSoup
-from app.models import zwChars as z # mongoDB collection containing CEDICT dictionary
+from models import zwChars as z # mongoDB collection containing CEDICT dictionary
 
 
 def query_cedict(phrase, as_zwPhrase=False):

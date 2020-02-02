@@ -93,7 +93,7 @@ def lib_functions():
     Provides library functions available to rest of templates
     :return: dict of functions to use
     """
-    from app.lib.zhongwen import render_chinese_word, render_document
+    from lib.zhongwen import render_chinese_word, render_document
     return dict(
         render_chinese_word=render_chinese_word,
         render_document=render_document
