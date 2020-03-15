@@ -29,7 +29,7 @@ class zwPhrase(EmbeddedDocument):
 class CEDICT(Document):
     """CC-CEDICT mapping in database. This gets loaded when the application starts"""
     # Required
-    traditional = EmbeddedDocumentField(zwPhrase,required=True)
-    simplified = EmbeddedDocumentField(zwPhrase, required=True)
+    traditional = StringField(required=True)
+    simplified = StringField(required=True)
     pinyin = StringField(required=True)
     definition = StringField(required=True)
