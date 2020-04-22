@@ -1,0 +1,5 @@
+flask
+mongoengine
+flask_login
+stanfordcorenlp
+bs4

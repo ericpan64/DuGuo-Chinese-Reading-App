@@ -1,51 +1,14 @@
 """
-Author: Martin Kess
-Description: Utility functions.
-
-Parts I changed:
-    CEDICT queries adjusted to query NoSQL instead of SQL
-        Added CEDICT as a parameter to adjust accordingly
-    Added some function documentation
+Author: Eric Pan, Martin Kess
+Description: Utility functions for rendering chinese
 """
 
-# -*- coding: utf-8 -*-
-
-''' Utility functions for rendering Chinese text. '''
-
-from lib.stanford import segment_text, get_parts_of_speech
 from flask_login import current_user
 from bs4 import BeautifulSoup
-from models import zwChars as z # mongoDB collection containing CEDICT dictionary
-
-
-def query_cedict(phrase, as_zwPhrase=False):
-    """
-    :param phrase: String of the zwPhrase
-    :param as_zwPhrase (optional): True if a zwPhrase object should be returned
-    :return: Returns first value that exists
-        - Simplified CEDICT entry
-        - Traditional CEDICT entry
-        - None
-        By default, a CEDICT object will be returned.
-    """
-    simp = True
-    # Query simplified words
-    res = z.CEDICT.objects(simplified__phrase=phrase)
-
-    # If no simplified found, query traditional words
-    if res == None:
-        simp = False
-        res = z.CEDICT.objects(traditional__phrase=phrase)
-
-    if as_zwPhrase and res != None:
-        res_phrase = z.zwPhrase(phrase=phrase,pinyin=res.pinyin,definition=res.definition,is_simplified=simp)
-        return res_phrase
-
-    return res
+from __init__.models import CEDICT # mongoDB collection containing CEDICT dictionary
 
 def get_pinyin(chinese_word):
     """
-    :param chinese_word: chinese word (array of 1-to-n chinese characters)
     :return: pinyin array=[word,pinyin,is_chinese]
     """
     if len(chinese_word) == 0:
@@ -57,7 +20,7 @@ def get_pinyin(chinese_word):
     current_token = chinese_word[0]
 
     for char in chinese_word:
-        entry = query_cedict(char) # Queries simplified Chinese only
+        entry = CEDICT.objects(simplified=char) # Queries simplified Chinese only
         if current_chinese is None:
             # First character
             current_chinese = entry is not None
@@ -87,15 +50,16 @@ def get_pinyin(chinese_word):
     for word, is_chinese in tokens:
         if is_chinese:
             # Try to get pinyin
-            # "as_pymongo()[0]" returns the CEDICT object as a dict (JSON-like)
-            entry = query_cedict(word).as_pymongo()[0]
+            # Not the cleanest below, but it works (converts to dict)
+            entry = CEDICT.objects(simplified=word).as_pymongo()[0]
             if entry is not None:
                 res.append((word, entry['pinyin'], is_chinese))
             else:
                 pinyin = []
                 # Otherwise, just do each letter
+                # TODO: could be more clever here... greedy match?
                 for char in word:
-                    entry = query_cedict(word).as_pymongo()[0]
+                    entry = CEDICT.objects(simplified=char).as_pymongo()[0]
                     pinyin.append(entry['pinyin'])
                 res.append((word, ' '.join(pinyin), is_chinese))
         else:
@@ -108,7 +72,6 @@ def get_tone(py):
     for t in tones:
         if py.find(t) != -1:
             return t
-
     return '0'
 
 
@@ -128,13 +91,10 @@ def render_chinese_word(chinese_word,pos=''):
 
     The part of speech is added as the class `pos-XX` (ie. pos-NR for proper nouns) attribute
     of the word span. This way, CSS can properly mark up the text.
-
-    :param chinese_word: Chinese word to render
-    :param pos: part of speech (optional)
-    :return: HTML syntax code for given Chinese
     """
 
     res = []
+
     pinyin = get_pinyin(chinese_word)
 
     for word, py, is_chinese in pinyin:
@@ -143,8 +103,9 @@ def render_chinese_word(chinese_word,pos=''):
             res.append(word)
             res.append('</span>')
         else:
-            entry = query_cedict(word).as_pymongo()[0]
+            entry = CEDICT.objects(simplified=word).as_pymongo()[0]
 
+            definition = None
             if entry is None:
                 definition = u'Could not find definition for "{}"'.format(word)
             else:
@@ -153,6 +114,8 @@ def render_chinese_word(chinese_word,pos=''):
             defn_html = '<ul>'
             defn_html += ''.join('<li>' + defn + '</li>' for defn in definition.split('/') if defn != '')
             defn_html += '</ul>'
+
+            title_html = u'{} [{}]'.format(word, py)
 
             res.append(u'<span class="word pos-{} {}" tabindex="0" data-word="{}">'.format(pos, '' if is_chinese else 'non-chinese', word))
             if is_chinese:
@@ -174,12 +137,6 @@ def render_chinese_word(chinese_word,pos=''):
     return '\n'.join(res)
 
 def generate_html(pos_text):
-    """
-    Takes article text, parses using BeautifulSoup for 'word' and returns HTML
-    :called by: annotate_text
-    :param pos_text: article text (post POS tagger)
-    :returns: Single string containing segmented HTML
-    """
     res = []
 
     bs = BeautifulSoup.BeautifulStoneSoup(pos_text)
@@ -193,21 +150,14 @@ def generate_html(pos_text):
     return ''.join(res)
 
 def annotate_text(data):
-    """
-    Takes text data and converts to HTML output
-    :param data: data element from EditDocumentForm()
-    :returns: Segmented HTML (post POS tagger)
-    """
-
-    # Converts text to segmented HTML. Each line in data -> a paragraph
     data = data.splitlines()
     processed = []
     for line in data:
         segmented_text = segment_text(line)
         pos_text = get_parts_of_speech(segmented_text)
+
         processed.append(generate_html(pos_text))
 
-    # Mark each paragraph as separate HTML segments
     res = []
     for paragraph in processed:
         res.append('<div class="paragraph">')
@@ -217,9 +167,6 @@ def annotate_text(data):
     return ''.join(res)
 
 def render_document(doc):
-    """
-    *esp 1/20/2020: Not in-use? Only in jinja functions and import, though no other calls in server code
-    """
     bs = BeautifulSoup.BeautifulSoup(doc)
     for div in bs.findAll('div'):
         for span in div.findAll('span'):
