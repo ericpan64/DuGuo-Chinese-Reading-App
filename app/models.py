@@ -8,7 +8,7 @@ Contains Words (atomic level), Phrases (sets of words), and CEDICT dictionary (s
 from mongoengine import Document, StringField, EmbeddedDocumentListField
 from mongoengine import EmbeddedDocument, BooleanField, DictField, DateTimeField
 from flask_login import UserMixin
-import datetime
+from datetime import datetime
 
 class zwPhrase(EmbeddedDocument):
     """ Represents Chinese phrase saved by user. Only exists within zwUser."""
@@ -22,7 +22,7 @@ class zwPhrase(EmbeddedDocument):
     part_of_speech = StringField() # Populated by NLP tagger
     context_title = DictField() # Store context for ALL occurrences of the phrase
     context_URL = DictField()
-    date_saved = DateTimeField(default=datetime.datetime.now)
+    date_saved = DateTimeField(default=datetime.now)
     radicals = DictField()
 
     comment = StringField() # Optional user-added comment
@@ -46,7 +46,7 @@ class zwDocument(EmbeddedDocument):
 
     # Optional
     title = StringField()
-    date_saved = DateTimeField(default=datetime.datetime.now)
+    date_saved = DateTimeField(default=datetime.now)
     comment = StringField() # Optional user-added comment
 
     meta = {'allow_inheritance' : True}
@@ -62,7 +62,7 @@ class zwUser(Document, UserMixin):
 
     # Optional
     name = StringField()
-    registered_date = DateTimeField(default=datetime.datetime.now) # passing now function, not now value
+    registered_date = DateTimeField(default=datetime.now) # passing now function, not now value
     phrase_dict = EmbeddedDocumentListField(zwPhrase) # user's "phrase dictionary"
 
     context_titles = DictField() # maps URL to Title of context

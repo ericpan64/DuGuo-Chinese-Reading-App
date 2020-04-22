@@ -10,7 +10,7 @@ Web Routing
     Main: /
 
 Hosting
-    Servers:
+    Servers: Heroku / Github Pages
 
 ## Desired Tech Stack
 Web
@@ -35,3 +35,7 @@ Deploy following functionality:
 - User can upload document in temp session (no login required)
 - User can login/create account to save uploaded documents
 - Document gets tagged by NLP in backend
+
+### Epics (high-level goal)
+
+### User Stories (subset of Epics)
