@@ -1,16 +1,10 @@
-# Zhongwen Learning-Mode extension
+# The Chinese Reading Machine (CRM) (in-progress)
 
-This extension will allow users to interactively learn how to read Chinese with any text-based article on the web by providing word segmentation, pinyin support, and a database of a user's "vocabulary-dictionary" of user-saved phrases.
+## Overview
+This extension will allow users to interactively learn how to read Chinese with any text-based article on the web by providing word segmentation, pinyin support, and a database of a user's "vocabulary-dictionary" of user-saved phrases. Articles are uploaded to the site and parse using the Stanford CoreNLP library.
 
-Input: User selects text in web browser --> right click to access extension
-  Implementation of the Context menu is found in the separate "Zhongwen" repo
-Output: New tab displaying selected text with pinyin and ability to save articles
+## To-Dos
+A lot to do to get this up and running. Tasks are being tracked externally using Trello and design docs uploaded to the /design folder.
 
-This feature will be built on top of the existing Zhongwen Google Chrome extension.
-
-Tasks are being tracked on this Trello Board: https://trello.com/b/jXz7UPlA/chinese-reading-machine-crm
-
-Misc Technical Notes
-- Context Menu (Chrome) -- right click menu options
-- Sockets -- helps control client/server communication
-- Context Manager -- better file handling (handles open/close of database, locks)
+## Zhongwen Extension (future)
+This feature will be built on top of the existing Zhongwen Google Chrome extension to facilitate easier article importing and give students the option of different immersive experiences
