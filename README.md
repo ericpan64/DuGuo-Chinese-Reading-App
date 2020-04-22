@@ -8,3 +8,8 @@ A lot to do to get this up and running. Tasks are being tracked externally using
 
 ## Zhongwen Extension (future)
 This feature will be built on top of the existing Zhongwen Google Chrome extension to facilitate easier article importing and give students the option of different immersive experiences
+
+## Misc
+
+### Acknowledgements
+Original project was adopted from Martin Kess's CS6460 final project (Summer 15').
