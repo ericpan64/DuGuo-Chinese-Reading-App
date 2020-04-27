@@ -1,17 +1,5 @@
 # Zhongwen CRM - refactor 1
 
-## Current Tech Stack
-Web Server
-    Backend: Python (Flask)
-    Frontend: 
-    Database: mongodb
-
-Web Routing
-    Main: /
-
-Hosting
-    Servers: Heroku / Github Pages
-
 ## Desired Tech Stack
 Web
     Backend: Python (Flask)
@@ -27,15 +15,20 @@ Web Routing
     View saved vocab: /vocab/{username}
 
 Hosting
-    Servers: AWS
+    Servers: Heroku/Github Pages
 
 ## Refactor 1 Goals
 Deploy following functionality:
 - Home page loads
 - User can upload document in temp session (no login required)
+    -- Saved to MongoDB database
+    -- Gets flushed daily
 - User can login/create account to save uploaded documents
-- Document gets tagged by NLP in backend
+- UI is passable
 
 ### Epics (high-level goal)
+- Get I/O functional
 
 ### User Stories (subset of Epics)
+- "What's this? Let me try it out!
+- "This is cool -- I let me make an account!"
