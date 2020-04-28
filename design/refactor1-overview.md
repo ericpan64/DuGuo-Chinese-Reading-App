@@ -2,20 +2,20 @@
 
 ## Desired Tech Stack
 Web
-    Backend: Python (Flask)
-    Frontend: plain JS/HTML/CSS
+- Backend: Python (Flask)
+- Frontend: plain JS/HTML/CSS
     Database: mongoDB
 
 Web Routing
-    Main: /
-    Account signup: /register
-    Account view: /user/{username}
-    Upload document: /upload/{generatedDocId}
-    View document: /view/{docId}
-    View saved vocab: /vocab/{username}
+- Main: /
+- Account signup: /register
+- Account view: /user/{username}
+- Upload document: /upload/{generatedDocId}
+- View document: /view/{docId}
+- View saved vocab: /vocab/{username}
 
 Hosting
-    Servers: Heroku/Github Pages
+- Servers: Heroku/Github Pages
 
 ## Refactor 1 Goals
 Deploy following functionality:
@@ -30,5 +30,5 @@ Deploy following functionality:
 - Get I/O functional
 
 ### User Stories (subset of Epics)
-- "What's this? Let me try it out!
+- "What's this? Let me try it out!"
 - "This is cool -- I let me make an account!"
