@@ -1,6 +1,6 @@
 """
 Author: Eric Pan, Francis Lin
-Description: Contains website views + code to start server
+Description: Contains app startup code + website views
 
 Example post data
 {
@@ -14,7 +14,14 @@ Example post data
 from flask import Flask, render_template
 from lib.mongo import connectToMongo, loadCEDICT
 
-# # Connect and load data to database
+""" === Server Start-up === """
+# Config
+from os.path import abspath, dirname
+basedir = abspath(dirname(__file__))
+CRF_ENABLED = True
+SECRET_KEY = 'EXAMPLE_SECRET_KEY_HERE'
+
+# Mongodb needs to be started on port 27017
 connectToMongo(alias='db', name='crm_main')
 loadCEDICT()
 
@@ -22,8 +29,9 @@ loadCEDICT()
 web = Flask(__name__)
 web.config.from_object('config')
 
-# === Views ===
-@web.route('/') # Default landing page
+""" === Views === """
+
+@web.route('/')
 @web.route('/index')
 def landing():
     return render_template('index.html')
@@ -133,3 +141,5 @@ def signup():
 
 if __name__ == '__main__':
     web.run(debug=True,use_reloader=False)
+
+    print("We got here")

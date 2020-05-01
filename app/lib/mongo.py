@@ -2,7 +2,7 @@ import argparse
 import app.models as ce
 from mongoengine import register_connection, connect
 
-def connectToMongo(alias='db', name='crm-db-main'):
+def connectToMongo(alias='db', name='main'):
     """
     Sets-up mongoDB connection
     """
