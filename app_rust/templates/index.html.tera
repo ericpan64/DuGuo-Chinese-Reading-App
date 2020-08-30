@@ -1,0 +1,18 @@
+{% extends "template" %}
+{% block title %}Home{% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+<h1>中文读机</h1>
+<p>
+    The Chinese Reading Machine (中文读机) is a tool that allows you to learn how to read Chinese in a customizable and context-rich environment.
+
+</p>
+<h2>Getting Started</h2>
+<p>
+    All you need is a URL to a Chinese article you want to read. The 中文读机 will render the article body into an interactive playground to learn and track progress.
+    
+    Try the Sandbox mode to demo the application before making an account!
+    
+    Otherwise, create an account to save documents and learned vocabulary.
+</p>
+{% endblock content %}
