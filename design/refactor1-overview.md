@@ -3,20 +3,23 @@
 ## Tech Stack
 Web
 - Backend: Rust (Rocket)
-- Frontend: plain JS/HTML/CSS
+- Frontend: vanilla JS + Bootstrap 5
 - Database: mongoDB
 
-Web Routing
+## Web Routing
+
+No Login Required (Anon)
 - Main: /
 - Account signup: /register
-- Account view: /u/{username}
-- View saved vocab: /u/{username}/vocab
 - Upload document (anon): /upload
-- Upload document (user): /u/upload
-- View document: /d/{docId}
+- View other account dashboard: /{username}
+- View saved vocab: /{username}/vocab
 
-Hosting
-- Servers: Heroku/Github Pages
+Login Required
+- Edit User dashboard: /u/info
+- Edit saved vocab: /u/vocab
+- Upload document (user): /u/doc/upload
+- View document: /u/doc/{docId}
 
 ## Refactor Goals
 Deploy following functionality:
