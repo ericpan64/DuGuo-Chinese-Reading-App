@@ -1,34 +1,39 @@
 # Zhongwen CRM - refactor 1
 
-## Desired Tech Stack
+## Tech Stack
 Web
-- Backend: Python (Flask)
-- Frontend: plain JS/HTML/CSS
-    Database: mongoDB
+- Backend: Rust (Rocket)
+- Frontend: vanilla JS + Bootstrap 5
+- Database: mongoDB
 
-Web Routing
+## Web Routing
+
+No Login Required (Anon)
 - Main: /
 - Account signup: /register
-- Account view: /user/{username}
-- Upload document: /upload/{generatedDocId}
-- View document: /view/{docId}
-- View saved vocab: /vocab/{username}
+- Upload document (anon): /upload
+- View other account dashboard: /{username}
+- View saved vocab: /{username}/vocab
 
-Hosting
-- Servers: Heroku/Github Pages
+Login Required
+- Edit User dashboard: /u/info
+- Edit saved vocab: /u/vocab
+- Upload document (user): /u/doc/upload
+- View document: /u/doc/{docId}
 
-## Refactor 1 Goals
+## Refactor Goals
 Deploy following functionality:
 - Home page loads
 - User can upload document in temp session (no login required)
-    -- Saved to MongoDB database
     -- Gets flushed daily
-- User can login/create account to save uploaded documents
-- UI is passable
+- User can login/create account
+- User can upload documents that are linked to their account
 
-### Epics (high-level goal)
+### Epics (high-level goals)
 - Get I/O functional
+- Set-up project infrastructure
 
 ### User Stories (subset of Epics)
 - "What's this? Let me try it out!"
-- "This is cool -- I let me make an account!"
+- "This is cool -- let me make an account!"
+- "Hm, I can make an account and upload, but why isn't there any functionality?"

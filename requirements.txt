@@ -1,9 +1,0 @@
-Flask
-flask_wtf
-flask_login
-mongoengine
-bs4
-argparse
-flask-bcrypt
-nose
-stanfordcorenlp

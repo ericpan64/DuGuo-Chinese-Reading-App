@@ -1,3 +1,5 @@
 *.DS_Store
 *.pyc
 .idea/*
+app_rust/target
+app_rust/temp
