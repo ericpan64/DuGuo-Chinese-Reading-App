@@ -1,0 +1,48 @@
+{% extends "template" %}
+{% block title %} Login / Register {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+
+<div class="form-box">
+    <div class="button-box">
+        <div id="btn">
+
+        </div>
+        <button type="button" onclick="login()">Log In</button>
+        <button type="button" onclick="register()">Register</button>
+    </div>
+
+
+    <form action="/login" id="login" method="POST">
+        <input type="text" name="user" placeholder="Username" required>
+        <input type="text" name="password" placeholder="Password" required>
+        <button type="submit">Log In</button>
+    </form>
+
+    <form action="/register" id="register" method="POST">
+        <input type="text" name="user" placeholder="Username" required>
+        <input type="text" name="email" placeholder="Email" required>
+        <input type="text" name="password" placeholder="Password" required>
+        <button type="submit">Register</button>
+    </form>
+</div>
+<script>
+    let x = document.getElementById("login");
+    let y = document.getElementById("register");
+    let z = document.getElementById("btn");
+
+    // Slides between register and login forms
+    function register() {
+        x.style.left = "-400px";
+        y.style.left = "50px";
+        z.style.left = "110px";
+    }
+
+    function login() {
+        x.style.left = "400px";
+        y.style.left = "-50px";
+        z.style.left = "-110px";
+    }
+</script>
+
+{% endblock content %}

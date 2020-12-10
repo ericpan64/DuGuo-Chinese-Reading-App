@@ -3,7 +3,7 @@
 ## Tech Stack
 Web
 - Backend: Rust (Rocket)
-- Frontend: vanilla JS + Bootstrap 5
+- Frontend: Bootstrap 5. No JS yet
 - Database: mongoDB
 
 ## Web Routing
@@ -25,7 +25,6 @@ Login Required
 Deploy following functionality:
 - Home page loads
 - User can upload document in temp session (no login required)
-    -- Gets flushed daily
 - User can login/create account
 - User can upload documents that are linked to their account
 
