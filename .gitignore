@@ -1,5 +1,6 @@
 *.DS_Store
 *.pyc
 .idea/*
-app_rust/target
-app_rust/temp
+app/target
+app/src/config.rs
+app/Cargo.lock
