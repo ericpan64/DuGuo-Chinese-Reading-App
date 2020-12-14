@@ -1,0 +1,14 @@
+{% extends "template" %}
+{% block title %} Document Reader {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+
+<p>
+    {% if paragraph_html is undefined %}
+    Doucment not found, check the document id!
+    {% else %}
+    {{ paragraph_html }}
+    {% endif %}
+</p>
+
+{% endblock content %}
