@@ -11,8 +11,8 @@
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
-                <li><a href="login">Login / Register</a></li>
-                <li><a href="sandbox">Sandbox</a></li>
+                <li><a href="/login">Login / Register</a></li>
+                <li><a href="/sandbox">Sandbox</a></li>
             </ul>
         </nav>
         <div id="content">

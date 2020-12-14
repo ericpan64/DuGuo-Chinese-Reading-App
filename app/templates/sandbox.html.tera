@@ -4,9 +4,9 @@
 {% block content %}
 
 
-<p>Upload a .txt file here!</p>
+<p>Try-out the app by uploading some text!</p>
+<textarea name="text" form="upload" rows="20" cols="100">中文</textarea>
 <form action="/sandbox/upload" id="upload" method="POST">
-    <input type="file" name="file" accept=".txt" placeholder="Upload File" required>
     <button type="submit">Upload</button>
 </form>
 
