@@ -9,11 +9,19 @@
     
     <body>
         <nav>
+        {% if username is undefined %}
             <ul>
                 <li><a href="/">Home</a></li>
                 <li><a href="/login">Login / Register</a></li>
                 <li><a href="/sandbox">Sandbox</a></li>
             </ul>
+        {% else %}
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/{{username}}">Profile</a></li>
+                <li><a href="/api/logout">Logout</a></li>
+            </ul>
+        {% endif %}
         </nav>
         <div id="content">
             {% block content %}{% endblock content %}

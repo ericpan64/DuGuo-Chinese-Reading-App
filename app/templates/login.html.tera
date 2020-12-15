@@ -9,7 +9,9 @@
         <button type="button" onclick="login()">Log In</button>
         <button type="button" onclick="register()">Register</button>
     </div>
-
+    {% if username is defined %}
+    <h3>Currently logged-in as: {{username}}</h3>
+    {% endif %}
     <form action="/login" id="login" method="POST">
         <input type="text" name="username" placeholder="Username" required>
         <input type="text" name="password" placeholder="Password" required>
