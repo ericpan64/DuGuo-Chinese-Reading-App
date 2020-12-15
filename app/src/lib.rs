@@ -1,10 +1,6 @@
 mod config;
-use config::{
-    DATABASE_NAME,
-    USER_COLL_NAME,
-    SANDBOX_COLL_NAME,
-    str_to_hashed_string,
-};
+use config::{DB_HOSTNAME, DB_PORT, DATABASE_NAME, USER_COLL_NAME, SANDBOX_COLL_NAME}; // static vars
+use config::{str_to_hashed_string, generate_jwt, validate_jwt_and_get_username}; // functions
 use mongodb::{
     bson::{doc, Bson, document::Document, to_document},
     options::{ClientOptions, StreamAddress},
@@ -12,13 +8,16 @@ use mongodb::{
     error::Error,
 };
 use rocket::{
-    http::RawStr,
+    http::{RawStr, Cookie},
 };
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
+/* Static Vars */
+// Note: other static variables used are imported from config (which is private)
+pub static JWT_NAME: &str = "duguo-代币";
+
 /* Structs */
-// _ Database _
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     username: String,
@@ -132,8 +131,8 @@ pub fn init_mongodb() -> Result<Database, Error> {
     let options = ClientOptions::builder()
     .hosts(vec![
         StreamAddress {
-            hostname: "localhost".into(),
-            port: Some(27017),
+            hostname: DB_HOSTNAME.into(),
+            port: Some(DB_PORT),
         }
     ])
     .build();
@@ -144,7 +143,7 @@ pub fn init_mongodb() -> Result<Database, Error> {
 }
 
 /// Returns "" if UTF-8 error is encountered
-pub fn convert_rawStr_to_String(s: &RawStr) -> String {
+pub fn convert_rawstr_to_string(s: &RawStr) -> String {
     let res = match s.url_decode() {
         Ok(val) => val,
         Err(e) => {
@@ -165,24 +164,25 @@ pub fn get_sandbox_document(db: Database, doc_id: String) -> Option<String> {
     return res;
 }
 
-pub fn send_password_reset(email: String) -> bool {
-    /* TODO: add functionality to generate+send reset email */
-    /* Alternative email workflow. Send link */
-    // create reset token
-    // set expiration date
-    // send email with reset link
-    false
+pub fn generate_http_cookie(username: String, password: String) -> Cookie<'static> {
+    let jwt = match generate_jwt(username, password) {
+        Ok(token) => token,
+        Err(e) => {
+            println!("Error when generating jwt: {:?}", e);
+            String::new()
+        }
+    };
+    let mut cookie = Cookie::new(JWT_NAME, jwt);
+    cookie.set_http_only(true);
+    return cookie;
 }
 
-pub fn update_password(db: Database, user_to_check: User, new_pw: String) -> bool {
-    let coll = db.collection(USER_COLL_NAME);
-    let query_doc = to_document(&user_to_check).expect("Schema error, ya doofus!");
-    let updated_user = User { pw_hash: str_to_hashed_string(new_pw.as_str()), ..user_to_check };
-    let updated_doc = to_document(&updated_user).expect("Schema error :-/");
-    let res = match coll.update_one(query_doc, updated_doc, None) {
-        Ok(_) => true,
-        Err(_) => false
-    };
+pub fn get_username_from_cookie(db: Database, cookie_lookup: Option<&Cookie<'static>>) -> Option<String> {
+    let mut res = None;
+    if let Some(ref login_cookie) = cookie_lookup {
+        let jwt_to_check = login_cookie.value();
+        res = validate_jwt_and_get_username(db.clone(), jwt_to_check.to_string());
+    }
     return res;
 }
 
