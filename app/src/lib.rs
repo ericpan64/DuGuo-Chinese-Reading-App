@@ -1,4 +1,4 @@
-/// FYI: there is a private "config.rs" file where I define and implement the imports below
+/// FYI: there is a private "config.rs" file where I define and implement the imports below.
 /// All upper-case are static variables, and functions are also explicitly listed.
 /// For security reasons, they are kept private.
 mod config;
@@ -25,6 +25,7 @@ use uuid::Uuid;
 /* Static Vars */
 // Note: other static variables used are imported from config (which is private)
 pub static JWT_NAME: &str = "duguo-代币";
+static CEDICT_FILEPATH: &str = "static/cedict_ts.u8";
 
 /* Structs */
 #[derive(Serialize, Deserialize, Debug)]
@@ -56,11 +57,17 @@ struct CnEnDictEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+enum CnType {
+    Traditional,
+    Simplified
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocab {
     username: String,
-    doc_title: String,
+    from_doc_title: String,
     phrase: CnEnDictEntry,
-    context: String, // n surrounding phrases in both directions
+    cn_type: CnType,
 }
 
 #[derive(Debug)]
@@ -100,11 +107,7 @@ pub trait DatabaseItem {
 impl User {
     pub fn new(username: String, password: String, email: String) -> Self {
         let pw_hash = str_to_hashed_string(password.as_str());
-        let new_user = User {
-            username,
-            pw_hash,
-            email,
-        };
+        let new_user = User { username, pw_hash, email };
         return new_user;
     }
 }
@@ -152,10 +155,7 @@ impl DatabaseItem for User {
 impl SandboxDoc {
     pub fn new(body: String) -> Self {
         let doc_id = Uuid::new_v4().to_string();
-        let new_doc = SandboxDoc {
-            doc_id,
-            body,
-        };
+        let new_doc = SandboxDoc { doc_id, body };
         return new_doc;
     }
 }
@@ -165,17 +165,59 @@ impl DatabaseItem for SandboxDoc {
     fn primary_key(&self) -> String { return self.doc_id.clone(); }
 }
 
+impl UserDoc {
+    pub fn new(username: String, title: String, body: String) -> Self {
+        // TODO: consider using Uuid to for consistency and unique primary key?
+        let new_doc = UserDoc { username, title, body };
+        return new_doc;
+    }
+}
+
 impl DatabaseItem for UserDoc {
     fn collection_name(&self) -> &str { return USER_DOC_COLL_NAME; }
     fn primary_key(&self) -> String { 
         // TODO: technically this is a dual key (username+title), how to handle?
-        return self.title.clone(); 
+        return self.username.clone(); 
     }
 }
 
 impl DatabaseItem for CnEnDictEntry {
     fn collection_name(&self) -> &str { return CEDICT_COLL_NAME; }
     fn primary_key(&self) -> String { return self.trad.clone(); }
+}
+
+impl UserVocab {
+    pub fn new(db: Database, username: String, phrase: String, from_doc_title: String) -> Self {
+        // Lookup CEDICT entry in Database
+        // TODO: parse-out contextual surrounding from_doc_title
+        // TODO: lookup CEDICT to create the phrase
+
+        let mut cn_type = CnType::Traditional;
+        let coll = db.collection(CEDICT_COLL_NAME);
+        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in CEDICT";
+        // Try traditional first, then simplified
+        let query_doc = doc! { "trad": &phrase };
+        let phrase: CnEnDictEntry = match coll.find_one(query_doc, None).unwrap() {
+            Some(doc) => from_bson(Bson::Document(doc)).unwrap(),
+            None => {
+                let second_query = doc! { "simp": &phrase };
+                match coll.find_one(second_query, None).unwrap() {
+                    Some(doc) => {
+                        cn_type = CnType::Simplified;
+                        from_bson(Bson::Document(doc)).unwrap()
+                    },
+                    None => CnEnDictEntry {
+                        trad: String::from(LOOKUP_ERROR_MSG),
+                        simp: String::from(LOOKUP_ERROR_MSG),
+                        pinyin: String::from(LOOKUP_ERROR_MSG),
+                        def: String::from(LOOKUP_ERROR_MSG)
+                    }
+                }
+            }
+        };
+        let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
+        return new_vocab;
+    }
 }
 
 impl DatabaseItem for UserVocab {
@@ -202,7 +244,74 @@ pub fn init_mongodb() -> Result<Database, Error> {
     return Ok(db);
 }
 
-/// Returns "" if UTF-8 error is encountered
+pub fn load_cedict(db: Database) -> Result<(), Error> {
+    // Do not re-populate if it's already populated
+    let coll = db.collection(CEDICT_COLL_NAME);
+    let est_curr_size = coll.estimated_document_count(None).unwrap();
+    if est_curr_size >= 100_000 {
+        return Ok(());
+    }
+
+    // read from filepath
+    let cedict_file = std::fs::read_to_string(CEDICT_FILEPATH).unwrap();
+    // for each line, create object and upload to database
+    let mut line_count = 0;
+    for line in cedict_file.split("\n") {
+        // Skip starting comments
+        line_count += 1;
+        if line_count < 31 {
+            continue;
+        }
+        
+        // Otherwise, parse-out phrase and add to db
+        let mut first_space_idx = 0;
+        let mut open_bracket_idx = 0;
+        let mut close_bracket_idx = 0;
+
+        const EST_CAPACITY: usize = 100;
+
+        let mut trad = String::with_capacity(EST_CAPACITY);
+        let mut simp = String::with_capacity(EST_CAPACITY);
+        let mut pinyin = String::with_capacity(EST_CAPACITY);
+        let mut def = String::with_capacity(EST_CAPACITY);
+        let mut add_to: u8 = 0;
+        for (i, c) in line.chars().enumerate() {
+            if first_space_idx == 0 && c == ' ' {
+                first_space_idx = i;
+                add_to = 1;
+            } else if open_bracket_idx == 0 && c == '[' {
+                open_bracket_idx = i;
+                add_to = 2;
+            } else if close_bracket_idx == 0 && c == ']' {
+                close_bracket_idx = i;
+                add_to = 3;
+            }
+            match add_to {
+                0 => { trad += &c.to_string(); },
+                1 => { simp += &c.to_string(); },
+                2 => { pinyin += &c.to_string(); },
+                3 => { def += &c.to_string(); },
+                _ => { }
+            }
+        }
+        // clean-up the strings. Unfortunately all ~ O(n) (except pop)
+        simp = simp.split_whitespace().collect();
+        pinyin.remove(0);
+        def = String::from(&def[3..]);
+        def.pop(); // pops '\r'
+        def.pop(); // pops last '/'
+
+        // println!("first: {}, open: {}, close: {}", first_space_idx, open_bracket_idx, close_bracket_idx);
+        let new_entry = CnEnDictEntry { trad, simp, pinyin, def };
+        match new_entry.try_insert(db.clone()) {
+            Ok(_) => { }
+            Err(e) => { println!("Error adding phrase: {:?}", e); }
+        }
+    }
+    Ok(())
+}
+
+/// Returns String::new() if UTF-8 error is encountered
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
     let escaped_s = s.html_escape().into_owned();
     let res = match RawStr::from_str(&escaped_s).url_decode() {
@@ -216,8 +325,8 @@ pub fn convert_rawstr_to_string(s: &RawStr) -> String {
 }
 
 pub fn get_sandbox_document(db: Database, doc_id: String) -> Option<String> {
-    let query_doc = doc! { "doc_id": doc_id };
     let coll = db.collection(SANDBOX_COLL_NAME);
+    let query_doc = doc! { "doc_id": doc_id };
     let res = match coll.find_one(query_doc, None).unwrap() {
         Some(doc) => Some(doc.get("body").and_then(Bson::as_str).expect("No body was stored").to_string()),
         None => None
@@ -255,7 +364,7 @@ pub fn check_password(db: Database, username: String, pw_to_check: String) -> bo
         Some(document) => {
             let saved_hash = document.get("pw_hash").and_then(Bson::as_str).expect("No password was stored");
             saved_hash == hashed_pw
-        }
+        },
         None => false
     };
     return res;
@@ -267,7 +376,7 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
     let coll = db.collection(USER_DOC_COLL_NAME);
     let mut res = String::new();
     res += "<table>\n";
-    res += "<tr><th>Title</th><th>Preview</th></tr>\n";
+    res += format!("<tr><th>{}</th><th>{}</th></tr>\n", "Title", "Preview").as_str();
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
         Ok(cursor) => {
@@ -277,7 +386,7 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
                 let UserDoc { body, title, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
 
-                // from body, get first n characters
+                // from body, get first n characters as content preview
                 let n = 10;
                 let mut b = [0; 3];
                 let body_chars = body.chars();
@@ -293,9 +402,8 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 if body_chars.count() > preview_count {
                     content_preview += "...";
                 }
-                
-                let row = format!("<tr><td>{}</td><td>{}</td></tr>\n", title, content_preview);
-                res += &row;
+
+                res += format!("<tr><td>{}</td><td>{}</td></tr>\n", title, content_preview).as_str();
             }
         },
         Err(e) => {
@@ -310,7 +418,7 @@ pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
     let coll = db.collection(USER_VOCAB_COLL_NAME);
     let mut res = String::new();
     res += "<table>\n";
-    res += "<tr><th>Term</th><th>Saved From</th><th>Context</th></tr>\n";
+    res += format!("<tr><th>{}</th><th>{}</th></tr>\n", "Term", "Saved From").as_str();
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
         Ok(cursor) => {
@@ -318,11 +426,15 @@ pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
-                let UserVocab { doc_title, phrase, context, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
-                let CnEnDictEntry { trad, .. } = phrase;
+                let UserVocab { from_doc_title, phrase, cn_type, .. } = from_bson(Bson::Document(user_doc)).unwrap();
+                let CnEnDictEntry { trad, simp, .. } = phrase;
                 // TODO add user settings for traditional/simplified config. For now, default to traditional
                 // TODO convert doc_title to <a href=...></a> link
-                let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", &trad, &doc_title, &context);
+                let hanzi = match cn_type {
+                    CnType::Traditional => trad,
+                    CnType::Simplified => simp
+                };
+                let row = format!("<tr><td>{}</td><td>{}</td></tr>\n", &hanzi, &from_doc_title);
                 res += &row;
             }
         },
