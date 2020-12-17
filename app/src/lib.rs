@@ -1,3 +1,6 @@
+/// FYI: there is a private "config.rs" file where I define and implement the imports below
+/// All upper-case are static variables, and functions are also explicitly listed.
+/// For security reasons, they are kept private.
 mod config;
 use config::{
     DB_HOSTNAME, DB_PORT, DATABASE_NAME,
