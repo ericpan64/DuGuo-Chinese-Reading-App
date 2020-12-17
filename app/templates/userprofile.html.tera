@@ -1,0 +1,32 @@
+{% extends "template" %}
+{% block title %}Profile{% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+
+{% if username is undefined %}
+<p>
+    Profile not found
+</p>
+
+{% else %}
+<h1>{{ username }}</h1>
+
+    {% if logged_in_username is undefined %}
+        <p> Log-in to view documents + vocab! </p>
+    {% elif logged_in_username == username %}
+        {# Add Document Table #}
+        <div style="overflow-x:auto">
+            {# Add overflow-y css code #}
+            {{ doc_table | safe }}
+        </div>
+
+        {# Add Vocab Table #}
+        <div style="overflow-x:auto">
+            {# Add overflow-y css code #}
+            {{ vocab_table | safe }}
+        </div>
+    {% else %}
+        <p> Currently viewing other user. </p>
+    {% endif%}
+{% endif %}
+{% endblock content %}
