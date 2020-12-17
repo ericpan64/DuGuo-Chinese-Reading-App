@@ -18,7 +18,7 @@
         {% else %}
             <ul>
                 <li><a href="/">Home</a></li>
-                <li><a href="/{{username}}">Profile</a></li>
+                <li><a href="/u/{{username}}">Profile</a></li>
                 <li><a href="/api/logout">Logout</a></li>
             </ul>
         {% endif %}

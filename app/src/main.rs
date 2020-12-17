@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rocket::{
     request::Form,
     response::Redirect,
-    http::{RawStr, Cookies},
+    http::{RawStr, Cookie, Cookies},
     State,
 };
 use rocket_contrib::templates::Template;
@@ -49,7 +49,7 @@ fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
     TODO - Figure-out how to render interactive text
     */
     let mut context: HashMap<&str, &str> = HashMap::new();
-    // Note: var html will _eventually_ need to be html, though plaintext for now
+    // TODO: update get_sandbox_document to return an HtmlString (it's just plaintext for now)
     let doc_id = convert_rawstr_to_string(doc_id);
     let html = match get_sandbox_document(db.clone(), doc_id) {
         Some(text) => {text},
@@ -59,6 +59,43 @@ fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
         context.insert("paragraph_html", &html);
     }
     return Template::render("reader", context);
+}
+
+#[get("/u/<raw_username>")]
+fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) -> Template {
+    let mut context: HashMap<&str, String> = HashMap::new();
+    let username = convert_rawstr_to_string(raw_username);
+    match check_if_username_exists(db.clone(), &username) {
+        true => { 
+            context.insert("username", username.clone()); 
+        },
+        false => { }
+    }
+    // lookup username in db
+    // get logged-in username from JWT
+    let cookie_lookup = cookies.get(JWT_NAME);
+    match get_username_from_cookie(db.clone(), cookie_lookup) {
+        Some(s) => { 
+            context.insert("logged_in_username", s.clone()); 
+            if &s == &username {
+                let HtmlString(doc_html) = render_document_table(db.clone(), &username);
+                let HtmlString(vocab_html) = render_vocab_table(db.clone(), &username);
+            
+                context.insert("doc_table", doc_html);
+                context.insert("vocab_table", vocab_html);           
+            }
+        },
+        None =>  { }
+    }
+    return Template::render("userprofile", context);
+}
+
+#[get("/api/logout")]
+fn logout_user(mut cookies: Cookies) -> Redirect {
+    let mut removal_cookie = Cookie::named(JWT_NAME);
+    removal_cookie.set_path("/");
+    cookies.remove(removal_cookie);
+    return Redirect::to(uri!(index));
 }
 
 // Note: these need to be here since they use Rocket macros
@@ -146,7 +183,8 @@ fn main() -> Result<(), mongodb::error::Error>{
         .manage(db)
         .mount("/", routes![index, 
             login, login_form, register_form, 
-            sandbox, sandbox_upload, sandbox_view_doc])
+            sandbox, sandbox_upload, sandbox_view_doc,
+            user_profile, logout_user])
         .launch();
 
     return Ok(());

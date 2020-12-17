@@ -6,14 +6,14 @@
 {% if username is undefined %}
 <h1>读国</h1>
 {% else %}
-<h1>读国欢迎您, {{username}} </h1>
+<h1>你好, {{username}} </h1>
 {% endif %}
 <p>
     DuGuo (读国) is a tool that allows you to learn how to read Chinese in a customizable and context-rich environment.
 </p>
 <h2>Getting Started</h2>
 <p>
-    All you need is the text of a Chinese article you want to read. DuGuo will render the article body into an interactive playground to learn and track progress.
+    All you need is to copy & paste the Chinese text you want to read. DuGuo will render the article body into an interactive playground to learn and track progress.
     
     Try the Sandbox mode to demo the application, or make an account to save files!
     
@@ -22,5 +22,7 @@
 <h2>Acknowledgements</h2>
 <p>
     Thank you to Martin Kess for providing the initial implementation (中文读机 from the OMSCS Education Technology course). It provided a very well-scoped architecture and strong foundation to build off-of.
+
+    The lookup functionality uses the CC-CEDICT which is generously shared on a Creative Commons license.
 </p>
 {% endblock content %}
