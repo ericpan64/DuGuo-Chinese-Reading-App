@@ -20,11 +20,26 @@
             {{ doc_table | safe }}
         </div>
 
+        <textarea name="body" form="user-doc-form" rows="10" cols="50">中文</textarea>
+        <form action="/api/upload" id="user-doc-form" method="POST">
+            <input type="text" name="title" placeholder="Document Title" required>
+            <button type="submit">Upload Document</button>
+        </form>
+
+
         {# Add Vocab Table #}
         <div style="overflow-x:auto">
             {# Add overflow-y css code #}
             {{ vocab_table | safe }}
         </div>
+
+
+        <h3>This form is a placeholder, until this is automagically in popups</h3>
+        <form action="/api/vocab" id="user-vocab-form" method="POST">
+            <input type="text" name="phrase" placeholder="Phrase" required>
+            <input type="text" name="from_doc_title" placeholder="From Document" required>
+            <button type="submit">Upload Vocab</button>
+        </form>
     {% else %}
         <p> Currently viewing other user. </p>
     {% endif%}

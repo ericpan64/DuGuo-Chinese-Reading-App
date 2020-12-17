@@ -118,7 +118,65 @@ struct TextForm<'f> {
     text: &'f RawStr,
 }
 
+#[derive(FromForm)]
+struct UserDocumentForm<'f> {
+    title: &'f RawStr,
+    body: &'f RawStr,
+}
+
+#[derive(FromForm)]
+struct UserVocabForm<'f> {
+    phrase: &'f RawStr,
+    from_doc_title: &'f RawStr,
+}
+
 /* POST */
+#[post("/api/upload", data="<user_doc>")]
+fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDocumentForm>) -> Redirect {
+    let UserDocumentForm { title, body } = user_doc.into_inner();
+    let title = convert_rawstr_to_string(title);
+    let body = convert_rawstr_to_string(body);
+
+    let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
+    let res_redirect = match username_from_cookie {
+        Some(username) => { 
+            let new_doc = UserDoc::new(username, title, body);
+            match new_doc.try_insert(db.clone()) {
+                Ok(username) => {Redirect::to(uri!(user_profile: username))},
+                Err(_) => { Redirect::to(uri!(index)) } 
+            }
+        },
+        None => {
+            Redirect::to(uri!(index))
+        }
+    };
+    return res_redirect;
+}
+
+#[post("/api/vocab", data="<user_vocab>")]
+fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<UserVocabForm>) -> Redirect {
+    // TODO convert this to be 
+    let UserVocabForm { phrase, from_doc_title } = user_vocab.into_inner();
+    let phrase = convert_rawstr_to_string(phrase);
+    let from_doc_title = convert_rawstr_to_string(from_doc_title);
+
+    let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
+    let res_redirect = match username_from_cookie {
+        Some(username) => { 
+            let new_doc = UserVocab::new(db.clone(), username, phrase, from_doc_title);
+            match new_doc.try_insert(db.clone()) {
+                Ok(username) => {Redirect::to(uri!(user_profile: username))},
+                Err(_) => { Redirect::to(uri!(index)) } 
+            }
+        },
+        None => {
+            Redirect::to(uri!(index))
+        }
+    };
+    return res_redirect;
+
+}
+
 #[post("/login", data = "<user_input>")]
 fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
     /*
@@ -138,6 +196,7 @@ fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLo
         },
         false => {
             // (record login attempt in database)
+            // TODO: remove message context, figure-out better way to display info
             let password_incorrect_msg = format!("Incorrect password for {}. N incorrect attempts remaining for today", username);
             context.insert("message", password_incorrect_msg);
             Redirect::to(uri!(login))
@@ -146,6 +205,7 @@ fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLo
     return res_redirect;
 }
 
+// TODO: Change message handling to something neater, then update this to redirect instead of render
 #[post("/login-post", data = "<user_input>")]
 fn register_form(db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Template {
     let UserRegisterForm { username, email, password } = user_input.into_inner();
@@ -177,14 +237,15 @@ fn sandbox_upload(db: State<Database>, user_text: Form<TextForm<'_>>) -> Redirec
 /* Server Startup */
 fn main() -> Result<(), mongodb::error::Error>{
     let db = init_mongodb()?;
-
+    load_cedict(db.clone())?; // TODO: test speedup with specified capacity
     rocket::ignite()
         .attach(Template::fairing())
         .manage(db)
         .mount("/", routes![index, 
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc,
-            user_profile, logout_user])
+            user_profile, logout_user, 
+            user_doc_upload, user_vocab_upload])
         .launch();
 
     return Ok(());
