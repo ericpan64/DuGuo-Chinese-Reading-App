@@ -313,14 +313,15 @@ pub fn load_cedict(db: Database) -> Result<(), Error> {
 
 /// Returns String::new() if UTF-8 error is encountered
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
-    let escaped_s = s.html_escape().into_owned();
-    let res = match RawStr::from_str(&escaped_s).url_decode() {
+    // // TODO update this to _only_ escape special chars: <, >, \, ., and NOT chinese characters!
+    let mut res = match s.url_decode() {
         Ok(val) => val,
         Err(e) => {
             println!("UTF-8 Error: {:?}", e);
             String::new()
         }
     };
+    res = res.replace(&['<', '>', '(', ')', ',', '\"', '.', ';', ':', '\''][..], "");
     return res;
 }
 
