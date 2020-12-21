@@ -4,10 +4,12 @@
 mod config;
 use config::{
     DB_HOSTNAME, DB_PORT, DATABASE_NAME,
-    USER_COLL_NAME, SANDBOX_COLL_NAME, CEDICT_COLL_NAME,
-    USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME,
+    USER_COLL_NAME, SANDBOX_COLL_NAME, TOKENIZER_PORT,
+    USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, CEDICT_COLL_NAME,
     functions::{
-        str_to_hashed_string, generate_jwt, validate_jwt_and_get_username,
+        str_to_hashed_string, 
+        generate_jwt, 
+        validate_jwt_and_get_username,
     }
 };
 use mongodb::{
@@ -19,13 +21,14 @@ use mongodb::{
 use rocket::{
     http::{RawStr, Cookie},
 };
+use std::io::prelude::*;
+use std::net::TcpStream;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 /* Static Vars */
 // Note: other static variables used are imported from config (which is private)
 pub static JWT_NAME: &str = "duguo-代币";
-static CEDICT_FILEPATH: &str = "static/cedict_ts.u8";
 
 /* Structs */
 #[derive(Serialize, Deserialize, Debug)]
@@ -52,7 +55,8 @@ pub struct UserDoc {
 struct CnEnDictEntry {
     trad: String,
     simp: String,
-    pinyin: String,
+    pinyin_raw: String,
+    pinyin_formatted: String,
     def: String,    
 }
 
@@ -181,6 +185,30 @@ impl DatabaseItem for UserDoc {
     }
 }
 
+impl CnEnDictEntry {
+    pub fn as_html(&self, cn_type: CnType) -> HtmlString {
+        // TODO: add <span> with bootstrap popover tags
+        let mut res = String::new();
+        res += "<table style=\"display: inline-table;\">";
+        let mut pinyin_td = String::new();
+        for py in self.pinyin_formatted.split(" ") {
+            pinyin_td += format!("<td>{}</td>", py).as_str();
+        }
+        res += format!("<tr>{}</tr>", pinyin_td).as_str();
+        let mut phrase_td = String::new();
+        let phrase = match cn_type {
+            CnType::Traditional => &self.trad,
+            CnType::Simplified => &self.simp,
+        };
+        for c in phrase.chars() {
+            phrase_td += format!("<td>{}</td>", c).as_str();
+        }
+        res += format!("<tr>{}</tr>", phrase_td).as_str();
+        res += "</table>";
+        return HtmlString(res);
+    }
+}
+
 impl DatabaseItem for CnEnDictEntry {
     fn collection_name(&self) -> &str { return CEDICT_COLL_NAME; }
     fn primary_key(&self) -> String { return self.trad.clone(); }
@@ -209,7 +237,8 @@ impl UserVocab {
                     None => CnEnDictEntry {
                         trad: String::from(LOOKUP_ERROR_MSG),
                         simp: String::from(LOOKUP_ERROR_MSG),
-                        pinyin: String::from(LOOKUP_ERROR_MSG),
+                        pinyin_raw: String::from(LOOKUP_ERROR_MSG),
+                        pinyin_formatted: String::from(LOOKUP_ERROR_MSG),
                         def: String::from(LOOKUP_ERROR_MSG)
                     }
                 }
@@ -217,28 +246,6 @@ impl UserVocab {
         };
         let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
         return new_vocab;
-    }
-
-    pub fn as_html(&self) -> HtmlString {
-        let mut res = String::new();
-        // TODO: add <span> with bootstrap popover tags
-
-        res += "<table>";
-        // TODO: implement this method
-        // add each pinyin as a table header
-        // add each char as a td item
-
-        // match self.cn_type {
-        //     CnType::Traditional => {
-
-        //     },
-        //     CnType::Simplified => {
-        //         format!("<table><th")
-        //     }
-        // };
-
-        res += "</table>";
-        return HtmlString(res);
     }
 }
 
@@ -248,6 +255,10 @@ impl DatabaseItem for UserVocab {
         // TODO: this is a dual key of username and CnEnDictEntry.trad... how to handle?
         return self.username.clone();
     }
+}
+
+impl HtmlString {
+    pub fn to_string(&self) -> String { return self.0.clone(); }
 }
 
 /* Public Functions */
@@ -267,7 +278,6 @@ pub fn connect_to_mongodb() -> Result<Database, Error> {
 
 /// Returns String::new() if UTF-8 error is encountered
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
-    // // TODO update this to _only_ escape special chars: <, >, \, ., and NOT chinese characters!
     let mut res = match s.url_decode() {
         Ok(val) => val,
         Err(e) => {
@@ -299,6 +309,7 @@ pub fn generate_http_cookie(username: String, password: String) -> Cookie<'stati
     };
     let mut cookie = Cookie::new(JWT_NAME, jwt);
     cookie.set_http_only(true);
+    cookie.set_path("/");
     return cookie;
 }
 
@@ -325,16 +336,32 @@ pub fn check_password(db: Database, username: String, pw_to_check: String) -> bo
     return res;
 }
 
-pub fn convert_string_to_tokenzied_html(db: Database, s: String) -> HtmlString {
-    // Connect to Tokenizer
+pub fn convert_string_to_tokenized_html(db: Database, s: String) -> HtmlString {
+    let tokenized_string = tokenize_string(s).expect("Tokenizer connection error");
+    let coll = db.collection(CEDICT_COLL_NAME);
 
-    // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
-    //  If operation fails, then return String
-
-    // Convert to HTML
-    
-    // placeholder
-    return HtmlString(String::new());
+    let mut res = String::new();
+    for phrase in tokenized_string.split(",") {
+        // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
+        let trad_query = coll.find_one(doc! { "trad": &phrase }, None).unwrap();
+        let simp_query = coll.find_one(doc! { "simp": &phrase }, None).unwrap();
+        if trad_query == None && simp_query == None {
+            let phrase_html = generate_phrase_without_pinyin_html(phrase).to_string();
+            res += phrase_html.as_str();
+        } else {
+            let mut cn_type = CnType::Traditional;
+            let cedict_doc = match trad_query {
+                Some(doc) => doc,
+                None => {
+                    cn_type = CnType::Simplified;
+                    simp_query.unwrap()
+                },
+            };
+            let entry: CnEnDictEntry = from_bson(Bson::Document(cedict_doc)).unwrap();
+            res += entry.as_html(cn_type).to_string().as_str(); 
+        }
+    }
+    return HtmlString(res);
 }
 
 
@@ -430,6 +457,31 @@ fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
         }
     }
     return Ok(());
+}
+
+fn tokenize_string(s: String) -> std::io::Result<String> {
+    let mut stream = TcpStream::connect(format!("{}:{}",DB_HOSTNAME, TOKENIZER_PORT))?;
+    stream.write(s.as_bytes())?;
+    let n_bytes = s.as_bytes().len();
+    let mut tokenized_bytes = vec![0; n_bytes * 2]; // max size includes original 'n_bytes' + at most 'n_bytes' commas
+    stream.read(&mut tokenized_bytes)?;
+
+    let mut res = String::from_utf8(tokenized_bytes).unwrap();
+    res = res.trim_matches(char::from(0)).to_string(); // remove training '0' chars
+    return Ok(res);
+}
+
+fn generate_phrase_without_pinyin_html(phrase: &str) -> HtmlString {
+    let mut res = String::new();
+    res += "<table style=\"display: inline-table;\">";
+    res += "<tr></tr>"; // No pinyin found
+    let mut phrase_td = String::new();
+    for c in phrase.chars() {
+        phrase_td += format!("<td>{}</td>", c).as_str();
+    }
+    res += format!("<tr>{}</tr>", phrase_td).as_str();
+    res += "</table>";
+    return HtmlString(res);
 }
 
 // TODO: change this to generic function (check if field exists)
