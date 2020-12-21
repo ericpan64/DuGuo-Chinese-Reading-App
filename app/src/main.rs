@@ -236,8 +236,8 @@ fn sandbox_upload(db: State<Database>, user_text: Form<TextForm<'_>>) -> Redirec
 
 /* Server Startup */
 fn main() -> Result<(), mongodb::error::Error>{
-    let db = init_mongodb()?;
-    load_cedict(db.clone())?; // TODO: test speedup with specified capacity
+    let db = connect_to_mongodb()?;
+    
     rocket::ignite()
         .attach(Template::fairing())
         .manage(db)
