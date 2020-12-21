@@ -218,6 +218,28 @@ impl UserVocab {
         let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
         return new_vocab;
     }
+
+    pub fn as_html(&self) -> HtmlString {
+        let mut res = String::new();
+        // TODO: add <span> with bootstrap popover tags
+
+        res += "<table>";
+        // TODO: implement this method
+        // add each pinyin as a table header
+        // add each char as a td item
+
+        // match self.cn_type {
+        //     CnType::Traditional => {
+
+        //     },
+        //     CnType::Simplified => {
+        //         format!("<table><th")
+        //     }
+        // };
+
+        res += "</table>";
+        return HtmlString(res);
+    }
 }
 
 impl DatabaseItem for UserVocab {
@@ -229,7 +251,7 @@ impl DatabaseItem for UserVocab {
 }
 
 /* Public Functions */
-pub fn init_mongodb() -> Result<Database, Error> {
+pub fn connect_to_mongodb() -> Result<Database, Error> {
     let options = ClientOptions::builder()
     .hosts(vec![
         StreamAddress {
@@ -238,77 +260,9 @@ pub fn init_mongodb() -> Result<Database, Error> {
         }
     ])
     .build();
-
     let client = Client::with_options(options)?;
     let db: Database = client.database(DATABASE_NAME);
     return Ok(db);
-}
-
-pub fn load_cedict(db: Database) -> Result<(), Error> {
-    // Do not re-populate if it's already populated
-    let coll = db.collection(CEDICT_COLL_NAME);
-    let est_curr_size = coll.estimated_document_count(None).unwrap();
-    if est_curr_size >= 100_000 {
-        return Ok(());
-    }
-
-    // read from filepath
-    let cedict_file = std::fs::read_to_string(CEDICT_FILEPATH).unwrap();
-    // for each line, create object and upload to database
-    let mut line_count = 0;
-    for line in cedict_file.split("\n") {
-        // Skip starting comments
-        line_count += 1;
-        if line_count < 31 {
-            continue;
-        }
-        
-        // Otherwise, parse-out phrase and add to db
-        let mut first_space_idx = 0;
-        let mut open_bracket_idx = 0;
-        let mut close_bracket_idx = 0;
-
-        const EST_CAPACITY: usize = 100;
-
-        let mut trad = String::with_capacity(EST_CAPACITY);
-        let mut simp = String::with_capacity(EST_CAPACITY);
-        let mut pinyin = String::with_capacity(EST_CAPACITY);
-        let mut def = String::with_capacity(EST_CAPACITY);
-        let mut add_to: u8 = 0;
-        for (i, c) in line.chars().enumerate() {
-            if first_space_idx == 0 && c == ' ' {
-                first_space_idx = i;
-                add_to = 1;
-            } else if open_bracket_idx == 0 && c == '[' {
-                open_bracket_idx = i;
-                add_to = 2;
-            } else if close_bracket_idx == 0 && c == ']' {
-                close_bracket_idx = i;
-                add_to = 3;
-            }
-            match add_to {
-                0 => { trad += &c.to_string(); },
-                1 => { simp += &c.to_string(); },
-                2 => { pinyin += &c.to_string(); },
-                3 => { def += &c.to_string(); },
-                _ => { }
-            }
-        }
-        // clean-up the strings. Unfortunately all ~ O(n) (except pop)
-        simp = simp.split_whitespace().collect();
-        pinyin.remove(0);
-        def = String::from(&def[3..]);
-        def.pop(); // pops '\r'
-        def.pop(); // pops last '/'
-
-        // println!("first: {}, open: {}, close: {}", first_space_idx, open_bracket_idx, close_bracket_idx);
-        let new_entry = CnEnDictEntry { trad, simp, pinyin, def };
-        match new_entry.try_insert(db.clone()) {
-            Ok(_) => { }
-            Err(e) => { println!("Error adding phrase: {:?}", e); }
-        }
-    }
-    Ok(())
 }
 
 /// Returns String::new() if UTF-8 error is encountered
@@ -369,6 +323,18 @@ pub fn check_password(db: Database, username: String, pw_to_check: String) -> bo
         None => false
     };
     return res;
+}
+
+pub fn convert_string_to_tokenzied_html(db: Database, s: String) -> HtmlString {
+    // Connect to Tokenizer
+
+    // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
+    //  If operation fails, then return String
+
+    // Convert to HTML
+    
+    // placeholder
+    return HtmlString(String::new());
 }
 
 
@@ -447,6 +413,7 @@ pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
     return HtmlString(res);
 }
 
+// TODO: change this to generic function (check if field exists)
 pub fn check_if_username_exists(db: Database, username: &str) -> bool {
     let coll = db.collection(USER_COLL_NAME);
     let username_search = coll.find_one(doc! { "username": username }, None).unwrap();
@@ -465,6 +432,7 @@ fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
     return Ok(());
 }
 
+// TODO: change this to generic function (check if field exists)
 fn check_if_email_exists(db: Database, email: &str) -> bool {
     let coll = db.collection(USER_COLL_NAME);
     let email_search = coll.find_one(doc! { "email": email }, None).unwrap();
