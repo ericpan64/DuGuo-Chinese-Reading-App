@@ -24,6 +24,8 @@
         <input type="text" name="password" placeholder="Password" required>
         <button type="submit">Register</button>
     </form>
+
+    <p>Note - the following characters are not allowed: '<', '>', '(', ')', ',', '\"', '.', ';', ':', '\''</p>
 </div>
 <script>
     let message = "{{ message | default(value=0)}}";
