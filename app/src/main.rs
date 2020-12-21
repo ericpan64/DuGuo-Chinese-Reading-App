@@ -45,17 +45,13 @@ fn sandbox() -> Template {
 
 #[get("/sandbox/<doc_id>")]
 fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
-    /*
-    TODO - Figure-out how to render interactive text
-    */
     let mut context: HashMap<&str, &str> = HashMap::new();
-    // TODO: update get_sandbox_document to return an HtmlString (it's just plaintext for now)
     let doc_id = convert_rawstr_to_string(doc_id);
     let html = match get_sandbox_document(db.clone(), doc_id) {
-        Some(text) => {text},
+        Some(text) => { convert_string_to_tokenized_html(db.clone(), text).to_string() },
         None => String::new()
     };
-    if html != "" {
+    if &html != "" {
         context.insert("paragraph_html", &html);
     }
     return Template::render("reader", context);
@@ -71,8 +67,7 @@ fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) ->
         },
         false => { }
     }
-    // lookup username in db
-    // get logged-in username from JWT
+    // Compare username with logged-in username from JWT
     let cookie_lookup = cookies.get(JWT_NAME);
     match get_username_from_cookie(db.clone(), cookie_lookup) {
         Some(s) => { 
@@ -98,7 +93,7 @@ fn logout_user(mut cookies: Cookies) -> Redirect {
     return Redirect::to(uri!(index));
 }
 
-// Note: these need to be here since they use Rocket macros
+// Note: these need to be defined here since they use Rocket macros
 /* POST Forms */
 #[derive(FromForm)]
 struct UserLoginForm<'f> {
@@ -155,7 +150,6 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDoc
 
 #[post("/api/vocab", data="<user_vocab>")]
 fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<UserVocabForm>) -> Redirect {
-    // TODO convert this to be 
     let UserVocabForm { phrase, from_doc_title } = user_vocab.into_inner();
     let phrase = convert_rawstr_to_string(phrase);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
@@ -179,9 +173,6 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<Use
 
 #[post("/login", data = "<user_input>")]
 fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
-    /*
-    TODO - in comments
-    */
     let UserLoginForm { username, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
@@ -206,19 +197,24 @@ fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLo
 }
 
 // TODO: Change message handling to something neater, then update this to redirect instead of render
-#[post("/login-post", data = "<user_input>")]
-fn register_form(db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Template {
+#[post("/api/register", data = "<user_input>")]
+fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Redirect {
     let UserRegisterForm { username, email, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
     let email = convert_rawstr_to_string(email);
 
-    let new_user = User::new(username, password, email);
-    let message = new_user.try_insert(db.clone()).unwrap();
-
-    let mut context: HashMap<&str, &str> = HashMap::new();
-    context.insert("message", message.as_str());
-    return Template::render("login", context);
+    let new_user = User::new(username.clone(), password.clone(), email);
+    // TODO: figure-out way to handle registration error cases
+    let res_redirect = match new_user.try_insert(db.clone()) {
+        Ok(_) => {
+            let new_cookie = generate_http_cookie(username, password);
+            cookies.add(new_cookie);
+            Redirect::to(uri!(index))
+        },
+        Err(_) => { Redirect::to(uri!(login)) }
+    };
+    return res_redirect;
 }
 
 #[post("/sandbox/upload", data = "<user_text>")]

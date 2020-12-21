@@ -18,7 +18,7 @@
         <button type="submit">Log In</button>
     </form>
 
-    <form action="/login-post" id="register" method="POST">
+    <form action="/api/register" id="register" method="POST">
         <input type="text" name="username" placeholder="Username" required>
         <input type="text" name="email" placeholder="Email" required>
         <input type="text" name="password" placeholder="Password" required>

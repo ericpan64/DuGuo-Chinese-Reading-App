@@ -7,7 +7,7 @@
     {% if paragraph_html is undefined %}
         Document not found, check the document id!
     {% else %}
-    {{ paragraph_html }}
+    {{ paragraph_html | safe }}
     {% endif %}
 </p>
 
