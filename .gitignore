@@ -2,5 +2,6 @@
 *.pyc
 .idea/*
 app/target
+app/temp
 app/src/config.rs
-app/Cargo.lock
+data_services/config.py
