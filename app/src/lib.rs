@@ -60,7 +60,7 @@ struct CnEnDictEntry {
     def: String,    
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 enum CnType {
     Traditional,
     Simplified
@@ -71,6 +71,7 @@ pub struct UserVocab {
     username: String,
     from_doc_title: String,
     phrase: CnEnDictEntry,
+    phrase_string: String,
     cn_type: CnType,
 }
 
@@ -186,15 +187,15 @@ impl UserDoc {
         return doc_body;
     }
 
-    // pub fn try_delete(db: Database, username: &str, title: &str) -> bool {
-    //     let coll = db.collection(USER_DOC_COLL_NAME);
-    //     let query_doc = doc! { "username": username, "title": title }; 
-    //     let res = match coll.delete_one(query_doc, None).unwrap() {
-    //         Some(delete_res) => delete_res.deleted_count == 1,
-    //         None => false,
-    //     };
-    //     return res;
-    // }
+    pub fn try_delete(db: Database, username: &str, title: &str) -> bool {
+        let coll = db.collection(USER_DOC_COLL_NAME);
+        let query_doc = doc! { "username": username, "title": title }; 
+        let res = match coll.delete_one(query_doc, None) {
+            Ok(delete_res) => delete_res.deleted_count == 1,
+            Err(_) => false,
+        };
+        return res;
+    }
     
     pub fn update_title(&mut self, db: Database, new_title: String) -> bool {
         let coll = db.collection(self.collection_name());
@@ -257,6 +258,32 @@ impl CnEnDictEntry {
         res += "</table>";
         return HtmlString(res);
     }
+
+    pub fn lookup_phrase(db: Database, phrase: String, cn_type: CnType) -> Option<Self> {
+        let coll = db.collection(CEDICT_COLL_NAME);
+        // Try traditional first, then simplified
+        let query_doc = match cn_type {
+            CnType::Traditional => doc! { "trad": &phrase },
+            CnType::Simplified => doc! { "simp": &phrase }
+        };
+        let phrase: Option<Self> = match coll.find_one(query_doc, None).unwrap() {
+            Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
+            None => None,
+        };
+        return phrase;
+    }
+
+    pub fn generate_empty_phrase() -> Self {
+        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in CEDICT";
+        let res = CnEnDictEntry {
+            trad: String::from(LOOKUP_ERROR_MSG),
+            simp: String::from(LOOKUP_ERROR_MSG),
+            pinyin_raw: String::from(LOOKUP_ERROR_MSG),
+            pinyin_formatted: String::from(LOOKUP_ERROR_MSG),
+            def: String::from(LOOKUP_ERROR_MSG)
+        };
+        return res;
+    }
 }
 
 impl DatabaseItem for CnEnDictEntry {
@@ -270,39 +297,41 @@ impl UserVocab {
         // TODO: parse-out contextual surrounding from_doc_title
         // TODO: lookup CEDICT to create the phrase
 
-        let mut cn_type = CnType::Traditional;
-        let coll = db.collection(CEDICT_COLL_NAME);
-        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in CEDICT";
         // Try traditional first, then simplified
-        let query_doc = doc! { "trad": &phrase };
-        let phrase: CnEnDictEntry = match coll.find_one(query_doc, None).unwrap() {
-            Some(doc) => from_bson(Bson::Document(doc)).unwrap(),
+        let mut cn_type = CnType::Traditional;
+        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), phrase.clone(), cn_type.clone()) {
+            Some(res) => res,
             None => {
-                let second_query = doc! { "simp": &phrase };
-                match coll.find_one(second_query, None).unwrap() {
-                    Some(doc) => {
-                        cn_type = CnType::Simplified;
-                        from_bson(Bson::Document(doc)).unwrap()
-                    },
-                    None => CnEnDictEntry {
-                        trad: String::from(LOOKUP_ERROR_MSG),
-                        simp: String::from(LOOKUP_ERROR_MSG),
-                        pinyin_raw: String::from(LOOKUP_ERROR_MSG),
-                        pinyin_formatted: String::from(LOOKUP_ERROR_MSG),
-                        def: String::from(LOOKUP_ERROR_MSG)
-                    }
+                cn_type = CnType::Simplified;
+                match CnEnDictEntry::lookup_phrase(db.clone(), phrase.clone(), cn_type.clone()) {
+                    Some(res) => res,
+                    None => CnEnDictEntry::generate_empty_phrase()
                 }
             }
         };
-        let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
+        let phrase_string = match cn_type {
+            CnType::Traditional => String::from(&phrase.trad),
+            CnType::Simplified => String::from(&phrase.simp),
+        };
+        let new_vocab = UserVocab { username, from_doc_title, phrase, phrase_string, cn_type };
         return new_vocab;
+    }
+
+    pub fn try_delete(db: Database, username: String, phrase: String) -> bool {
+        let coll = db.collection(USER_VOCAB_COLL_NAME);
+        let query_doc = doc! { "username": username, "phrase_string": phrase }; 
+        let res = match coll.delete_one(query_doc, None) {
+            Ok(delete_res) => delete_res.deleted_count == 1,
+            Err(_) => false,
+        };
+        return res;
     }
 }
 
 impl DatabaseItem for UserVocab {
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> String {
-        // TODO: this is a dual key of username and CnEnDictEntry.trad... how to handle?
+        // TODO: this is a dual key of username and phrase_string... how to handle?
         return self.username.clone();
     }
 }
@@ -430,6 +459,8 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
                 let UserDoc { body, title, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
 
+                let delete_button = format!("<a href=\"/api/delete-doc/{}\">X</a>", &title);
+
                 let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
 
                 // from body, get first n characters as content preview
@@ -449,7 +480,9 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                     content_preview += "...";
                 }
 
-                res += format!("<tr><td>{}</td><td>{}</td></tr>\n", title, content_preview).as_str();
+
+
+                res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
             }
         },
         Err(e) => {
@@ -480,7 +513,8 @@ pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
                     CnType::Traditional => trad,
                     CnType::Simplified => simp
                 };
-                let row = format!("<tr><td>{}</td><td>{}</td></tr>\n", &hanzi, &from_doc_title);
+                let delete_button = format!("<a href=\"/api/delete-vocab/{}\">X</a>", &hanzi);
+                let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", &hanzi, &from_doc_title, &delete_button);
                 res += &row;
             }
         },
