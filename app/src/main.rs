@@ -124,6 +124,22 @@ fn logout_user(mut cookies: Cookies) -> Redirect {
     return Redirect::to(uri!(index));
 }
 
+#[get("/api/delete-doc/<doc_title>")]
+fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Redirect {
+    let username = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)).unwrap();
+    let title = convert_rawstr_to_string(doc_title);
+    UserDoc::try_delete(db.clone(), &username, &title);
+    return Redirect::to(uri!(user_profile: username));
+}
+
+#[get("/api/delete-vocab/<vocab_phrase>")]
+fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &RawStr) -> Redirect {
+    let username = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)).unwrap();
+    let phrase = convert_rawstr_to_string(vocab_phrase);
+    UserVocab::try_delete(db.clone(), username.clone(), phrase);
+    return Redirect::to(uri!(user_profile: username));
+}
+
 // Note: these need to be defined here since they use Rocket macros
 /* POST Forms */
 #[derive(FromForm)]
@@ -272,7 +288,8 @@ fn main() -> Result<(), mongodb::error::Error>{
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc,
             user_profile, logout_user, 
-            user_doc_upload, user_vocab_upload, user_view_doc])
+            user_doc_upload, user_vocab_upload, user_view_doc,
+            delete_user_doc, delete_user_vocab])
         .launch();
 
     return Ok(());
