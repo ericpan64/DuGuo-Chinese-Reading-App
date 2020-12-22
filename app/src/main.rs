@@ -85,6 +85,37 @@ fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) ->
     return Template::render("userprofile", context);
 }
 
+#[get("/u/<raw_username>/<doc_title>")]
+fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
+    let mut context: HashMap<&str, String> = HashMap::new();
+    let username = convert_rawstr_to_string(raw_username);
+    match check_if_username_exists(db.clone(), &username) {
+        true => { 
+            context.insert("username", username.clone()); 
+        },
+        false => { }
+    }
+    // Compare username with logged-in username from JWT
+    let cookie_lookup = cookies.get(JWT_NAME);
+    match get_username_from_cookie(db.clone(), cookie_lookup) {
+        Some(s) => { 
+            if &s == &username {
+                let title = convert_rawstr_to_string(doc_title);
+                let doc_body = match UserDoc::get_body_from_user_doc(db.clone(), &username, &title) {
+                    Some(s) => s.clone(),
+                    None => String::new()
+                };
+                let HtmlString(doc_html) = convert_string_to_tokenized_html(db.clone(), doc_body);
+                context.insert("paragraph_html", doc_html);   
+            }
+        },
+        None =>  {
+            context.insert("paragraph_html", "<p>Not authenticated as user</p>".to_string());
+        }
+    }
+    return Template::render("reader", context);
+}
+
 #[get("/api/logout")]
 fn logout_user(mut cookies: Cookies) -> Redirect {
     let mut removal_cookie = Cookie::named(JWT_NAME);
@@ -241,7 +272,7 @@ fn main() -> Result<(), mongodb::error::Error>{
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc,
             user_profile, logout_user, 
-            user_doc_upload, user_vocab_upload])
+            user_doc_upload, user_vocab_upload, user_view_doc])
         .launch();
 
     return Ok(());

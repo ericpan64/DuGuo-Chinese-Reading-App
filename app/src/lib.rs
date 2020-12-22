@@ -44,7 +44,7 @@ pub struct SandboxDoc {
     body: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserDoc {
     username: String,
     title: String,
@@ -175,6 +175,39 @@ impl UserDoc {
         let new_doc = UserDoc { username, title, body };
         return new_doc;
     }
+
+    pub fn get_body_from_user_doc(db: Database, username: &str, title: &str) -> Option<String> {
+        let coll = db.collection(USER_DOC_COLL_NAME);
+        let query_doc = doc! { "username": username, "title": title };
+        let doc_body = match coll.find_one(query_doc, None).unwrap() {
+            Some(doc) => Some(doc.get("body").and_then(Bson::as_str).unwrap().to_string()),
+            None => None
+        };
+        return doc_body;
+    }
+
+    // pub fn try_delete(db: Database, username: &str, title: &str) -> bool {
+    //     let coll = db.collection(USER_DOC_COLL_NAME);
+    //     let query_doc = doc! { "username": username, "title": title }; 
+    //     let res = match coll.delete_one(query_doc, None).unwrap() {
+    //         Some(delete_res) => delete_res.deleted_count == 1,
+    //         None => false,
+    //     };
+    //     return res;
+    // }
+    
+    pub fn update_title(&mut self, db: Database, new_title: String) -> bool {
+        let coll = db.collection(self.collection_name());
+        let title_exists = check_coll_for_existing_key_value(coll, "title", &new_title);
+        let res = match title_exists {
+            true => false,
+            false => { 
+                self.title = new_title;
+                true
+            }
+        };
+        return res;
+    }
 }
 
 impl DatabaseItem for UserDoc {
@@ -182,6 +215,23 @@ impl DatabaseItem for UserDoc {
     fn primary_key(&self) -> String { 
         // TODO: technically this is a dual key (username+title), how to handle?
         return self.username.clone(); 
+    }
+    fn try_insert(&self, db: Database) -> Result<String, Error> where Self: Serialize {
+        let coll = db.collection(self.collection_name());
+        let title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &self.title);
+        let new_doc = match title_exists {
+            true => {
+                let mut dup_doc = self.clone();
+                dup_doc.title = self.title.clone() + "-duplicate";
+                dup_doc.as_document()
+            },
+            false => { self.as_document() }
+        };
+        match insert_one_doc(coll, new_doc) {
+            Ok(_) => {}
+            Err(e) => { return Err(e); }
+        }
+        return Ok(self.primary_key());
     }
 }
 
@@ -370,7 +420,7 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
     let coll = db.collection(USER_DOC_COLL_NAME);
     let mut res = String::new();
     res += "<table>\n";
-    res += format!("<tr><th>{}</th><th>{}</th></tr>\n", "Title", "Preview").as_str();
+    res += "<tr><th>Title</th><th>Preview</th></tr>\n";
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
         Ok(cursor) => {
@@ -379,6 +429,8 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 // unwrap BSON document
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
                 let UserDoc { body, title, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
+
+                let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
 
                 // from body, get first n characters as content preview
                 let n = 10;
@@ -460,7 +512,7 @@ fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
 }
 
 fn tokenize_string(s: String) -> std::io::Result<String> {
-    let mut stream = TcpStream::connect(format!("{}:{}",DB_HOSTNAME, TOKENIZER_PORT))?;
+    let mut stream = TcpStream::connect(format!("{}:{}", DB_HOSTNAME, TOKENIZER_PORT))?;
     stream.write(s.as_bytes())?;
     let n_bytes = s.as_bytes().len();
     let mut tokenized_bytes = vec![0; n_bytes * 2]; // max size includes original 'n_bytes' + at most 'n_bytes' commas
@@ -489,4 +541,9 @@ fn check_if_email_exists(db: Database, email: &str) -> bool {
     let coll = db.collection(USER_COLL_NAME);
     let email_search = coll.find_one(doc! { "email": email }, None).unwrap();
     return email_search != None;
+}
+
+fn check_coll_for_existing_key_value(coll: Collection, key: &str, value: &str) -> bool {
+    let query = coll.find_one(doc! { key: value }, None).unwrap();
+    return query != None;
 }
