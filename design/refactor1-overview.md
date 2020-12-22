@@ -1,25 +1,25 @@
-# Zhongwen CRM - refactor 1
+# ~~Zhongwen CRM~~ DuGuo - Refactor 1
 
 ## Tech Stack
 Web
 - Backend: Rust (Rocket)
-- Frontend: Bootstrap 5. No JS yet
+- ~~Frontend: Bootstrap 5. No JS yet~~
 - Database: mongoDB
 
 ## Web Routing
 
 No Login Required (Anon)
-- Main: /
-- Account signup: /register
-- Upload document (anon): /upload
-- View other account dashboard: /{username}
-- View saved vocab: /{username}/vocab
+- Index: /
+- Account signup: /login
+- Upload document (anon): /sandbox
+- View other account dashboard: /u/{username}
+- ~~View saved vocab: /u/{username}/vocab~~
 
 Login Required
-- Edit User dashboard: /u/info
-- Edit saved vocab: /u/vocab
-- Upload document (user): /u/doc/upload
-- View document: /u/doc/{docId}
+- Edit User dashboard: ~~/u/info~~ /u/{username}
+- Edit saved vocab: ~~/u/vocab~~ /u/{username}
+- Upload document (user): ~~/u/doc/upload~~ /u/{username}
+- View document: ~~/u/doc/{docId}~~ /u/{username}/{doc_title}
 
 ## Refactor Goals
 Deploy following functionality:
@@ -34,5 +34,5 @@ Deploy following functionality:
 
 ### User Stories (subset of Epics)
 - "What's this? Let me try it out!"
-- "This is cool -- let me make an account!"
+- "This is ~~cool~~ interesting -- let me make an account!"
 - "Hm, I can make an account and upload, but why isn't there any functionality?"
