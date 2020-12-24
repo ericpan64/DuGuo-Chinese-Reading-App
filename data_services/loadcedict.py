@@ -24,14 +24,47 @@ def convert_digits_to_pinyin(s):
         s = s.replace(k, v)
     return s
 
+def format_defn_html(defn):
+    # Input: /The first definition/The second definition/ ...
+    # Output: 1. The first definition\n2. The second definition\n ...
+    res = ''
+    defns = defn.split('/')[1:-1] # removes first and last splits, which are '' in this case
+    for (i, d) in enumerate(defns):
+        res += f'{i+1}. {d}<br/>'
+    return res
+
+def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
+    # Input: CEDICT entry info
+    # Output: (table html using trad, table html using simp)
+    download_icon_loc = 'https://icons.getbootstrap.com/icons/box-arrow-down.svg'
+    pinyin_html = ''.join([f'<td style="visibility: visible" name="{d}">{d}</td>' for d in formatted_pinyin.split(' ')])
+    pinyin_html = f'<tr>{pinyin_html}</tr>'
+    def perform_render(phrase):
+        res = ''
+        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" data-bs-trigger="focus" \
+            title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{formatted_pinyin.replace(" ", "_")}&quot;>\
+            <img src=&quot;{download_icon_loc}&quot;></img></a>" data-bs-html="true">' # ... dear neptune...
+        res += span_start.replace('            ', '')
+        res += '<table style="display: inline-table;">'
+        res += pinyin_html
+        phrase_html = ''.join([f'<td>{w}</td>' for w in phrase])
+        phrase_html = f'<tr>{phrase_html}</tr>'
+        res += phrase_html
+        res += '</table>'
+        res += '</span>'
+        return res
+    res_trad = perform_render(trad)
+    res_simp = perform_render(simp)
+    return (res_trad, res_simp)
+
 if __name__ == '__main__':
     # Load CEDICT from file to mongoDB
-    cedict_path='static/cedict_ts.u8'
+    cedict_path = 'static/cedict_ts.u8'
     if coll.estimated_document_count() > 100000:
-        print("CEDICT is already loaded -- skipping operation...")
+        print('CEDICT is already loaded -- skipping operation...')
 
-    print("Loading CEDICT - this takes a few seconds...")
-    with open(cedict_path, encoding="utf8") as f:
+    print('Loading CEDICT - this takes a few seconds...')
+    with open(cedict_path, encoding='utf8') as f:
         entry_list = []
         for line in f:
             line = line.strip()
@@ -41,20 +74,24 @@ if __name__ == '__main__':
             trad, simp, rest = [tok for tok in line.split(' ', 2)]
             # print(trad,len(trad),simp,rest)
             close_bracket = rest.find(']')  # close bracket on pinyin
-            pinyin_raw = rest[1:close_bracket]
+            raw_pinyin = rest[1:close_bracket]
             defn = rest[close_bracket+2:]
 
-            pinyin_formatted = pfmt.get(simp, delimiter=" ")
-            pinyin_formatted = convert_digits_to_pinyin(pinyin_formatted)
+            formatted_pinyin = pfmt.get(simp, delimiter=' ')
+            formatted_pinyin = convert_digits_to_pinyin(formatted_pinyin)
+
+            trad_html, simp_html = render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn)
 
             entry_list.append({
-                "trad": trad,
-                "simp": simp,
-                "pinyin_raw": pinyin_raw,
-                "pinyin_formatted": pinyin_formatted,
-                "def": defn
+                'trad': trad,
+                'simp': simp,
+                'raw_pinyin': raw_pinyin,
+                'formatted_pinyin': formatted_pinyin,
+                'def': defn,
+                'trad_html': trad_html,
+                'simp_html': simp_html
             })
-        print("Loaded. Sending to db...")
+        print('Loaded. Sending to db...')
         coll.insert_many(entry_list)
-        print("Completed")
+        print('Completed')
 

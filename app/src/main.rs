@@ -73,8 +73,8 @@ fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) ->
         Some(s) => { 
             context.insert("logged_in_username", s.clone()); 
             if &s == &username {
-                let HtmlString(doc_html) = render_document_table(db.clone(), &username);
-                let HtmlString(vocab_html) = render_vocab_table(db.clone(), &username);
+                let doc_html = render_document_table(db.clone(), &username);
+                let vocab_html = render_vocab_table(db.clone(), &username);
             
                 context.insert("doc_table", doc_html);
                 context.insert("vocab_table", vocab_html);           
@@ -105,7 +105,7 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, d
                     Some(s) => s.clone(),
                     None => String::new()
                 };
-                let HtmlString(doc_html) = convert_string_to_tokenized_html(db.clone(), doc_body);
+                let doc_html = convert_string_to_tokenized_html(db.clone(), doc_body);
                 context.insert("paragraph_html", doc_html);   
             }
         },

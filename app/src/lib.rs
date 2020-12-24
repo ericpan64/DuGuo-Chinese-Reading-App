@@ -55,8 +55,10 @@ pub struct UserDoc {
 struct CnEnDictEntry {
     trad: String,
     simp: String,
-    pinyin_raw: String,
-    pinyin_formatted: String,
+    raw_pinyin: String,
+    formatted_pinyin: String,
+    trad_html: String,
+    simp_html: String,
     def: String,    
 }
 
@@ -74,9 +76,6 @@ pub struct UserVocab {
     phrase_string: String,
     cn_type: CnType,
 }
-
-#[derive(Debug)]
-pub struct HtmlString(pub String);
 
 /* Traits */
 pub trait DatabaseItem {
@@ -126,14 +125,14 @@ impl DatabaseItem for User {
 
     // TODO: clean this up s.t. String returned is primary key (move error message logic elsewhere)
     fn try_insert(&self, db: Database) -> Result<String, Error> {
+        let coll = db.collection(USER_COLL_NAME);
         let is_existing_username = check_if_username_exists(db.clone(), self.username.as_str());
-        let is_existing_email = check_if_email_exists(db.clone(), self.email.as_str());
+        let is_existing_email = check_coll_for_existing_key_value(coll.clone(), "email", self.email.as_str());
         let can_register = !(is_existing_username || is_existing_email);
         let mut message = String::new();
         if can_register {
-            let user_coll = db.collection(USER_COLL_NAME);
             let new_doc = self.as_document();
-            match insert_one_doc(user_coll, new_doc) {
+            match insert_one_doc(coll, new_doc) {
                 Ok(_) => {
                     let success_msg = format!("Registration successful! Username: {}", self.username);
                     message.push_str(&success_msg);
@@ -237,28 +236,6 @@ impl DatabaseItem for UserDoc {
 }
 
 impl CnEnDictEntry {
-    pub fn as_html(&self, cn_type: CnType) -> HtmlString {
-        // TODO: add <span> with bootstrap popover tags
-        let mut res = String::new();
-        res += "<table style=\"display: inline-table;\">";
-        let mut pinyin_td = String::new();
-        for py in self.pinyin_formatted.split(" ") {
-            pinyin_td += format!("<td>{}</td>", py).as_str();
-        }
-        res += format!("<tr>{}</tr>", pinyin_td).as_str();
-        let mut phrase_td = String::new();
-        let phrase = match cn_type {
-            CnType::Traditional => &self.trad,
-            CnType::Simplified => &self.simp,
-        };
-        for c in phrase.chars() {
-            phrase_td += format!("<td>{}</td>", c).as_str();
-        }
-        res += format!("<tr>{}</tr>", phrase_td).as_str();
-        res += "</table>";
-        return HtmlString(res);
-    }
-
     pub fn lookup_phrase(db: Database, phrase: String, cn_type: CnType) -> Option<Self> {
         let coll = db.collection(CEDICT_COLL_NAME);
         // Try traditional first, then simplified
@@ -274,13 +251,16 @@ impl CnEnDictEntry {
     }
 
     pub fn generate_empty_phrase() -> Self {
+        // TODO: find a cleaner alternative to not found vocab
         const LOOKUP_ERROR_MSG: &str = "N/A - Not found in CEDICT";
         let res = CnEnDictEntry {
             trad: String::from(LOOKUP_ERROR_MSG),
             simp: String::from(LOOKUP_ERROR_MSG),
-            pinyin_raw: String::from(LOOKUP_ERROR_MSG),
-            pinyin_formatted: String::from(LOOKUP_ERROR_MSG),
-            def: String::from(LOOKUP_ERROR_MSG)
+            raw_pinyin: String::from(LOOKUP_ERROR_MSG),
+            formatted_pinyin: String::from(LOOKUP_ERROR_MSG),
+            def: String::from(LOOKUP_ERROR_MSG),
+            trad_html: String::from(LOOKUP_ERROR_MSG),
+            simp_html: String::from(LOOKUP_ERROR_MSG),
         };
         return res;
     }
@@ -336,10 +316,6 @@ impl DatabaseItem for UserVocab {
     }
 }
 
-impl HtmlString {
-    pub fn to_string(&self) -> String { return self.0.clone(); }
-}
-
 /* Public Functions */
 pub fn connect_to_mongodb() -> Result<Database, Error> {
     let options = ClientOptions::builder()
@@ -364,7 +340,7 @@ pub fn convert_rawstr_to_string(s: &RawStr) -> String {
             String::new()
         }
     };
-    res = res.replace(&['<', '>', '(', ')', ',', '\"', '.', ';', ':', '\''][..], "");
+    res = res.replace(&['<', '>', '(', ')', ',', '\"', ';', ':', '\''][..], "");
     return res;
 }
 
@@ -415,17 +391,18 @@ pub fn check_password(db: Database, username: String, pw_to_check: String) -> bo
     return res;
 }
 
-pub fn convert_string_to_tokenized_html(db: Database, s: String) -> HtmlString {
+pub fn convert_string_to_tokenized_html(db: Database, s: String) -> String {
     let tokenized_string = tokenize_string(s).expect("Tokenizer connection error");
     let coll = db.collection(CEDICT_COLL_NAME);
 
     let mut res = String::new();
     for phrase in tokenized_string.split(",") {
         // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
+        // if none match, then generate the phrase witout the pinyin
         let trad_query = coll.find_one(doc! { "trad": &phrase }, None).unwrap();
         let simp_query = coll.find_one(doc! { "simp": &phrase }, None).unwrap();
         if trad_query == None && simp_query == None {
-            let phrase_html = generate_phrase_without_pinyin_html(phrase).to_string();
+            let phrase_html = generate_html_for_not_found_phrase(phrase);
             res += phrase_html.as_str();
         } else {
             let mut cn_type = CnType::Traditional;
@@ -437,14 +414,17 @@ pub fn convert_string_to_tokenized_html(db: Database, s: String) -> HtmlString {
                 },
             };
             let entry: CnEnDictEntry = from_bson(Bson::Document(cedict_doc)).unwrap();
-            res += entry.as_html(cn_type).to_string().as_str(); 
+            match cn_type {
+                CnType::Traditional => res += entry.trad_html.as_str(),
+                CnType::Simplified => res += entry.simp_html.as_str()
+            }
         }
     }
-    return HtmlString(res);
+    return res;
 }
 
 
-pub fn render_document_table(db: Database, username: &str) -> HtmlString {
+pub fn render_document_table(db: Database, username: &str) -> String {
     // get all documents for user
     let coll = db.collection(USER_DOC_COLL_NAME);
     let mut res = String::new();
@@ -458,9 +438,7 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 // unwrap BSON document
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
                 let UserDoc { body, title, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
-
                 let delete_button = format!("<a href=\"/api/delete-doc/{}\">X</a>", &title);
-
                 let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
 
                 // from body, get first n characters as content preview
@@ -479,10 +457,8 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
                 if body_chars.count() > preview_count {
                     content_preview += "...";
                 }
-
-
-
-                res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
+                let interactive_content_preview = convert_string_to_tokenized_html(db.clone(), content_preview);
+                res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, interactive_content_preview, delete_button).as_str();
             }
         },
         Err(e) => {
@@ -490,10 +466,10 @@ pub fn render_document_table(db: Database, username: &str) -> HtmlString {
         }
     }
     res += "</table>";
-    return HtmlString(res);
+    return res;
 }
 
-pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
+pub fn render_vocab_table(db: Database, username: &str) -> String {
     let coll = db.collection(USER_VOCAB_COLL_NAME);
     let mut res = String::new();
     res += "<table>\n";
@@ -523,10 +499,9 @@ pub fn render_vocab_table(db: Database, username: &str) -> HtmlString {
         }
     }
     res += "</table>";
-    return HtmlString(res);
+    return res;
 }
 
-// TODO: change this to generic function (check if field exists)
 pub fn check_if_username_exists(db: Database, username: &str) -> bool {
     let coll = db.collection(USER_COLL_NAME);
     let username_search = coll.find_one(doc! { "username": username }, None).unwrap();
@@ -557,8 +532,9 @@ fn tokenize_string(s: String) -> std::io::Result<String> {
     return Ok(res);
 }
 
-fn generate_phrase_without_pinyin_html(phrase: &str) -> HtmlString {
+fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     let mut res = String::new();
+    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in CEDICT.\" data-bs-trigger=\"focus\">";
     res += "<table style=\"display: inline-table;\">";
     res += "<tr></tr>"; // No pinyin found
     let mut phrase_td = String::new();
@@ -567,14 +543,8 @@ fn generate_phrase_without_pinyin_html(phrase: &str) -> HtmlString {
     }
     res += format!("<tr>{}</tr>", phrase_td).as_str();
     res += "</table>";
-    return HtmlString(res);
-}
-
-// TODO: change this to generic function (check if field exists)
-fn check_if_email_exists(db: Database, email: &str) -> bool {
-    let coll = db.collection(USER_COLL_NAME);
-    let email_search = coll.find_one(doc! { "email": email }, None).unwrap();
-    return email_search != None;
+    res += "</span>";
+    return res;
 }
 
 fn check_coll_for_existing_key_value(coll: Collection, key: &str, value: &str) -> bool {
