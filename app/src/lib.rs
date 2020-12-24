@@ -42,6 +42,7 @@ pub struct User {
 pub struct SandboxDoc {
     doc_id: String,
     body: String,
+    body_html: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -49,6 +50,7 @@ pub struct UserDoc {
     username: String,
     title: String,
     body: String,
+    body_html: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -157,9 +159,10 @@ impl DatabaseItem for User {
 }
 
 impl SandboxDoc {
-    pub fn new(body: String) -> Self {
+    pub fn new(db: Database, body: String) -> Self {
         let doc_id = Uuid::new_v4().to_string();
-        let new_doc = SandboxDoc { doc_id, body };
+        let body_html = convert_string_to_tokenized_html(db.clone(), body.clone());
+        let new_doc = SandboxDoc { doc_id, body, body_html };
         return new_doc;
     }
 }
@@ -170,17 +173,18 @@ impl DatabaseItem for SandboxDoc {
 }
 
 impl UserDoc {
-    pub fn new(username: String, title: String, body: String) -> Self {
-        // TODO: consider using Uuid to for consistency and unique primary key?
-        let new_doc = UserDoc { username, title, body };
+    pub fn new(db: Database, username: String, title: String, body: String) -> Self {
+        // TODO: somehow enforce unique title?
+        let body_html = convert_string_to_tokenized_html(db.clone(), body.clone());
+        let new_doc = UserDoc { username, title, body, body_html };
         return new_doc;
     }
 
-    pub fn get_body_from_user_doc(db: Database, username: &str, title: &str) -> Option<String> {
+    pub fn get_body_html_from_user_doc(db: Database, username: &str, title: &str) -> Option<String> {
         let coll = db.collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title };
         let doc_body = match coll.find_one(query_doc, None).unwrap() {
-            Some(doc) => Some(doc.get("body").and_then(Bson::as_str).unwrap().to_string()),
+            Some(doc) => Some(doc.get("body_html").and_then(Bson::as_str).unwrap().to_string()),
             None => None
         };
         return doc_body;
@@ -428,7 +432,7 @@ pub fn render_document_table(db: Database, username: &str) -> String {
     // get all documents for user
     let coll = db.collection(USER_DOC_COLL_NAME);
     let mut res = String::new();
-    res += "<table>\n";
+    res += "<table class=\"table table-striped table-hover\">\n";
     res += "<tr><th>Title</th><th>Preview</th></tr>\n";
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
@@ -457,8 +461,8 @@ pub fn render_document_table(db: Database, username: &str) -> String {
                 if body_chars.count() > preview_count {
                     content_preview += "...";
                 }
-                let interactive_content_preview = convert_string_to_tokenized_html(db.clone(), content_preview);
-                res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, interactive_content_preview, delete_button).as_str();
+                // let interactive_content_preview = convert_string_to_tokenized_html(db.clone(), content_preview);
+                res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
             }
         },
         Err(e) => {
@@ -472,8 +476,8 @@ pub fn render_document_table(db: Database, username: &str) -> String {
 pub fn render_vocab_table(db: Database, username: &str) -> String {
     let coll = db.collection(USER_VOCAB_COLL_NAME);
     let mut res = String::new();
-    res += "<table>\n";
-    res += format!("<tr><th>{}</th><th>{}</th></tr>\n", "Term", "Saved From").as_str();
+    res += "<table class=\"table table-striped table-hover\">\n";
+    res += format!("<tr><th>{}</th><th>{}</th><th>{}</th></tr>\n", "Term", "Saved From", "Delete").as_str();
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
         Ok(cursor) => {

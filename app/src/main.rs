@@ -101,11 +101,10 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, d
         Some(s) => { 
             if &s == &username {
                 let title = convert_rawstr_to_string(doc_title);
-                let doc_body = match UserDoc::get_body_from_user_doc(db.clone(), &username, &title) {
+                let doc_html = match UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title) {
                     Some(s) => s.clone(),
                     None => String::new()
                 };
-                let doc_html = convert_string_to_tokenized_html(db.clone(), doc_body);
                 context.insert("paragraph_html", doc_html);   
             }
         },
@@ -182,7 +181,7 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDoc
     let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = UserDoc::new(username, title, body);
+            let new_doc = UserDoc::new(db.clone(), username, title, body);
             match new_doc.try_insert(db.clone()) {
                 Ok(username) => {Redirect::to(uri!(user_profile: username))},
                 Err(_) => { Redirect::to(uri!(index)) } 
@@ -271,7 +270,7 @@ fn sandbox_upload(db: State<Database>, user_text: Form<TextForm<'_>>) -> Redirec
     */
     let TextForm { text } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
-    let new_doc = SandboxDoc::new(text_as_string);
+    let new_doc = SandboxDoc::new(db.clone(), text_as_string);
     let inserted_id = new_doc.try_insert(db.clone()).unwrap();
     // Redirect to URL with document ID
     return Redirect::to(uri!(sandbox_view_doc: inserted_id));
