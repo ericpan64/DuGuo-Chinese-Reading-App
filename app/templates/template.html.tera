@@ -1,30 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+    {% block head %}
     <head>
-        {% block head %}
         <meta charset="UTF-8">
         <title>{% block title %}{% endblock title %}</title>
-        {% endblock head %}
-    </head>
     
-    <body>
-        <nav>
-        {% if username is undefined %}
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/login">Login / Register</a></li>
-                <li><a href="/sandbox">Sandbox</a></li>
-            </ul>
-        {% else %}
-            <ul>
-                <li><a href="/">Home</a></li>
-                <li><a href="/u/{{username}}">Profile</a></li>
-                <li><a href="/api/logout">Logout</a></li>
-            </ul>
-        {% endif %}
+        {# Bootstrap Files #}
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+
+        {# Bootstrap Tags #}
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    {% endblock head %}
+    
+    <body class="container-fluid">
+        <nav class="navbar navbar-expand navbar-dark navbar-static-top bg-primary">
+            <div class="container">
+            {% if username is undefined %}
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/login">Login / Register</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/sandbox">Sandbox</a></li>
+                </ul>
+            {% else %}
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/u/{{username}}">Profile</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/api/logout">Logout</a></li>
+                </ul>
+            {% endif %}       
+            </div>
         </nav>
-        <div id="content">
+        <br/>
+        <div class="container">
             {% block content %}{% endblock content %}
         </div>
     </body>
+
+
+    <script>
+        // Enable pop-ups
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        })
+    </script>
 </html>

@@ -3,7 +3,7 @@
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
 
-<p>
+<p class="container">
     {% if paragraph_html is undefined %}
         Document not found, check the document id!
     {% else %}
