@@ -75,7 +75,6 @@ pub struct UserVocab {
     username: String,
     from_doc_title: String,
     phrase: CnEnDictEntry,
-    phrase_string: String,
     cn_type: CnType,
 }
 
@@ -225,6 +224,7 @@ impl DatabaseItem for UserDoc {
         let title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &self.title);
         let new_doc = match title_exists {
             true => {
+                // TODO make this cleaner
                 let mut dup_doc = self.clone();
                 dup_doc.title = self.title.clone() + "-duplicate";
                 dup_doc.as_document()
@@ -240,13 +240,9 @@ impl DatabaseItem for UserDoc {
 }
 
 impl CnEnDictEntry {
-    pub fn lookup_phrase(db: Database, phrase: String, cn_type: CnType) -> Option<Self> {
+    pub fn lookup_phrase(db: Database, formatted_pinyin: String) -> Option<Self> {
         let coll = db.collection(CEDICT_COLL_NAME);
-        // Try traditional first, then simplified
-        let query_doc = match cn_type {
-            CnType::Traditional => doc! { "trad": &phrase },
-            CnType::Simplified => doc! { "simp": &phrase }
-        };
+        let query_doc = doc! { "formatted_pinyin": formatted_pinyin };
         let phrase: Option<Self> = match coll.find_one(query_doc, None).unwrap() {
             Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
             None => None,
@@ -276,34 +272,22 @@ impl DatabaseItem for CnEnDictEntry {
 }
 
 impl UserVocab {
-    pub fn new(db: Database, username: String, phrase: String, from_doc_title: String) -> Self {
-        // Lookup CEDICT entry in Database
+    pub fn new(db: Database, username: String, formatted_pinyin: String, from_doc_title: String) -> Self {
         // TODO: parse-out contextual surrounding from_doc_title
-        // TODO: lookup CEDICT to create the phrase
 
-        // Try traditional first, then simplified
-        let mut cn_type = CnType::Traditional;
-        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), phrase.clone(), cn_type.clone()) {
-            Some(res) => res,
-            None => {
-                cn_type = CnType::Simplified;
-                match CnEnDictEntry::lookup_phrase(db.clone(), phrase.clone(), cn_type.clone()) {
-                    Some(res) => res,
-                    None => CnEnDictEntry::generate_empty_phrase()
-                }
-            }
+        // Default to traditional
+        let cn_type = CnType::Traditional;
+        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), formatted_pinyin.clone()) {
+            Some(p) => p,
+            None => CnEnDictEntry::generate_empty_phrase()
         };
-        let phrase_string = match cn_type {
-            CnType::Traditional => String::from(&phrase.trad),
-            CnType::Simplified => String::from(&phrase.simp),
-        };
-        let new_vocab = UserVocab { username, from_doc_title, phrase, phrase_string, cn_type };
+        let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
         return new_vocab;
     }
 
-    pub fn try_delete(db: Database, username: String, phrase: String) -> bool {
+    pub fn try_delete(db: Database, username: String, formatted_pinyin: String) -> bool {
         let coll = db.collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": username, "phrase_string": phrase }; 
+        let query_doc = doc! { "username": username, "phrase.formatted_pinyin": formatted_pinyin }; 
         let res = match coll.delete_one(query_doc, None) {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
@@ -316,7 +300,7 @@ impl DatabaseItem for UserVocab {
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> String {
         // TODO: this is a dual key of username and phrase_string... how to handle?
-        return self.username.clone();
+        return self.phrase.formatted_pinyin.clone();
     }
 }
 
@@ -433,7 +417,7 @@ pub fn render_document_table(db: Database, username: &str) -> String {
     let coll = db.collection(USER_DOC_COLL_NAME);
     let mut res = String::new();
     res += "<table class=\"table table-striped table-hover\">\n";
-    res += "<tr><th>Title</th><th>Preview</th></tr>\n";
+    res += "<tr><th>Title</th><th>Preview</th><th>Delete</th></tr>\n";
     let query_doc = doc! { "username": username };
     match coll.find(query_doc, None) {
         Ok(cursor) => {

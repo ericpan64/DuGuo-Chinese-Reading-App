@@ -5,9 +5,6 @@
 
 {% if username is undefined %}
 <h1>读国</h1>
-{% else %}
-<h1>你好, {{username}} </h1>
-{% endif %}
 <p>
     DuGuo (读国) is a tool that allows you to learn how to read Chinese in a customizable and context-rich environment.
 </p>
@@ -19,6 +16,15 @@
     
     Otherwise, create an account to save documents and learned vocabulary.
 </p>
+{% else %}
+<h1><span tabindex="0" data-bs-toggle="popover" data-bs-content="1. hello<br/>2. hi<br/>" data-bs-trigger="focus" title="你好 [ni3 hao3]" data-bs-html="true"><table style="display: inline-table;"><tr><td>你</td><td>好</td></tr></table></span>
+, {{username}} </h1>
+<h2>Getting Started</h2>
+<p>
+    Head to <a href="/u/{{username}}">your profile</a> to upload documents and view your saved vocabulary!
+</p>
+{% endif %}
+
 <h2>Acknowledgements</h2>
 <p>
     Thank you to Martin Kess for providing the initial implementation (中文读机 from the OMSCS Education Technology course). It provided a very well-scoped architecture and strong foundation to build off-of.

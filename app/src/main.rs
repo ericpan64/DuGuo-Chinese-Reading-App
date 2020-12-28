@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 use rocket::{
     request::Form,
-    response::Redirect,
-    http::{RawStr, Cookie, Cookies},
+    response::{Redirect},
+    http::{RawStr, Cookie, Cookies, Status},
     State,
 };
 use rocket_contrib::templates::Template;
@@ -167,7 +167,7 @@ struct UserDocumentForm<'f> {
 
 #[derive(FromForm)]
 struct UserVocabForm<'f> {
-    phrase: &'f RawStr,
+    formatted_pinyin: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
 
@@ -195,26 +195,29 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDoc
 }
 
 #[post("/api/vocab", data="<user_vocab>")]
-fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<UserVocabForm>) -> Redirect {
-    let UserVocabForm { phrase, from_doc_title } = user_vocab.into_inner();
-    let phrase = convert_rawstr_to_string(phrase);
+fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<UserVocabForm>) -> Status {
+    let UserVocabForm { formatted_pinyin, from_doc_title } = user_vocab.into_inner();
+    let formatted_pinyin = convert_rawstr_to_string(formatted_pinyin);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
 
     let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
-    let res_redirect = match username_from_cookie {
+    let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_doc = UserVocab::new(db.clone(), username, phrase, from_doc_title);
+            let new_doc = UserVocab::new(db.clone(), username.clone(), formatted_pinyin.clone(), from_doc_title);
             match new_doc.try_insert(db.clone()) {
-                Ok(username) => {Redirect::to(uri!(user_profile: username))},
-                Err(_) => { Redirect::to(uri!(index)) } 
+                Ok(_) => { Status::Accepted },
+                Err(_) => { 
+                    println!("Error when writing phrase {} for user {}", &formatted_pinyin, &username); 
+                    Status::BadRequest
+                } 
             }
         },
         None => {
-            Redirect::to(uri!(index))
+            println!("Error: no username found from cookie");
+            Status::BadRequest
         }
     };
-    return res_redirect;
-
+    return res_status;
 }
 
 #[post("/login", data = "<user_input>")]

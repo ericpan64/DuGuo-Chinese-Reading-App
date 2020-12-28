@@ -3,12 +3,99 @@
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
 
-<p class="container">
     {% if paragraph_html is undefined %}
-        Document not found, check the document id!
+        Document not found, check the document title!
     {% else %}
-    {{ paragraph_html | safe }}
+        <div id="banner" class="container" role="alert">
+            <p id="banner-msg"><br/></p>
+        </div>
+        {{ paragraph_html | safe }}
     {% endif %}
-</p>
 
+
+<script>
+    // Trigger Pinyin Visibility
+    // input: space-delimited pinyin ids
+    // result: updates 'style' attribute of corresponding pinyin ids
+    let switchOffVisibility = (e) => {
+        e.style.visibility = 'hidden';
+    }
+
+    let switchOffWordVisibility = (pinyin) => {
+        for (name of pinyin.split(' ')) {
+            yins = document.getElementsByName(name).forEach(switchOffVisibility);
+        }
+    }
+
+    {# 
+    let existing_vocab = {{  TODO RENDER THIS (or pass this in) }};
+    for (vocab in existing_vocab) {
+        switchOffWordVisibility(vocab.formatted_pinyin)
+    } 
+    #}
+
+    let toggleBanner = (success, msg) => {
+        let banner = document.getElementById('banner');
+        let banner_msg = document.getElementById('banner-msg');
+        if (success) {
+            banner.className = "alert alert-success alert-dismissible fade show";
+            banner.style.visibility = 'visible';
+        } else {
+            banner.className = "alert alert-warning alert-dismissible fade show";
+            banner.style.visibility = 'visible';
+        }
+        banner_msg.innerHTML = msg + "<button type=\"button\" class=\"btn\" onclick=\"switchOffVisibility(document.getElementById('banner'))\">X</button>";
+    }
+
+    let parseHashChange = () => {
+        if (location.hash) {
+            let py_string = location.hash.substring(1);
+            py_string = py_string.replaceAll('_', ' ');
+            py_string = decodeURIComponent(py_string);
+
+            // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
+            history.pushState("", document.title, window.location.pathname + window.location.search);
+
+            // Send POST request to add vocab string with title, then return result
+            // (Rocket should handle the cookie reading!)
+            let current_url_arr = window.location.href.split("/");
+            let title = current_url_arr[current_url_arr.length - 1];
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/vocab");
+            xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            let params = 'formatted_pinyin=' +  py_string;
+            params += '&from_doc_title=' + title;
+                
+            xhr.onload = () => {
+                if (this.status == 200) {
+                    let msg = `Successfully added ${py_string} to user dictionary!`;
+                    toggleBanner(true, msg);
+                } else {
+                    let msg = `Create an account to add ${py_string} to your dictionary!`;
+                    toggleBanner(false, msg);
+                }
+                switchOffWordVisibility(py_string);
+            }
+            xhr.onerror = () => {
+                let msg = `Error when adding ${py_string} to dictionary. Try again and/or open a Github issue`;
+                toggleBanner(false, msg);
+            }
+            xhr.send(params);
+        }
+    }
+
+    window.onhashchange = parseHashChange
+
+    let saveDocumentState = () => {
+        // TODO: implement this and test this
+
+        // Get current document title + user
+        // Send POST request with jwt and doc title, then re-render
+        // Get document text (1db read)
+        // Delete document (1db write)
+        // Re-create document (rendering + 1 db write)
+    }
+
+    window.onbeforeunload = saveDocumentState
+</script>
 {% endblock content %}
