@@ -5,7 +5,8 @@ mod config;
 use config::{
     DB_HOSTNAME, DB_PORT, DATABASE_NAME,
     USER_COLL_NAME, SANDBOX_COLL_NAME, TOKENIZER_PORT,
-    USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, CEDICT_COLL_NAME,
+    USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, CEDICT_COLL_NAME, 
+    USER_VOCAB_LIST_COLL_NAME,
     functions::{
         str_to_hashed_string, 
         generate_jwt, 
@@ -78,6 +79,12 @@ pub struct UserVocab {
     cn_type: CnType,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserVocabPinyinList {
+    username: String,
+    formatted_pinyin_list: String, // comma-delimited
+}
+
 /* Traits */
 pub trait DatabaseItem {
     // Default
@@ -98,6 +105,16 @@ pub trait DatabaseItem {
         let new_doc = self.as_document();
         match insert_one_doc(coll, new_doc) {
             Ok(_) => {}
+            Err(e) => { return Err(e); }
+        }
+        return Ok(self.primary_key());
+    }
+    fn try_update(&self, db: Database, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
+        let coll = db.collection(self.collection_name());
+        let update_doc = doc! { key: new_value };
+        let update_query = doc! { "$set": update_doc };
+        match coll.update_one(self.as_document(), update_query, None) {
+            Ok(_) => {},
             Err(e) => { return Err(e); }
         }
         return Ok(self.primary_key());
@@ -172,9 +189,26 @@ impl DatabaseItem for SandboxDoc {
 }
 
 impl UserDoc {
-    pub fn new(db: Database, username: String, title: String, body: String) -> Self {
-        // TODO: somehow enforce unique title?
+    pub fn new(db: Database, username: String, desired_title: String, body: String) -> Self {
         let body_html = convert_string_to_tokenized_html(db.clone(), body.clone());
+        // If title is non-unique, try appending digits until match
+        let coll = db.collection(USER_DOC_COLL_NAME);
+        let mut title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &desired_title);
+        let title = match title_exists {
+            true => {
+                // Try new titles until unique one found
+                let mut count = 0;
+                let mut new_title = String::new();
+                while title_exists {
+                    count += 1;
+                    let appended = format!("-{}", count);
+                    new_title = desired_title.clone() + appended.as_str();
+                    title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &new_title);
+                }
+                new_title
+            },
+            false => { desired_title }
+        };
         let new_doc = UserDoc { username, title, body, body_html };
         return new_doc;
     }
@@ -219,24 +253,6 @@ impl DatabaseItem for UserDoc {
         // TODO: technically this is a dual key (username+title), how to handle?
         return self.username.clone(); 
     }
-    fn try_insert(&self, db: Database) -> Result<String, Error> where Self: Serialize {
-        let coll = db.collection(self.collection_name());
-        let title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &self.title);
-        let new_doc = match title_exists {
-            true => {
-                // TODO make this cleaner
-                let mut dup_doc = self.clone();
-                dup_doc.title = self.title.clone() + "-duplicate";
-                dup_doc.as_document()
-            },
-            false => { self.as_document() }
-        };
-        match insert_one_doc(coll, new_doc) {
-            Ok(_) => {}
-            Err(e) => { return Err(e); }
-        }
-        return Ok(self.primary_key());
-    }
 }
 
 impl CnEnDictEntry {
@@ -273,8 +289,6 @@ impl DatabaseItem for CnEnDictEntry {
 
 impl UserVocab {
     pub fn new(db: Database, username: String, formatted_pinyin: String, from_doc_title: String) -> Self {
-        // TODO: parse-out contextual surrounding from_doc_title
-
         // Default to traditional
         let cn_type = CnType::Traditional;
         let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), formatted_pinyin.clone()) {
@@ -297,11 +311,28 @@ impl UserVocab {
 }
 
 impl DatabaseItem for UserVocab {
+    fn try_insert(&self, db: Database) -> Result<String, Error> where Self: Serialize {
+        let coll = db.collection(self.collection_name());
+        let new_doc = self.as_document();
+        match insert_one_doc(coll, new_doc) {
+            Ok(_) => {
+                append_to_user_pinyin_list_string(db, &self.username, &self.phrase.formatted_pinyin)?;
+            },
+            Err(e) => { return Err(e); }
+        }
+        return Ok(self.primary_key());
+    }
+
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> String {
         // TODO: this is a dual key of username and phrase_string... how to handle?
         return self.phrase.formatted_pinyin.clone();
     }
+}
+
+impl DatabaseItem for UserVocabPinyinList {
+    fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
+    fn primary_key(&self) -> String { return self.username.clone(); }
 }
 
 /* Public Functions */
@@ -328,6 +359,7 @@ pub fn convert_rawstr_to_string(s: &RawStr) -> String {
             String::new()
         }
     };
+    // Note: can't sanitize '/' since that breaks default character encoding
     res = res.replace(&['<', '>', '(', ')', ',', '\"', ';', ':', '\''][..], "");
     return res;
 }
@@ -410,7 +442,6 @@ pub fn convert_string_to_tokenized_html(db: Database, s: String) -> String {
     }
     return res;
 }
-
 
 pub fn render_document_table(db: Database, username: &str) -> String {
     // get all documents for user
@@ -496,7 +527,58 @@ pub fn check_if_username_exists(db: Database, username: &str) -> bool {
     return username_search != None;
 }
 
+pub fn get_user_pinyin_list_string(db: Database, username: &str) -> Option<String> {
+    let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    let query_doc = doc! { "username": username };
+    let res = match coll.find_one(query_doc, None) {
+        Ok(query_res) => {
+            match query_res {
+                Some(doc) => Some(doc.get("formatted_pinyin_list").and_then(Bson::as_str).unwrap().to_string()),
+                None => None
+            }            
+        },
+        Err(e) => {
+            println!("Error when reading pinyin list for user {}: {:?}", username, e);
+            None
+        }
+    };
+    return res;
+}
+
 /* Private Functions */
+/// new_pinyin should be space-delimited formatted pinyin
+fn append_to_user_pinyin_list_string(db: Database, username: &str, new_pinyin: &str) -> Result<(), Error> {
+    let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    let query_doc = doc! { "username": username };
+    match coll.find_one(query_doc, None) {
+        Ok(query_res) => {
+            match query_res {
+                Some(doc) => {
+                    // Update existing list
+                    let prev_doc: UserVocabPinyinList = from_bson(Bson::Document(doc)).unwrap();
+                    let mut formatted_pinyin_list = prev_doc.formatted_pinyin_list.clone();
+                    formatted_pinyin_list += ",";
+                    formatted_pinyin_list += new_pinyin.replace(" ", ",").as_str();
+
+                    // Write to db
+                    prev_doc.try_update(db.clone(), "formatted_pinyin_list", &formatted_pinyin_list)?;
+                }
+                None => {
+                    // Create new instance
+                    let formatted_pinyin_list = new_pinyin.replace(" ", ",");
+                    let username = username.to_string();
+                    let new_doc = UserVocabPinyinList { username, formatted_pinyin_list };
+                    new_doc.try_insert(db.clone())?;
+                }
+            }
+        },
+        Err(e) => { 
+            println!("Error when searching for pinyin list for user {}: {:?}", username, e);
+        }
+    }
+    Ok(())
+}
+
 fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
     coll.delete_one(doc.clone(), None)?; // remove once can set unique indices
     match coll.insert_one(doc.clone(), None) {

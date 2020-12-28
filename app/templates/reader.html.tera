@@ -2,38 +2,55 @@
 {% block title %} Document Reader {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
-
     {% if paragraph_html is undefined %}
         Document not found, check the document title!
     {% else %}
         <div id="banner" class="container" role="alert">
             <p id="banner-msg"><br/></p>
         </div>
+        <div id="buttons" class="container">
+            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin()">Hide Saved Pinyin</button>
+            <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin()">Hide All Pinyin</button>
+            <button id="reset-all" class="btn btn-primary" onclick="resetAllPinyin()">Reset All Pinyin</button>
+        </div>
+        <br/>
         {{ paragraph_html | safe }}
     {% endif %}
 
-
 <script>
-    // Trigger Pinyin Visibility
-    // input: space-delimited pinyin ids
-    // result: updates 'style' attribute of corresponding pinyin ids
-    let switchOffVisibility = (e) => {
-        e.style.visibility = 'hidden';
-    }
-
+    /// Trigger Pinyin Visibility
+    let switchToHidden = (e) => { e.style.visibility = 'hidden'; }
+    let switchToVisible = (e) => { e.style.visibility = 'visible'; }
     let switchOffWordVisibility = (pinyin) => {
         for (name of pinyin.split(' ')) {
-            yins = document.getElementsByName(name).forEach(switchOffVisibility);
+            yins = document.getElementsByName(name).forEach(switchToHidden);
         }
     }
 
-    {# 
-    let existing_vocab = {{  TODO RENDER THIS (or pass this in) }};
-    for (vocab in existing_vocab) {
-        switchOffWordVisibility(vocab.formatted_pinyin)
-    } 
-    #}
+    /// Button Functionality
+    {% if user_pinyin_list_string is undefined %}
+    let user_saved_pinyin_list = [];
+    {% else %}
+    let user_saved_pinyin_list = "{{user_pinyin_list_string}}".split(',');
+    {% endif %}
 
+    let all_pinyin_list = document.getElementsByClassName("pinyin");
+    let hideSavedPinyin = () => {
+        user_saved_pinyin_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
+    }
+    let hideAllPinyin = () => { 
+        for (let i = 0; i < all_pinyin_list.length; i++) {
+            switchToHidden(all_pinyin_list[i]);
+        }   
+    }
+    let resetAllPinyin = () => {
+        for (let i = 0; i < all_pinyin_list.length; i++) {
+            switchToVisible(all_pinyin_list[i]);
+        }   
+    }
+
+    /// Display end-user message
+    /// TODO: convert this to dismissable single pop-up
     let toggleBanner = (success, msg) => {
         let banner = document.getElementById('banner');
         let banner_msg = document.getElementById('banner-msg');
@@ -44,9 +61,13 @@
             banner.className = "alert alert-warning alert-dismissible fade show";
             banner.style.visibility = 'visible';
         }
-        banner_msg.innerHTML = msg + "<button type=\"button\" class=\"btn\" onclick=\"switchOffVisibility(document.getElementById('banner'))\">X</button>";
+        banner_msg.innerHTML = msg + "<button type=\"button\" class=\"btn\" onclick=\"switchToHidden(document.getElementById('banner'))\">X</button>";
     }
 
+    /// Track words that were saved this session
+    let SAVED_PHRASES_THIS_SESSION = new Set();
+
+    /// Handle Hash Change
     let parseHashChange = () => {
         if (location.hash) {
             let py_string = location.hash.substring(1);
@@ -57,22 +78,22 @@
             history.pushState("", document.title, window.location.pathname + window.location.search);
 
             // Send POST request to add vocab string with title, then return result
-            // (Rocket should handle the cookie reading!)
+            // (Rocket handles the cookie reading!)
             let current_url_arr = window.location.href.split("/");
             let title = current_url_arr[current_url_arr.length - 1];
             let xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/vocab");
             xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            let params = 'formatted_pinyin=' +  py_string;
-            params += '&from_doc_title=' + title;
+            let params = `formatted_pinyin=${py_string}&from_doc_title=${title}`;
                 
             xhr.onload = () => {
-                if (this.status == 200) {
-                    let msg = `Successfully added ${py_string} to user dictionary!`;
-                    toggleBanner(true, msg);
-                } else {
+                if (this.status == 400) {
                     let msg = `Create an account to add ${py_string} to your dictionary!`;
                     toggleBanner(false, msg);
+                } else {
+                    let msg = `Successfully added ${py_string} to user dictionary!`;
+                    SAVED_PHRASES_THIS_SESSION.add(py_string);
+                    toggleBanner(true, msg);
                 }
                 switchOffWordVisibility(py_string);
             }
@@ -83,19 +104,25 @@
             xhr.send(params);
         }
     }
-
     window.onhashchange = parseHashChange
 
+    {#     
+    // Saves state of document by deleting it, then re-rendering
     let saveDocumentState = () => {
-        // TODO: implement this and test this
+        let current_url_arr = window.location.href.split("/");
+        let title = current_url_arr[current_url_arr.length - 1];
 
-        // Get current document title + user
-        // Send POST request with jwt and doc title, then re-render
-        // Get document text (1db read)
-        // Delete document (1db write)
-        // Re-create document (rendering + 1 db write)
-    }
-
+        if SAVED_PHRASES_THIS_SESSION.size > 0 {
+            toggleBanner(true, "Saving changes, please wait...");
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/reload_doc");
+            xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            let params = `title=${title}`;
+            xhr.send(params);
+            // Send POST request with doc title, then re-render
+        }
+    } 
     window.onbeforeunload = saveDocumentState
+    #}
 </script>
 {% endblock content %}

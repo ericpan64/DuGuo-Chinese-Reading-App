@@ -100,12 +100,13 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, d
     match get_username_from_cookie(db.clone(), cookie_lookup) {
         Some(s) => { 
             if &s == &username {
+                // Get html to render
                 let title = convert_rawstr_to_string(doc_title);
-                let doc_html = match UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title) {
-                    Some(s) => s.clone(),
-                    None => String::new()
-                };
-                context.insert("paragraph_html", doc_html);   
+                let doc_html = UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title).unwrap_or_default();
+                context.insert("paragraph_html", doc_html);
+                // Get current list of user's saved phrases
+                let user_pinyin_list_string = get_user_pinyin_list_string(db.clone(), &username).unwrap_or_default();
+                context.insert("user_pinyin_list_string", user_pinyin_list_string);
             }
         },
         None =>  {
@@ -183,7 +184,7 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDoc
         Some(username) => { 
             let new_doc = UserDoc::new(db.clone(), username, title, body);
             match new_doc.try_insert(db.clone()) {
-                Ok(username) => {Redirect::to(uri!(user_profile: username))},
+                Ok(username) => { Redirect::to(uri!(user_profile: username)) },
                 Err(_) => { Redirect::to(uri!(index)) } 
             }
         },
@@ -268,14 +269,10 @@ fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<Use
 
 #[post("/sandbox/upload", data = "<user_text>")]
 fn sandbox_upload(db: State<Database>, user_text: Form<TextForm<'_>>) -> Redirect {
-    /* 
-    TODO - in comments
-    */
     let TextForm { text } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
     let new_doc = SandboxDoc::new(db.clone(), text_as_string);
     let inserted_id = new_doc.try_insert(db.clone()).unwrap();
-    // Redirect to URL with document ID
     return Redirect::to(uri!(sandbox_view_doc: inserted_id));
 }
 

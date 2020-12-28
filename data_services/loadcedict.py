@@ -37,7 +37,7 @@ def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
     # Input: CEDICT entry info
     # Output: (table html using trad, table html using simp)
     download_icon_loc = 'https://icons.getbootstrap.com/icons/box-arrow-down.svg'
-    pinyin_html = ''.join([f'<td style="visibility: visible" name="{d}">{d}</td>' for d in formatted_pinyin.split(' ')])
+    pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{d}">{d}</td>' for d in formatted_pinyin.split(' ')])
     pinyin_html = f'<tr>{pinyin_html}</tr>'
     def perform_render(phrase):
         res = ''
