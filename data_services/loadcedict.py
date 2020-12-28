@@ -28,7 +28,8 @@ def format_defn_html(defn):
     # Input: /The first definition/The second definition/ ...
     # Output: 1. The first definition\n2. The second definition\n ...
     res = ''
-    defns = defn.split('/')[1:-1] # removes first and last splits, which are '' in this case
+    clean_defn = defn.replace('\"', '\'') # some entries in CEDICT use " character
+    defns = clean_defn.split('/')[1:-1] # removes first and last splits, which are '' in this case
     for (i, d) in enumerate(defns):
         res += f'{i+1}. {d}<br/>'
     return res
