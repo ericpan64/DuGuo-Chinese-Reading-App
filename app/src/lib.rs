@@ -55,11 +55,11 @@ pub struct UserDoc {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct CnEnDictEntry {
+pub struct CnEnDictEntry {
     trad: String,
     simp: String,
     raw_pinyin: String,
-    formatted_pinyin: String,
+    pub formatted_pinyin: String,
     trad_html: String,
     simp_html: String,
     def: String,    
@@ -256,14 +256,29 @@ impl DatabaseItem for UserDoc {
 }
 
 impl CnEnDictEntry {
-    pub fn lookup_phrase(db: Database, formatted_pinyin: String) -> Option<Self> {
+    pub fn new(db: Database, phrase_str: &str) -> Self {
+        // Try simplified, then traditional
+        let res = match CnEnDictEntry::lookup_phrase(db.clone(), "simp", phrase_str) {
+            Some(obj) => obj,
+            None => {
+                match CnEnDictEntry::lookup_phrase(db.clone(), "trad", phrase_str) {
+                    Some(obj) => obj,
+                    None => CnEnDictEntry::generate_empty_phrase()
+                }
+            }
+        };
+        return res;
+    }
+
+    // TODO: refactor this to apply for DatabaseItem trait
+    pub fn lookup_phrase(db: Database, key: &str, value: &str) -> Option<Self> {
         let coll = db.collection(CEDICT_COLL_NAME);
-        let query_doc = doc! { "formatted_pinyin": formatted_pinyin };
-        let phrase: Option<Self> = match coll.find_one(query_doc, None).unwrap() {
+        let query_doc = doc! { key: value };
+        let res: Option<Self> = match coll.find_one(query_doc, None).unwrap() {
             Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
             None => None,
         };
-        return phrase;
+        return res;
     }
 
     pub fn generate_empty_phrase() -> Self {
@@ -291,7 +306,7 @@ impl UserVocab {
     pub fn new(db: Database, username: String, formatted_pinyin: String, from_doc_title: String) -> Self {
         // Default to traditional
         let cn_type = CnType::Traditional;
-        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), formatted_pinyin.clone()) {
+        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), "formatted_pinyin", &formatted_pinyin) {
             Some(p) => p,
             None => CnEnDictEntry::generate_empty_phrase()
         };

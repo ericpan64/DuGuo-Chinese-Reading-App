@@ -135,8 +135,9 @@ fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) ->
 #[get("/api/delete-vocab/<vocab_phrase>")]
 fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &RawStr) -> Redirect {
     let username = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)).unwrap();
-    let phrase = convert_rawstr_to_string(vocab_phrase);
-    UserVocab::try_delete(db.clone(), username.clone(), phrase);
+    let phrase_string = convert_rawstr_to_string(vocab_phrase);
+    let phrase_obj = CnEnDictEntry::new(db.clone(), &phrase_string);
+    UserVocab::try_delete(db.clone(), username.clone(), phrase_obj.formatted_pinyin.clone());
     return Redirect::to(uri!(user_profile: username));
 }
 
