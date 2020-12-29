@@ -25,6 +25,7 @@ def convert_digits_to_pinyin(s):
     return s
 
 def format_defn_html(defn):
+    """ Takes /-delimited definition and generates corresponding HTML """
     # Input: /The first definition/The second definition/ ...
     # Output: 1. The first definition\n2. The second definition\n ...
     res = ''
@@ -35,16 +36,15 @@ def format_defn_html(defn):
     return res
 
 def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
-    # Input: CEDICT entry info
-    # Output: (table html using trad, table html using simp)
+    """ Takes CEDICT entry information and generates corresponding HTML """
     download_icon_loc = 'https://icons.getbootstrap.com/icons/box-arrow-down.svg'
     pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{d}">{d}</td>' for d in formatted_pinyin.split(' ')])
     pinyin_html = f'<tr>{pinyin_html}</tr>'
     def perform_render(phrase):
         res = ''
-        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" data-bs-trigger="focus" \
+        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" \
             title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{formatted_pinyin.replace(" ", "_")}&quot;>\
-            <img src=&quot;{download_icon_loc}&quot;></img></a>" data-bs-html="true">' # ... dear neptune...
+            <img src=&quot;{download_icon_loc}&quot;></img></a>" data-bs-html="true">' # ... oh neptune...
         res += span_start.replace('            ', '')
         res += '<table style="display: inline-table;">'
         res += pinyin_html
@@ -63,36 +63,54 @@ if __name__ == '__main__':
     cedict_path = 'static/cedict_ts.u8'
     if coll.estimated_document_count() > 100000:
         print('CEDICT is already loaded -- skipping operation...')
+    else:
+        # Track lines with identical pinyin + phrase
+        prev_trad, prev_simp, prev_formatted_pinyin = None, None, None
+        curr_matches_prev = lambda t, s, fp: (prev_trad == t) and (prev_simp == s) and (prev_formatted_pinyin == fp)
 
-    print('Loading CEDICT - this takes a few seconds...')
-    with open(cedict_path, encoding='utf8') as f:
-        entry_list = []
-        for line in f:
-            line = line.strip()
-            if len(line) == 0 or line[0] == '#':
-                continue
+        # Parse file
+        print('Loading CEDICT - this takes a few seconds...')
+        with open(cedict_path, encoding='utf8') as f:
+            entry_list = []
+            for line in f:
+                # skip no-data lines
+                line = line.strip()
+                if len(line) == 0 or line[0] == '#':
+                    continue
 
-            trad, simp, rest = [tok for tok in line.split(' ', 2)]
-            # print(trad,len(trad),simp,rest)
-            close_bracket = rest.find(']')  # close bracket on pinyin
-            raw_pinyin = rest[1:close_bracket]
-            defn = rest[close_bracket+2:]
+                # get CEDICT components
+                trad, simp, rest = [token for token in line.split(' ', 2)]
+                close_bracket = rest.find(']')  # close bracket on pinyin
+                raw_pinyin = rest[1:close_bracket]
+                defn = rest[close_bracket+2:]
 
-            formatted_pinyin = pfmt.get(simp, delimiter=' ')
-            formatted_pinyin = convert_digits_to_pinyin(formatted_pinyin)
+                # get formatted pinyin
+                formatted_pinyin = pfmt.get(simp, delimiter=' ')
+                formatted_pinyin = convert_digits_to_pinyin(formatted_pinyin)
 
-            trad_html, simp_html = render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn)
+                # handle case where lines can be merged (based on formatted pinyin)
+                if curr_matches_prev(trad, simp, formatted_pinyin):
+                    last_entry = entry_list.pop()
+                    defn = last_entry['def'] + defn[1:]
 
-            entry_list.append({
-                'trad': trad,
-                'simp': simp,
-                'raw_pinyin': raw_pinyin,
-                'formatted_pinyin': formatted_pinyin,
-                'def': defn,
-                'trad_html': trad_html,
-                'simp_html': simp_html
-            })
-        print('Loaded. Sending to db...')
-        coll.insert_many(entry_list)
-        print('Completed')
+                # render html
+                trad_html, simp_html = render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn)
+
+                # append entry
+                entry_list.append({
+                    'trad': trad,
+                    'simp': simp,
+                    'raw_pinyin': raw_pinyin,
+                    'formatted_pinyin': formatted_pinyin,
+                    'def': defn,
+                    'trad_html': trad_html,
+                    'simp_html': simp_html
+                })
+            
+                # update prev items
+                prev_trad, prev_simp, prev_formatted_pinyin = trad, simp, formatted_pinyin
+
+            print('Loaded. Sending to db...')
+            coll.insert_many(entry_list)
+            print('Completed')
 
