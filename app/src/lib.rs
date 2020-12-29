@@ -619,7 +619,7 @@ fn tokenize_string(s: String) -> std::io::Result<String> {
 
 fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     let mut res = String::new();
-    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in CEDICT.\" data-bs-trigger=\"focus\">";
+    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in CEDICT.\">";
     res += "<table style=\"display: inline-table;\">";
     res += "<tr></tr>"; // No pinyin found
     let mut phrase_td = String::new();

@@ -17,19 +17,21 @@
             <div class="col-md">
                 {# Document Table #}
                 {# TODO Add overflow-y css code #}
+                <h4>View Documents</h4>
                 <div style="overflow-x:auto">
                 {{ doc_table | safe }}
                 </div>
 
-                
+                <h4>Upload Document</h4>
                 <form class="form" action="/api/upload" id="user-doc-form" method="POST">
                     <input type="text" name="title" placeholder="Document Title" required>
                     <textarea class="form-control" name="body" form="user-doc-form" rows="10" cols="50"></textarea>
                     <button class="btn btn-outline-primary" type="submit">Upload Document</button>
                 </form>
             </div>
-
+            
             <div class="col-md">
+                <h4>View Saved Vocab</h4>
                 {# Vocab Table #}
                 {# TODO Add overflow-y css code #}
                 <div style="overflow-x:auto">

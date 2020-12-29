@@ -5,9 +5,7 @@
     {% if paragraph_html is undefined %}
         Document not found, check the document title!
     {% else %}
-        <div id="banner" class="container" role="alert">
-            <p id="banner-msg"><br/></p>
-        </div>
+        <p>Note: To use "Hide Saved Pinyin" on phrases saved this session, reload the page!</p>
         <div id="buttons" class="container">
             <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin()">Hide Saved Pinyin</button>
             <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin()">Hide All Pinyin</button>
@@ -49,24 +47,6 @@
         }   
     }
 
-    /// Display end-user message
-    /// TODO: convert this to dismissable single pop-up
-    let toggleBanner = (success, msg) => {
-        let banner = document.getElementById('banner');
-        let banner_msg = document.getElementById('banner-msg');
-        if (success) {
-            banner.className = "alert alert-success alert-dismissible fade show";
-            banner.style.visibility = 'visible';
-        } else {
-            banner.className = "alert alert-warning alert-dismissible fade show";
-            banner.style.visibility = 'visible';
-        }
-        banner_msg.innerHTML = msg + "<button type=\"button\" class=\"btn\" onclick=\"switchToHidden(document.getElementById('banner'))\">X</button>";
-    }
-
-    /// Track words that were saved this session
-    let SAVED_PHRASES_THIS_SESSION = new Set();
-
     /// Handle Hash Change
     let parseHashChange = () => {
         if (location.hash) {
@@ -89,11 +69,10 @@
             xhr.onload = () => {
                 if (this.status == 400) {
                     let msg = `Create an account to add ${py_string} to your dictionary!`;
-                    toggleBanner(false, msg);
+                    alert(msg);
                 } else {
-                    let msg = `Successfully added ${py_string} to user dictionary!`;
-                    SAVED_PHRASES_THIS_SESSION.add(py_string);
-                    toggleBanner(true, msg);
+                    let msg = `Successfully added ${py_string} to your dictionary!`;
+                    alert(msg);
                 }
                 switchOffWordVisibility(py_string);
             }
@@ -105,24 +84,5 @@
         }
     }
     window.onhashchange = parseHashChange
-
-    {#     
-    // Saves state of document by deleting it, then re-rendering
-    let saveDocumentState = () => {
-        let current_url_arr = window.location.href.split("/");
-        let title = current_url_arr[current_url_arr.length - 1];
-
-        if SAVED_PHRASES_THIS_SESSION.size > 0 {
-            toggleBanner(true, "Saving changes, please wait...");
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", "/api/reload_doc");
-            xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            let params = `title=${title}`;
-            xhr.send(params);
-            // Send POST request with doc title, then re-render
-        }
-    } 
-    window.onbeforeunload = saveDocumentState
-    #}
 </script>
 {% endblock content %}
