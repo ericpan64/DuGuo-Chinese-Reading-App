@@ -17,7 +17,6 @@ use futures::StreamExt;
 use tokio::runtime::Handle;
 use mongodb::{
     bson::{doc, Bson, document::Document, to_document, from_bson},
-    options::{ClientOptions, StreamAddress},
     error::Error,
     Client, Collection, Database
 };
@@ -265,7 +264,7 @@ impl CnEnDictEntry {
 
     pub fn generate_empty_phrase() -> Self {
         // TODO: find a cleaner alternative to not found vocab
-        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in CEDICT";
+        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in database";
         let res = CnEnDictEntry {
             trad: String::from(LOOKUP_ERROR_MSG),
             simp: String::from(LOOKUP_ERROR_MSG),
