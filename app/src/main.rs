@@ -9,15 +9,16 @@ use rocket::{
     State,
 };
 use rocket_contrib::templates::Template;
-use mongodb::sync::Database;
+use mongodb::Database;
+use tokio::runtime::{Runtime, Handle};
 use ::duguo::*; // lib.rs
 
 /* GET */
 #[get("/")]
-fn index(cookies: Cookies, db: State<Database>) -> Template {
+fn index(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let cookie_lookup = cookies.get(JWT_NAME);
-    let username_from_cookie = get_username_from_cookie(db.clone(), cookie_lookup);
+    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup));
     match username_from_cookie {
         Some(username) => { context.insert("username", username); },
         None =>  {}
@@ -26,10 +27,10 @@ fn index(cookies: Cookies, db: State<Database>) -> Template {
 }
 
 #[get("/login")]
-fn login(cookies: Cookies, db: State<Database>) -> Template {
+fn login(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let cookie_lookup = cookies.get(JWT_NAME);
-    let username_from_cookie = get_username_from_cookie(db.clone(), cookie_lookup);
+    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup));
     match username_from_cookie {
         Some(username) => { context.insert("username", username); },
         None =>  {}
@@ -44,11 +45,11 @@ fn sandbox() -> Template {
 }
 
 #[get("/sandbox/<doc_id>")]
-fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
+fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
-    let html = match get_sandbox_document(db.clone(), doc_id) {
-        Some(text) => { convert_string_to_tokenized_html(db.clone(), text).to_string() },
+    let html = match rt.block_on(get_sandbox_document(db.clone(), doc_id)) {
+        Some(text) => { rt.block_on(convert_string_to_tokenized_html(db.clone(), text)) },
         None => String::new()
     };
     if &html != "" {
@@ -58,10 +59,10 @@ fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
 }
 
 #[get("/u/<raw_username>")]
-fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) -> Template {
+fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let username = convert_rawstr_to_string(raw_username);
-    match check_if_username_exists(db.clone(), &username) {
+    match rt.block_on(check_if_username_exists(db.clone(), &username)) {
         true => { 
             context.insert("username", username.clone()); 
         },
@@ -69,12 +70,12 @@ fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) ->
     }
     // Compare username with logged-in username from JWT
     let cookie_lookup = cookies.get(JWT_NAME);
-    match get_username_from_cookie(db.clone(), cookie_lookup) {
+    match rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup)) {
         Some(s) => { 
             context.insert("logged_in_username", s.clone()); 
             if &s == &username {
-                let doc_html = render_document_table(db.clone(), &username);
-                let vocab_html = render_vocab_table(db.clone(), &username);
+                let doc_html = rt.block_on(render_document_table(db.clone(), &username));
+                let vocab_html = rt.block_on(render_vocab_table(db.clone(), &username));
             
                 context.insert("doc_table", doc_html);
                 context.insert("vocab_table", vocab_html);           
@@ -86,10 +87,10 @@ fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) ->
 }
 
 #[get("/u/<raw_username>/<doc_title>")]
-fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
+fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let username = convert_rawstr_to_string(raw_username);
-    match check_if_username_exists(db.clone(), &username) {
+    match rt.block_on(check_if_username_exists(db.clone(), &username)) {
         true => { 
             context.insert("username", username.clone()); 
         },
@@ -97,16 +98,18 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, d
     }
     // Compare username with logged-in username from JWT
     let cookie_lookup = cookies.get(JWT_NAME);
-    match get_username_from_cookie(db.clone(), cookie_lookup) {
+    match rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup)) {
         Some(s) => { 
             if &s == &username {
                 // Get html to render
                 let title = convert_rawstr_to_string(doc_title);
-                let doc_html = UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title).unwrap_or_default();
-                context.insert("paragraph_html", doc_html);
-                // Get current list of user's saved phrases
-                let user_pinyin_list_string = get_user_pinyin_list_string(db.clone(), &username).unwrap_or_default();
-                context.insert("user_pinyin_list_string", user_pinyin_list_string);
+                let doc_html = UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title);
+                let user_pinyin_list_string = get_user_pinyin_list_string(db.clone(), &username);
+
+                let doc_res = rt.block_on(doc_html);
+                context.insert("paragraph_html", doc_res.unwrap_or_default());
+                let py_list_res = rt.block_on(user_pinyin_list_string);
+                context.insert("user_pinyin_list_string", py_list_res.unwrap_or_default());
             }
         },
         None =>  {
@@ -125,19 +128,23 @@ fn logout_user(mut cookies: Cookies) -> Redirect {
 }
 
 #[get("/api/delete-doc/<doc_title>")]
-fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Redirect {
-    let username = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)).unwrap();
+fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Redirect {
+    let username_query = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
     let title = convert_rawstr_to_string(doc_title);
-    UserDoc::try_delete(db.clone(), &username, &title);
+    let username = rt.block_on(username_query).unwrap();
+    rt.block_on(UserDoc::try_delete(db.clone(), &username, &title));
     return Redirect::to(uri!(user_profile: username));
 }
 
 #[get("/api/delete-vocab/<vocab_phrase>")]
-fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &RawStr) -> Redirect {
-    let username = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)).unwrap();
+fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_phrase: &RawStr) -> Redirect {
     let phrase_string = convert_rawstr_to_string(vocab_phrase);
-    let phrase_obj = CnEnDictEntry::new(db.clone(), &phrase_string);
-    UserVocab::try_delete(db.clone(), username.clone(), phrase_obj.formatted_pinyin.clone());
+    let phrase_obj_creation = CnEnDictEntry::new(db.clone(), &phrase_string);
+    let username_query = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
+    
+    let username = rt.block_on(username_query).unwrap();
+    let phrase_obj = rt.block_on(phrase_obj_creation);
+    rt.block_on(UserVocab::try_delete(db.clone(), username.clone(), phrase_obj.formatted_pinyin.clone()));
     return Redirect::to(uri!(user_profile: username));
 }
 
@@ -175,16 +182,16 @@ struct UserVocabForm<'f> {
 
 /* POST */
 #[post("/api/upload", data="<user_doc>")]
-fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDocumentForm>) -> Redirect {
+fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
     let UserDocumentForm { title, body } = user_doc.into_inner();
     let title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
 
-    let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
+    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = UserDoc::new(db.clone(), username, title, body);
-            match new_doc.try_insert(db.clone()) {
+            let new_doc = rt.block_on(UserDoc::new(db.clone(), username, title, body));
+            match rt.block_on(new_doc.try_insert(db.clone())) {
                 Ok(username) => { Redirect::to(uri!(user_profile: username)) },
                 Err(_) => { Redirect::to(uri!(index)) } 
             }
@@ -197,16 +204,16 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDoc
 }
 
 #[post("/api/vocab", data="<user_vocab>")]
-fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<UserVocabForm>) -> Status {
+fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { formatted_pinyin, from_doc_title } = user_vocab.into_inner();
     let formatted_pinyin = convert_rawstr_to_string(formatted_pinyin);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
 
-    let username_from_cookie = get_username_from_cookie(db.clone(), cookies.get(JWT_NAME));
+    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)));
     let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_doc = UserVocab::new(db.clone(), username.clone(), formatted_pinyin.clone(), from_doc_title);
-            match new_doc.try_insert(db.clone()) {
+            let new_doc = rt.block_on(UserVocab::new(db.clone(), username.clone(), formatted_pinyin.clone(), from_doc_title));
+            match rt.block_on(new_doc.try_insert(db.clone())) {
                 Ok(_) => { Status::Accepted },
                 Err(_) => { 
                     println!("Error when writing phrase {} for user {}", &formatted_pinyin, &username); 
@@ -223,12 +230,12 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, user_vocab: Form<Use
 }
 
 #[post("/login", data = "<user_input>")]
-fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
+fn login_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
     let UserLoginForm { username, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
 
-    let is_valid_password = check_password(db.clone(), username.clone(), password.clone());
+    let is_valid_password = rt.block_on(check_password(db.clone(), username.clone(), password.clone()));
     let mut context = HashMap::new();
     let res_redirect = match is_valid_password {
         true => {
@@ -249,7 +256,7 @@ fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLo
 
 // TODO: Change message handling to something neater, then update this to redirect instead of render
 #[post("/api/register", data = "<user_input>")]
-fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Redirect {
+fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserRegisterForm<'_>>) -> Redirect {
     let UserRegisterForm { username, email, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
@@ -257,7 +264,7 @@ fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<Use
 
     let new_user = User::new(username.clone(), password.clone(), email);
     // TODO: figure-out way to handle registration error cases
-    let res_redirect = match new_user.try_insert(db.clone()) {
+    let res_redirect = match rt.block_on(new_user.try_insert(db.clone())) {
         Ok(_) => {
             let new_cookie = generate_http_cookie(username, password);
             cookies.add(new_cookie);
@@ -269,21 +276,25 @@ fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<Use
 }
 
 #[post("/sandbox/upload", data = "<user_text>")]
-fn sandbox_upload(db: State<Database>, user_text: Form<TextForm<'_>>) -> Redirect {
+fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
     let TextForm { text } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
-    let new_doc = SandboxDoc::new(db.clone(), text_as_string);
-    let inserted_id = new_doc.try_insert(db.clone()).unwrap();
+    let new_doc = rt.block_on(SandboxDoc::new(db.clone(), text_as_string));
+    let inserted_id = rt.block_on(new_doc.try_insert(db.clone())).unwrap();
     return Redirect::to(uri!(sandbox_view_doc: inserted_id));
 }
 
 /* Server Startup */
-fn main() -> Result<(), mongodb::error::Error>{
+#[tokio::main]
+async fn main() -> Result<(), mongodb::error::Error>{
     let db = connect_to_mongodb()?;
+    let async_runtime = Runtime::new().unwrap();
+    let rt = async_runtime.handle().clone(); // "Handle" is a clonable reference to the Runtime manager
     
     rocket::ignite()
         .attach(Template::fairing())
         .manage(db)
+        .manage(rt)
         .mount("/", routes![index, 
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc,
