@@ -13,9 +13,8 @@ use config::{
         validate_jwt_and_get_username,
     }
 };
-use async_trait::async_trait;
 use futures::StreamExt;
-use tokio::runtime::Runtime;
+use tokio::runtime::Handle;
 use mongodb::{
     bson::{doc, Bson, document::Document, to_document, from_bson},
     options::{ClientOptions, StreamAddress},
@@ -89,26 +88,25 @@ pub struct UserVocabPinyinList {
 }
 
 /* Traits */
-#[async_trait]
 pub trait DatabaseItem {
     // Default
     fn as_document(&self) -> Document where Self: Serialize {
         return to_document(self).unwrap();
     }
-    async fn try_insert(&self, db: Database) -> Result<String, Error> where Self: Serialize {
+    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> where Self: Serialize {
         let coll = db.collection(self.collection_name());
         let new_doc = self.as_document();
-        match insert_one_doc(coll, new_doc).await {
+        match rt.block_on(insert_one_doc(coll, new_doc)) {
             Ok(_) => {}
             Err(e) => { return Err(e); }
         }
         return Ok(self.primary_key());
     }
-    async fn try_update(&self, db: Database, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
+    fn try_update(&self, db: Database, rt: Handle, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
         let coll = db.collection(self.collection_name());
         let update_doc = doc! { key: new_value };
         let update_query = doc! { "$set": update_doc };
-        match coll.update_one(self.as_document(), update_query, None).await {
+        match rt.block_on(coll.update_one(self.as_document(), update_query, None)) {
             Ok(_) => {},
             Err(e) => { return Err(e); }
         }
@@ -129,7 +127,6 @@ impl User {
     }
 }
 
-#[async_trait]
 impl DatabaseItem for User {
     fn collection_name(&self) -> &str { return USER_COLL_NAME; }
     fn primary_key(&self) -> String {
@@ -138,15 +135,17 @@ impl DatabaseItem for User {
     }
 
     // TODO: clean this up s.t. String returned is primary key (move error message logic elsewhere)
-    async fn try_insert(&self, db: Database) -> Result<String, Error> {
+    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> {
         let coll = db.collection(USER_COLL_NAME);
-        let is_existing_username = check_if_username_exists(db.clone(), self.username.as_str()).await;
-        let is_existing_email = check_coll_for_existing_key_value(coll.clone(), "email", self.email.as_str()).await;
+        let username_query = check_if_username_exists(db.clone(), self.username.as_str());
+        let email_query = check_coll_for_existing_key_value(coll.clone(), "email", self.email.as_str());
+        let is_existing_username = rt.block_on(username_query);
+        let is_existing_email = rt.block_on(email_query);
         let can_register = !(is_existing_username || is_existing_email);
         let mut message = String::new();
         if can_register {
             let new_doc = self.as_document();
-            match insert_one_doc(coll, new_doc).await {
+            match rt.block_on(insert_one_doc(coll, new_doc)) {
                 Ok(_) => {
                     let success_msg = format!("Registration successful! Username: {}", self.username);
                     message.push_str(&success_msg);
@@ -308,14 +307,13 @@ impl UserVocab {
     }
 }
 
-#[async_trait]
 impl DatabaseItem for UserVocab {
-    async fn try_insert(&self, db: Database) -> Result<String, Error> where Self: Serialize {
+    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> where Self: Serialize {
         let coll = db.collection(self.collection_name());
         let new_doc = self.as_document();
-        match insert_one_doc(coll, new_doc).await {
+        match rt.block_on(insert_one_doc(coll, new_doc)) {
             Ok(_) => {
-                append_to_user_pinyin_list_string(db, &self.username, &self.phrase.formatted_pinyin).await?;
+                rt.block_on(append_to_user_pinyin_list_string(db, rt.clone(), &self.username, &self.phrase.formatted_pinyin))?;
             },
             Err(e) => { return Err(e); }
         }
@@ -325,6 +323,7 @@ impl DatabaseItem for UserVocab {
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> String {
         // TODO: this is a dual key of username and phrase_string... how to handle?
+        // TODO: make this phrase.trad + phrase.simp (this is unique in CEDICT)
         return self.phrase.formatted_pinyin.clone();
     }
 }
@@ -335,16 +334,9 @@ impl DatabaseItem for UserVocabPinyinList {
 }
 
 /* Public Functions */
-pub fn connect_to_mongodb() -> Result<Database, Error> {
-    let options = ClientOptions::builder()
-    .hosts(vec![
-        StreamAddress {
-            hostname: DB_HOSTNAME.into(),
-            port: Some(DB_PORT),
-        }
-    ])
-    .build();
-    let client = Client::with_options(options)?;
+pub fn connect_to_mongodb(rt: Handle) -> Result<Database, Error> {
+    let uri = format!("mongodb://{}:{}/", DB_HOSTNAME, DB_PORT);
+    let client = rt.block_on(Client::with_uri_str(&uri))?;
     let db: Database = client.database(DATABASE_NAME);
     return Ok(db);
 }
@@ -504,15 +496,19 @@ pub async fn render_vocab_table(db: Database, username: &str) -> String {
                 // unwrap BSON document
                 let user_doc = item.unwrap(); // TODO handling error case would be better (Result)
                 let UserVocab { from_doc_title, phrase, cn_type, .. } = from_bson(Bson::Document(user_doc)).unwrap();
-                let CnEnDictEntry { trad, simp, .. } = phrase;
+                let CnEnDictEntry { trad, simp, trad_html, simp_html, .. } = phrase;
                 // TODO add user settings for traditional/simplified config. For now, default to traditional
                 // TODO convert doc_title to <a href=...></a> link
                 let hanzi = match cn_type {
-                    CnType::Traditional => trad,
-                    CnType::Simplified => simp
+                    CnType::Traditional => &trad,
+                    CnType::Simplified => &simp
                 };
-                let delete_button = format!("<a href=\"/api/delete-vocab/{}\">X</a>", &hanzi);
-                let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", &hanzi, &from_doc_title, &delete_button);
+                let hanzi_html = match cn_type {
+                    CnType::Traditional => &trad_html,
+                    CnType::Simplified => &simp_html
+                };
+                let delete_button = format!("<a href=\"/api/delete-vocab/{}\">X</a>", hanzi);
+                let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", hanzi_html, &from_doc_title, &delete_button);
                 res += &row;
             }
         },
@@ -551,10 +547,10 @@ pub async fn get_user_pinyin_list_string(db: Database, username: &str) -> Option
 
 /* Private Functions */
 /// new_pinyin should be space-delimited formatted pinyin
-async fn append_to_user_pinyin_list_string(db: Database, username: &str, new_pinyin: &str) -> Result<(), Error> {
+async fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, new_pinyin: &str) -> Result<(), Error> {
     let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
     let query_doc = doc! { "username": username };
-    match Runtime::new().unwrap().block_on(coll.find_one(query_doc, None)) {
+    match rt.block_on(coll.find_one(query_doc, None)) {
         Ok(query_res) => {
             match query_res {
                 Some(doc) => {
@@ -565,14 +561,14 @@ async fn append_to_user_pinyin_list_string(db: Database, username: &str, new_pin
                     formatted_pinyin_list += new_pinyin.replace(" ", ",").as_str();
 
                     // Write to db
-                    prev_doc.try_update(db.clone(), "formatted_pinyin_list", &formatted_pinyin_list).await?;
+                    prev_doc.try_update(db.clone(), rt.clone(), "formatted_pinyin_list", &formatted_pinyin_list)?;
                 }
                 None => {
                     // Create new instance
                     let formatted_pinyin_list = new_pinyin.replace(" ", ",");
                     let username = username.to_string();
                     let new_doc = UserVocabPinyinList { username, formatted_pinyin_list };
-                    new_doc.try_insert(db.clone()).await?;
+                    new_doc.try_insert(db.clone(), rt.clone())?;
                 }
             }
         },
@@ -584,7 +580,7 @@ async fn append_to_user_pinyin_list_string(db: Database, username: &str, new_pin
 }
 
 async fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
-    Runtime::new().unwrap().block_on(coll.delete_one(doc.clone(), None))?; // remove once can set unique indices
+    coll.delete_one(doc.clone(), None).await?; // remove once can set unique indices
     match coll.insert_one(doc.clone(), None).await {
         Ok(_) => {}
         Err(e) => {

@@ -181,6 +181,18 @@ struct UserVocabForm<'f> {
 }
 
 /* POST */
+#[post("/sandbox/upload", data = "<user_text>")]
+fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
+    let TextForm { text } = user_text.into_inner();    
+    let text_as_string = convert_rawstr_to_string(text);
+    println!("Creating new doc...");
+    let new_doc = rt.block_on(SandboxDoc::new(db.clone(), text_as_string));
+    println!("Doc created. Inserting new doc...");
+    let inserted_id = new_doc.try_insert(db.clone(), rt.clone()).unwrap();
+    println!("Doc inserted");
+    return Redirect::to(uri!(sandbox_view_doc: inserted_id));
+}
+
 #[post("/api/upload", data="<user_doc>")]
 fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
     let UserDocumentForm { title, body } = user_doc.into_inner();
@@ -191,7 +203,7 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
     let res_redirect = match username_from_cookie {
         Some(username) => { 
             let new_doc = rt.block_on(UserDoc::new(db.clone(), username, title, body));
-            match rt.block_on(new_doc.try_insert(db.clone())) {
+            match new_doc.try_insert(db.clone(), rt.clone()) {
                 Ok(username) => { Redirect::to(uri!(user_profile: username)) },
                 Err(_) => { Redirect::to(uri!(index)) } 
             }
@@ -213,7 +225,7 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, u
     let res_status = match username_from_cookie {
         Some(username) => { 
             let new_doc = rt.block_on(UserVocab::new(db.clone(), username.clone(), formatted_pinyin.clone(), from_doc_title));
-            match rt.block_on(new_doc.try_insert(db.clone())) {
+            match new_doc.try_insert(db.clone(), rt.clone()) {
                 Ok(_) => { Status::Accepted },
                 Err(_) => { 
                     println!("Error when writing phrase {} for user {}", &formatted_pinyin, &username); 
@@ -264,7 +276,7 @@ fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, u
 
     let new_user = User::new(username.clone(), password.clone(), email);
     // TODO: figure-out way to handle registration error cases
-    let res_redirect = match rt.block_on(new_user.try_insert(db.clone())) {
+    let res_redirect = match new_user.try_insert(db.clone(), rt.clone()) {
         Ok(_) => {
             let new_cookie = generate_http_cookie(username, password);
             cookies.add(new_cookie);
@@ -275,22 +287,12 @@ fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, u
     return res_redirect;
 }
 
-#[post("/sandbox/upload", data = "<user_text>")]
-fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
-    let TextForm { text } = user_text.into_inner();    
-    let text_as_string = convert_rawstr_to_string(text);
-    let new_doc = rt.block_on(SandboxDoc::new(db.clone(), text_as_string));
-    let inserted_id = rt.block_on(new_doc.try_insert(db.clone())).unwrap();
-    return Redirect::to(uri!(sandbox_view_doc: inserted_id));
-}
-
 /* Server Startup */
-#[tokio::main]
-async fn main() -> Result<(), mongodb::error::Error>{
-    let db = connect_to_mongodb()?;
+fn main() -> Result<(), mongodb::error::Error>{
     let async_runtime = Runtime::new().unwrap();
     let rt = async_runtime.handle().clone(); // "Handle" is a clonable reference to the Runtime manager
-    
+    let db = connect_to_mongodb(rt.clone())?;
+
     rocket::ignite()
         .attach(Template::fairing())
         .manage(db)
