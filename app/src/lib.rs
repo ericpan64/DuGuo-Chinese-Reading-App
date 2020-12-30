@@ -137,7 +137,7 @@ impl DatabaseItem for User {
     fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> {
         let coll = db.collection(USER_COLL_NAME);
         let username_query = check_if_username_exists(db.clone(), self.username.as_str());
-        let email_query = check_coll_for_existing_key_value(coll.clone(), "email", self.email.as_str());
+        let email_query = check_coll_for_existing_key_value(coll.clone(), "email", self.email.as_str(), None);
         let is_existing_username = rt.block_on(username_query);
         let is_existing_email = rt.block_on(email_query);
         let can_register = !(is_existing_username || is_existing_email);
@@ -187,7 +187,7 @@ impl UserDoc {
         let body_html = convert_string_to_tokenized_html(db.clone(), body.clone()).await;
         // If title is non-unique, try appending digits until match
         let coll = db.collection(USER_DOC_COLL_NAME);
-        let mut title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &desired_title).await;
+        let mut title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &desired_title, Some(&username)).await;
         let title = match title_exists {
             true => {
                 // Try new titles until unique one found
@@ -197,7 +197,7 @@ impl UserDoc {
                     count += 1;
                     let appended = format!("-{}", count);
                     new_title = desired_title.clone() + appended.as_str();
-                    title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &new_title).await;
+                    title_exists = check_coll_for_existing_key_value(coll.clone(), "title", &new_title, Some(&username)).await;
                 }
                 new_title
             },
@@ -604,7 +604,7 @@ fn tokenize_string(s: String) -> std::io::Result<String> {
 
 fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     let mut res = String::with_capacity(2500); // Using ~2500 characters as conservative estimate
-    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in CEDICT.\">";
+    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in database.\">";
     res += "<table style=\"display: inline-table;\">";
     res += "<tr></tr>"; // No pinyin found
     let mut phrase_td = String::with_capacity(10 * phrase.len()); // Adding ~10 chars per 3 bytes (1 chinese character), so this is conservative
@@ -618,7 +618,10 @@ fn generate_html_for_not_found_phrase(phrase: &str) -> String {
 }
 
 // TODO: make this generic DatabaseItem function? Then can call Struct::check_if_existing_key_value("username", ...)
-async fn check_coll_for_existing_key_value(coll: Collection, key: &str, value: &str) -> bool {
-    let query = coll.find_one(doc! { key: value }, None).await.unwrap();
+async fn check_coll_for_existing_key_value(coll: Collection, key: &str, value: &str, username: Option<&str>) -> bool {
+    let query = match username {
+        Some(u) => coll.find_one(doc! { "username": u, key: value }, None).await.unwrap(),
+        None => coll.find_one(doc! { key: value }, None).await.unwrap()
+    };
     return query != None;
 }
