@@ -2,35 +2,50 @@
 {% block title %} Login / Register {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
-
-<div class="form-box">
-    <div class="button-box">
-        <div id="btn"></div>
-        <button type="button" onclick="login()">Log In</button>
-        <button type="button" onclick="register()">Register</button>
-    </div>
+<div class="container">
     {% if username is defined %}
     <h3>Currently logged-in as: {{username}}</h3>
     {% endif %}
-    <form action="/login" id="login" method="POST">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="text" name="password" placeholder="Password" required>
-        <button type="submit">Log In</button>
+    <h1 class="h1">Login</h1>
+    <br/>
+    <form action="/api/login" id="login" method="POST">
+        <input class="form-control" type="text" name="username" placeholder="Username" required>
+        <br/>
+        <input class="form-control" type="password" name="password" id="pw-login" placeholder="Password" required>
+        <br/>
+        <button class="btn btn-primary" type="submit">Log In</button>
+        <br/>
     </form>
-
+    <br/>
+    <h1 class="h1">Register</h1>
+    <br/>
     <form action="/api/register" id="register" method="POST">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="text" name="email" placeholder="Email" required>
-        <input type="text" name="password" placeholder="Password" required>
-        <button type="submit">Register</button>
+        <input class="form-control" type="text" name="username" placeholder="Username" required>
+        <br/>
+        <input class="form-control" type="text" name="email" placeholder="Email" required>
+        <br/>
+        <input class="form-control" type="password" name="password" id="pw-reg" placeholder="Password" required>
+        <br/>
+        <button class="btn btn-primary" type="submit">Register</button>
     </form>
-
-    <p>Note - the following characters are not allowed: '<', '>', '(', ')', ',', '\"', '.', ';', ':', '\''</p>
+    <br/>
+    <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
+    <br/><br/>
+    <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " ; : \</p>
 </div>
 <script>
-    let message = "{{ message | default(value=0)}}";
-    if (message != "0") {
-        alert(message);
+    /// Toggle password visibility
+    let showPassword = () => {
+        let login_pw = document.getElementById("pw-login")
+        let reg_pw = document.getElementById("pw-reg")
+
+        if (login_pw.type == "password") {
+            login_pw.type = "text"
+            reg_pw.type = "text"
+        } else {
+            login_pw.type = "password"
+            reg_pw.type = "password"
+        }
     }
 </script>
 {% endblock content %}
