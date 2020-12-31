@@ -10,11 +10,11 @@
 <br/><br/>
 <h2>Getting Started</h2>
 
-    All you need is to copy & paste the Chinese text you want to read. DuGuo will render the article body into an interactive playground to learn and track progress.
+    All you need is to copy & paste the Chinese text you want to read. DuGuo will render the article body into an interactive playground that facilitates learning and tracking progress.
     <br/>
-    Try the Sandbox mode to demo the application, or make an account to save files!
+    Try the <a href="/sandbox">Sandbox mode</a> to demo the application, or make an account to save files!
     <br/>
-    Otherwise, create an account to save documents and learned vocabulary.
+    Otherwise, <a href="/login">create an account</a> to save documents and learned vocabulary.
 {% else %}
 <h1><span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. hello<br/>2. hi<br/>" title="你好 [ni3 hao3] <a role=&quot;button&quot; href=&quot;#~你好&quot;><img src=&quot;https://icons.getbootstrap.com/icons/mic.svg&quot;></img></a>    <a role=&quot;button&quot; href=&quot;#你好&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">你好</span>
 , {{username}} </h1>
@@ -24,9 +24,17 @@
     Head to <a href="/u/{{username}}">your profile</a> to upload documents and view your saved vocabulary!
 {% endif %}
 <br/><br/>
+<h2>Submit Feedback</h2>
+
+    Visit the <a href="/feedback">feedback tab</a> to submit feedback. All thoughts, comments, and suggestions are welcome (constructive criticism most appreciated)!
+<br/><br/>
 <h2>Acknowledgements</h2>
 
-    Thank you to Martin Kess for providing the initial implementation (<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class<br/>" title="中文读机 [zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/mic.svg&quot;></img></a>    <a role=&quot;button&quot; href=&quot;#中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span> from the OMSCS Education Technology course) which provided a very well-scoped architecture and strong foundation to build off-of.
+    Thank you to Martin Kess for providing the initial implementation (the <span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class<br/>" title="中文读机 [zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/mic.svg&quot;></img></a>    <a role=&quot;button&quot; href=&quot;#中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) which provided a well-scoped architecture and very strong foundation to build on.
     <br/>
-    View the <a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github Repo</a> to view the stack and other notes on the project.
+    Visit the <a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github Repo</a> to view the stack and other notes on the project.
+<script>
+    // Update active navbar
+    document.getElementById("nav1").classList.add("active");
+</script>
 {% endblock content %}

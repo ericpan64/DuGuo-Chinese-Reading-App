@@ -22,9 +22,9 @@
     <form action="/api/register" id="register" method="POST">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
         <br/>
-        <input class="form-control" type="text" name="email" placeholder="Email" required>
+        <input class="form-control" type="email" name="email" placeholder="Email" required>
         <br/>
-        <input class="form-control" type="password" name="password" id="pw-reg" placeholder="Password" required>
+        <input class="form-control" type="password" name="password" id="pw-reg" placeholder="Password (min 8 chars)" minlength="8" required>
         <br/>
         <button class="btn btn-primary" type="submit">Register</button>
     </form>
@@ -34,6 +34,9 @@
     <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " ; : \</p>
 </div>
 <script>
+    // Update active navbar
+    document.getElementById("nav3").classList.add("active");
+    
     /// Toggle password visibility
     let showPassword = () => {
         let login_pw = document.getElementById("pw-login")
