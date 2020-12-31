@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-import pinyin as pfmt
+from pypinyin import pinyin as pfmt
 import pandas as pd
 from config import DB_NAME, COLL_NAME, DB_PORT, DB_HOSTNAME # Note: this exists but is not published on this repo
 
@@ -14,20 +14,20 @@ get_first_col_as_set = lambda fn: set(pd.read_csv(fn).iloc[:, 0])
 simp_dups = get_first_col_as_set('static/simplified_duplicates.csv')
 trad_dups = get_first_col_as_set('static/traditional_duplicates.csv')
 
-def convert_digits_to_pinyin(s):
-    """ Formats edge-case characters from pinyin (pfmt) library """
+def convert_digits_to_chars(s):
+    """ Formats edge-case characters from pypinyin (pfmt) library """
     repl_dict = {
-        '0': 'líng',
-        '1': 'yī',
-        '2': 'èr', 
-        '3': 'sān',
-        '4': 'sì',
-        '5': 'wǔ',
-        '6': 'liù',
-        '7': 'qī',
-        '8': 'bā',
-        '9': 'jiǔ',
-        '%': 'pā',
+        '1': '一',
+        '2': '二',
+        '3': '三',
+        '4': '四',
+        '5': '五',
+        '6': '六',
+        '7': '七',
+        '8': '八',
+        '9': '九',
+        '0': '零',
+        '%': '啪', # FYI: same pinyin, not same word
     }
     for k, v in repl_dict.items():
         s = s.replace(k, v)
@@ -51,9 +51,21 @@ def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
         # get individual words (used in pinyin name)
         word_list = [w for w in phrase]
         pinyin_list = formatted_pinyin.split(' ')
+        print(f"word_list: {word_list}\npinyin_list: {pinyin_list}")
+        # handle case for non-chinese character pinyin getting "stuck" (e.g. ['AA'] should be ['A', 'A'])
+        # Note: this is not pretty, but it works!
+        if len(word_list) > len(pinyin_list):
+            # from inspection, this is always first or last item. Hard-code for edge cases (['dǎ', 'call'], ['mǔ', 'tāi', 'solo'])
+            if pinyin_list[0] not in {'dǎ', 'mǔ'} and len(pinyin_list[0]) > 1:
+                non_chinese_chars = [c for c in pinyin_list[0]] 
+                pinyin_list = non_chinese_chars + pinyin_list[1:]
+            elif len(pinyin_list[-1]) > 1:
+                non_chinese_chars = [c for c in pinyin_list[-1]] 
+                pinyin_list = pinyin_list[:-1] + non_chinese_chars
         assert len(word_list) == len(pinyin_list)
-        n_words = len(word_list)
+        
         # generate html
+        n_words = len(word_list)
         res = ''
         span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
             title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{phrase}&quot;>\
@@ -104,9 +116,10 @@ if __name__ == '__main__':
                     continue
 
                 # get formatted pinyin
-                formatted_pinyin = pfmt.get(simp, delimiter=' ')
-                formatted_pinyin = convert_digits_to_pinyin(formatted_pinyin)
-
+                flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+                formatted_simp = convert_digits_to_chars(simp)
+                formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
+                
                 # handle case where lines can be merged (based on formatted pinyin)
                 if curr_matches_prev(trad, simp, formatted_pinyin):
                     last_entry = entry_list.pop()
@@ -131,5 +144,5 @@ if __name__ == '__main__':
 
             print('Loaded. Sending to db...')
             coll.insert_many(entry_list)
-            print('Completed')
+        print('Completed')
 
