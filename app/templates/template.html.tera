@@ -8,7 +8,7 @@
         {# Bootstrap Files #}
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
-
+        
         {# Bootstrap Tags #}
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
@@ -25,7 +25,7 @@
                 </ul>
             {% else %}
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">About</a></li>
                     <li class="nav-item"><a class="nav-link" href="/u/{{username}}">Profile</a></li>
                     <li class="nav-item"><a class="nav-link" href="/api/logout">Logout</a></li>
                 </ul>
@@ -37,13 +37,63 @@
             {% block content %}{% endblock content %}
         </div>
     </body>
-
-
     <script>
+        /// Trigger Pinyin Visibility
+        let switchToHidden = (e) => { e.style.visibility = 'hidden'; }
+        let switchToVisible = (e) => { e.style.visibility = 'visible'; }
+        let switchOffWordVisibility = (pinyin) => {
+            for (name of pinyin.split(' ')) {
+                yins = document.getElementsByName(name).forEach(switchToHidden);
+            }
+        }
         // Enable pop-ups
-        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
             return new bootstrap.Popover(popoverTriggerEl)
         })
+        // Text-to-Speech
+        let sayPhrase = (phrase) => {
+            let utterance = new SpeechSynthesisUtterance(phrase);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 0.8;
+            return window.speechSynthesis.speak(utterance);
+        }
+        /// Handle Hash Changes
+        let parseHashChange = () => {
+            if (location.hash) {
+                let py_string = location.hash.substring(1);
+                py_string = decodeURIComponent(py_string);
+                // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
+                history.pushState("", document.title, window.location.pathname + window.location.search);
+                // Text-to-Speech if starts with ~
+                // Otherwise, Saving Vocab
+                if (py_string.charAt(0) == '~') {
+                    py_string = py_string.substring(1);
+                    sayPhrase(py_string); // defined in "template.html.tera"
+                } else {
+                    // Send POST request to add vocab string with title, then return result
+                    // (Rocket handles the cookie reading!)
+                    let xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/api/vocab");
+                    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                    let params = `saved_phrase=${py_string}&from_doc_title=${document.title}`;
+                    
+                    // TODO make sure this works correctly in Sandbox/otherwise
+                    xhr.onload = () => {
+                        if (xhr.status == 202) {
+                            alert(`Successfully added ${py_string} to your dictionary!`);
+                        } else {
+                            alert(`Error when adding ${py_string} to dictionary. Create an account and/or open a Github issue`);
+                        }
+                        switchOffWordVisibility(py_string);
+                    }
+                    xhr.onerror = () => {
+                        alert(`Error when adding ${py_string} to dictionary. Try again and/or open a Github issue`);
+                    }
+                    xhr.send(params);
+                }
+            }
+        }
+        window.onhashchange = parseHashChange;
     </script>
 </html>

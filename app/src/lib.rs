@@ -152,19 +152,7 @@ impl DatabaseItem for User {
                     let success_msg = format!("Registration successful! Username: {}", self.username);
                     message.push_str(&success_msg);
                 }
-                Err(e) => {
-                    let error_msg = format!("Error when pushing to database, log: {:?}", e);
-                    message.push_str(&error_msg);
-                }
-            }
-        } else {
-            if is_existing_username {
-                let user_taken_msg = format!("Username {} is already in-use. ", self.username);
-                message.push_str(&user_taken_msg);
-            }
-            if is_existing_email {
-                let email_taken_msg = format!("Email {} is already in-use. ", self.email);
-                message.push_str(&email_taken_msg);
+                Err(e) => { return Err(e); }
             }
         }
         return Ok(message);
@@ -304,13 +292,17 @@ impl UserVocab {
         return new_vocab;
     }
 
-    pub async fn try_delete(db: Database, username: String, phrase: CnEnDictEntry) -> bool {
+    pub fn try_delete(db: Database, rt: Handle, username: String, phrase: CnEnDictEntry) -> bool {
         let coll = db.collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": username, "phrase": phrase.as_bson() }; 
-        let res = match coll.delete_one(query_doc, None).await {
+        let query_doc = doc! { "username": &username, "phrase.trad": &phrase.trad, "phrase.simp": &phrase.simp };
+        let mut res = match rt.block_on(coll.delete_one(query_doc, None)) {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
         };
+        match remove_from_phrase_list_string(db.clone(), rt, &username, &phrase) {
+            Ok(_) => { },
+            Err(_) => { res = false; }
+        }
         return res;
     }
 }
@@ -321,7 +313,7 @@ impl DatabaseItem for UserVocab {
         let new_doc = self.as_document();
         match rt.block_on(insert_one_doc(coll, new_doc)) {
             Ok(_) => {
-                append_to_user_pinyin_list_string(db, rt.clone(), &self.username, &self.phrase)?;
+                append_to_user_phrase_list_string(db, rt.clone(), &self.username, &self.phrase)?;
             },
             Err(e) => { return Err(e); }
         }
@@ -554,8 +546,7 @@ pub async fn get_user_vocab_list_string(db: Database, username: &str) -> Option<
 }
 
 /* Private Functions */
-/// new_pinyin should be space-delimited formatted pinyin
-fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, new_phrase: &CnEnDictEntry) -> Result<(), Error> {
+fn append_to_user_phrase_list_string(db: Database, rt: Handle, username: &str, new_phrase: &CnEnDictEntry) -> Result<(), Error> {
     let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
     let query_doc = doc! { "username": username };
     match rt.block_on(coll.find_one(query_doc, None)) {
@@ -569,15 +560,14 @@ fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, n
                     let trad_and_simp_str = String::with_capacity(50) + &*new_phrase.trad + &*new_phrase.simp;
                     for c in (trad_and_simp_str).chars() {
                         if !unique_phrase_list.contains(c) {
-                            unique_phrase_list += ",";
                             unique_phrase_list += &c.to_string();
+                            unique_phrase_list += ",";
                         }
                     }
                     // Write to db
                     prev_doc.try_update(db.clone(), rt.clone(), "unique_phrase_list", &unique_phrase_list)?;
                 }
                 None => {
-                    println!("We got here");
                     // Create new instance with unique chars, save to db
                     let mut unique_phrase_list = String::with_capacity(50);
                     let trad_and_simp_str = String::with_capacity(50) + &*new_phrase.trad + &*new_phrase.simp;
@@ -587,7 +577,6 @@ fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, n
                             unique_phrase_list += ",";
                         }
                     }
-                    unique_phrase_list.pop(); // remove last comma
                     let username = username.to_string();
                     let new_doc = UserVocabList { username, unique_phrase_list };
                     new_doc.try_insert(db.clone(), rt.clone())?;
@@ -598,8 +587,39 @@ fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, n
             println!("Error when searching for pinyin list for user {}: {:?}", username, e);
         }
     }
-    println!("We have exited");
-    Ok(())
+    return Ok(());
+}
+
+fn remove_from_phrase_list_string(db: Database, rt: Handle, username: &str, phrase_to_remove: &CnEnDictEntry) -> Result<(), Error> {
+    let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    let query_doc = doc! { "username": username };
+    match rt.block_on(coll.find_one(query_doc, None)) {
+        Ok(query_res) => {
+            match query_res {
+                Some(doc) => {
+                    // Update existing list
+                    let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
+                    let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
+                    // Remove unique chars
+                    let trad_and_simp_str = String::with_capacity(50) + &*phrase_to_remove.trad + &*phrase_to_remove.simp;
+                    for c in (trad_and_simp_str).chars() {
+                        if unique_phrase_list.contains(c) {
+                            // remove the string from unique_phrase_list
+                            let c_with_comma = format!("{},", c);
+                            unique_phrase_list = unique_phrase_list.replace(&c_with_comma, "");
+                        }
+                    }
+                    // Write to db
+                    prev_doc.try_update(db.clone(), rt.clone(), "unique_phrase_list", &unique_phrase_list)?;
+                },
+                None => {}
+            }
+        },
+        Err(e) => { 
+            println!("Error when searching for pinyin list for user {}: {:?}", username, e);
+        }
+    }
+    return Ok(());
 }
 
 async fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {

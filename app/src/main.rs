@@ -144,7 +144,7 @@ fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, v
     
     let username = rt.block_on(username_query).unwrap();
     let phrase_obj = rt.block_on(phrase_obj_creation);
-    rt.block_on(UserVocab::try_delete(db.clone(), username.clone(), phrase_obj));
+    UserVocab::try_delete(db.clone(), rt.clone(), username.clone(), phrase_obj);
     return Redirect::to(uri!(user_profile: username));
 }
 
@@ -216,14 +216,13 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
 fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { saved_phrase, from_doc_title } = user_vocab.into_inner();
     let phrase = convert_rawstr_to_string(saved_phrase);
-    println!("{}", &phrase); // TODO: confirm hanzi survives this...
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
 
     let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)));
     let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_doc = rt.block_on(UserVocab::new(db.clone(), username.clone(), phrase.clone(), from_doc_title));
-            match new_doc.try_insert(db.clone(), rt.clone()) {
+            let new_vocab = rt.block_on(UserVocab::new(db.clone(), username.clone(), phrase.clone(), from_doc_title));
+            match new_vocab.try_insert(db.clone(), rt.clone()) {
                 Ok(_) => { Status::Accepted },
                 Err(_) => { 
                     println!("Error when writing phrase {} for user {}", &phrase, &username); 
@@ -239,7 +238,7 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, u
     return res_status;
 }
 
-#[post("/login", data = "<user_input>")]
+#[post("/api/login", data = "<user_input>")]
 fn login_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
     let UserLoginForm { username, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);

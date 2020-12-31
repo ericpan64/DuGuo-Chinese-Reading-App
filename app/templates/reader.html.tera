@@ -1,5 +1,5 @@
 {% extends "template" %}
-{% block title %} Document Reader {% endblock title %}
+{% block title %} {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
     {% if paragraph_html is undefined %}
@@ -16,25 +16,23 @@
     {% endif %}
 
 <script>
-    /// Trigger Pinyin Visibility
-    let switchToHidden = (e) => { e.style.visibility = 'hidden'; }
-    let switchToVisible = (e) => { e.style.visibility = 'visible'; }
-    let switchOffWordVisibility = (pinyin) => {
-        for (name of pinyin.split(' ')) {
-            yins = document.getElementsByName(name).forEach(switchToHidden);
-        }
-    }
-
+    /// Document Title
+    {% if username is undefined %}
+    document.title = "Sandbox";
+    {% else %}
+    let current_url_arr = window.location.href.split("/");
+    document.title = current_url_arr[current_url_arr.length - 1];
+    {% endif %}
     /// Button Functionality
     {% if user_vocab_list_string is undefined %}
-    let user_saved_pinyin_list = [];
+    let user_saved_phrase_list = [];
     {% else %}
-    let user_saved_pinyin_list = "{{user_vocab_list_string}}".split(',');
+    let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
 
     let all_pinyin_list = document.getElementsByClassName("pinyin");
     let hideSavedPinyin = () => {
-        user_saved_pinyin_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
+        user_saved_phrase_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
     }
     let hideAllPinyin = () => { 
         for (let i = 0; i < all_pinyin_list.length; i++) {
@@ -46,47 +44,5 @@
             switchToVisible(all_pinyin_list[i]);
         }   
     }
-
-    /// Handle Hash Change
-    let parseHashChange = () => {
-        if (location.hash) {
-            let py_string = location.hash.substring(1);
-            py_string = py_string.replaceAll('_', ' ');
-            py_string = decodeURIComponent(py_string);
-
-            // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
-            history.pushState("", document.title, window.location.pathname + window.location.search);
-
-            // Send POST request to add vocab string with title, then return result
-            // (Rocket handles the cookie reading!)
-            let current_url_arr = window.location.href.split("/");
-            let title = current_url_arr[current_url_arr.length - 1];
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", "/api/vocab");
-            xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            let params = `saved_phrase=${py_string}&from_doc_title=${title}`;
-
-
-            console.log(params);
-            
-            // TODO make sure this works correctly in Sandbox/otherwise
-            xhr.onload = () => {
-                if (this.status == 400) {
-                    alert(`Create an account to add ${py_string} to your dictionary!`);
-                } else if (this.status > 400) {
-                    alert(`Error when adding ${py_string} to dictionary. Try again and/or open a Github issue`);
-                } else {
-                    alert(`Successfully added ${py_string} to your dictionary!`);
-                }
-                switchOffWordVisibility(py_string);
-            }
-            xhr.onerror = () => {
-                let msg = `Error when adding ${py_string} to dictionary. Try again and/or open a Github issue`;
-                toggleBanner(false, msg);
-            }
-            xhr.send(params);
-        }
-    }
-    window.onhashchange = parseHashChange
 </script>
 {% endblock content %}

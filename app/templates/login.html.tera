@@ -8,7 +8,7 @@
     {% endif %}
     <h1 class="h1">Login</h1>
     <br/>
-    <form action="/login" id="login" method="POST">
+    <form action="/api/login" id="login" method="POST">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
         <br/>
         <input class="form-control" type="password" name="password" id="pw-login" placeholder="Password" required>
@@ -31,7 +31,7 @@
     <br/>
     <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
     <br/><br/>
-    <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " . ; : \</p>
+    <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " ; : \</p>
 </div>
 <script>
     /// Toggle password visibility

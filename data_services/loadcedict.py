@@ -7,6 +7,7 @@ from config import DB_NAME, COLL_NAME, DB_PORT, DB_HOSTNAME # Note: this exists 
 client = MongoClient(DB_HOSTNAME, DB_PORT)
 db = client[DB_NAME]
 coll = db[COLL_NAME]
+# coll.drop() # reload when testing
 
 # Track set of Traditional/Simplified characters with duplicate entries.
 # Skip them for now (seek to merge definitions in the future)
@@ -27,7 +28,7 @@ def convert_digits_to_chars(s):
         '8': '八',
         '9': '九',
         '0': '零',
-        '%': '啪', # FYI: same pinyin, not same word
+        '%': '啪', # FYI: same pinyin, not actually the same word
     }
     for k, v in repl_dict.items():
         s = s.replace(k, v)
@@ -46,12 +47,12 @@ def format_defn_html(defn):
 
 def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
     """ Takes CEDICT entry information and generates corresponding HTML """
-    download_icon_loc = 'https://icons.getbootstrap.com/icons/box-arrow-down.svg'
+    download_icon_loc = 'https://icons.getbootstrap.com/icons/download.svg'
+    sound_icon_loc = 'https://icons.getbootstrap.com/icons/mic.svg'
     def perform_render(phrase):
         # get individual words (used in pinyin name)
         word_list = [w for w in phrase]
         pinyin_list = formatted_pinyin.split(' ')
-        print(f"word_list: {word_list}\npinyin_list: {pinyin_list}")
         # handle case for non-chinese character pinyin getting "stuck" (e.g. ['AA'] should be ['A', 'A'])
         # Note: this is not pretty, but it works!
         if len(word_list) > len(pinyin_list):
@@ -63,19 +64,20 @@ def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
                 non_chinese_chars = [c for c in pinyin_list[-1]] 
                 pinyin_list = pinyin_list[:-1] + non_chinese_chars
         assert len(word_list) == len(pinyin_list)
-        
         # generate html
         n_words = len(word_list)
         res = ''
         span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
-            title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{phrase}&quot;>\
-            <img src=&quot;{download_icon_loc}&quot;></img></a>" data-bs-html="true">' # ... oh neptune...
+            title="{phrase} [{raw_pinyin}] \
+            <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a>    \
+            <a role=&quot;button&quot; href=&quot;#{phrase}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
+            data-bs-html="true">' # ... dear neptune...
         res += span_start.replace('            ', '')
-        res += '<table style="display: inline-table;">'
+        res += '<table style="display: inline-table; text-align: center;">'
         pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{word_list[i]}">{pinyin_list[i]}</td>' for i in range(n_words)])
         pinyin_html = f'<tr>{pinyin_html}</tr>'
         res += pinyin_html
-        phrase_html = ''.join([f'<td>{w}</td>' for w in phrase])
+        phrase_html = ''.join([f'<td class="phrase">{w}</td>' for w in phrase])
         phrase_html = f'<tr>{phrase_html}</tr>'
         res += phrase_html
         res += '</table>'
