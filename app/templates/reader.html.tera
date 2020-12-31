@@ -26,10 +26,10 @@
     }
 
     /// Button Functionality
-    {% if user_pinyin_list_string is undefined %}
+    {% if user_vocab_list_string is undefined %}
     let user_saved_pinyin_list = [];
     {% else %}
-    let user_saved_pinyin_list = "{{user_pinyin_list_string}}".split(',');
+    let user_saved_pinyin_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
 
     let all_pinyin_list = document.getElementsByClassName("pinyin");
@@ -64,15 +64,19 @@
             let xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/vocab");
             xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            let params = `formatted_pinyin=${py_string}&from_doc_title=${title}`;
-                
+            let params = `saved_phrase=${py_string}&from_doc_title=${title}`;
+
+
+            console.log(params);
+            
+            // TODO make sure this works correctly in Sandbox/otherwise
             xhr.onload = () => {
                 if (this.status == 400) {
-                    let msg = `Create an account to add ${py_string} to your dictionary!`;
-                    alert(msg);
+                    alert(`Create an account to add ${py_string} to your dictionary!`);
+                } else if (this.status > 400) {
+                    alert(`Error when adding ${py_string} to dictionary. Try again and/or open a Github issue`);
                 } else {
-                    let msg = `Successfully added ${py_string} to your dictionary!`;
-                    alert(msg);
+                    alert(`Successfully added ${py_string} to your dictionary!`);
                 }
                 switchOffWordVisibility(py_string);
             }

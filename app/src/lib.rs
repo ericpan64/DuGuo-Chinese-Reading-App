@@ -16,12 +16,12 @@ use config::{
 use futures::StreamExt;
 use tokio::runtime::Handle;
 use mongodb::{
-    bson::{doc, Bson, document::Document, to_document, from_bson},
+    bson::{doc, Bson, document::Document, to_document, from_bson, to_bson},
     error::Error,
     Client, Collection, Database
 };
 use rocket::{
-    http::{RawStr, Cookie},
+    http::{RawStr, Cookie, SameSite},
 };
 use std::io::prelude::*;
 use std::net::TcpStream;
@@ -81,9 +81,9 @@ pub struct UserVocab {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UserVocabPinyinList {
+pub struct UserVocabList {
     username: String,
-    formatted_pinyin_list: String, // comma-delimited
+    unique_phrase_list: String, // comma-delimited
 }
 
 /* Traits */
@@ -91,6 +91,9 @@ pub trait DatabaseItem {
     // Default
     fn as_document(&self) -> Document where Self: Serialize {
         return to_document(self).unwrap();
+    }
+    fn as_bson(&self) -> Bson where Self: Serialize {
+        return to_bson(self).unwrap();
     }
     fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> where Self: Serialize {
         let coll = db.collection(self.collection_name());
@@ -284,20 +287,26 @@ impl DatabaseItem for CnEnDictEntry {
 }
 
 impl UserVocab {
-    pub async fn new(db: Database, username: String, formatted_pinyin: String, from_doc_title: String) -> Self {
-        // Default to traditional
-        let cn_type = CnType::Traditional;
-        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), "formatted_pinyin", &formatted_pinyin).await {
-            Some(p) => p,
-            None => CnEnDictEntry::generate_empty_phrase()
+    pub async fn new(db: Database, username: String, saved_phrase: String, from_doc_title: String) -> Self {
+        // Try simplified, then traditional
+        let mut cn_type = CnType::Simplified;
+        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), "simp", &saved_phrase).await {
+            Some(sp) => sp,
+            None => {
+                cn_type = CnType::Traditional;
+                match CnEnDictEntry::lookup_phrase(db.clone(), "trad", &saved_phrase).await {
+                    Some(tp) => tp,
+                    None => CnEnDictEntry::generate_empty_phrase()
+                }
+            }
         };
         let new_vocab = UserVocab { username, from_doc_title, phrase, cn_type };
         return new_vocab;
     }
 
-    pub async fn try_delete(db: Database, username: String, formatted_pinyin: String) -> bool {
+    pub async fn try_delete(db: Database, username: String, phrase: CnEnDictEntry) -> bool {
         let coll = db.collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": username, "phrase.formatted_pinyin": formatted_pinyin }; 
+        let query_doc = doc! { "username": username, "phrase": phrase.as_bson() }; 
         let res = match coll.delete_one(query_doc, None).await {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
@@ -312,7 +321,7 @@ impl DatabaseItem for UserVocab {
         let new_doc = self.as_document();
         match rt.block_on(insert_one_doc(coll, new_doc)) {
             Ok(_) => {
-                rt.block_on(append_to_user_pinyin_list_string(db, rt.clone(), &self.username, &self.phrase.formatted_pinyin))?;
+                append_to_user_pinyin_list_string(db, rt.clone(), &self.username, &self.phrase)?;
             },
             Err(e) => { return Err(e); }
         }
@@ -321,13 +330,12 @@ impl DatabaseItem for UserVocab {
 
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> String {
-        // TODO: this is a dual key of username and phrase_string... how to handle?
-        // TODO: make this phrase.trad + phrase.simp (this is unique in CEDICT)
-        return self.phrase.formatted_pinyin.clone();
+        // TODO: make this phrase.trad + phrase.simp (this is unique in CEDICT), or something better...
+        return self.phrase.trad.clone();
     }
 }
 
-impl DatabaseItem for UserVocabPinyinList {
+impl DatabaseItem for UserVocabList {
     fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
     fn primary_key(&self) -> String { return self.username.clone(); }
 }
@@ -375,6 +383,7 @@ pub fn generate_http_cookie(username: String, password: String) -> Cookie<'stati
     };
     let mut cookie = Cookie::new(JWT_NAME, jwt);
     cookie.set_http_only(true);
+    cookie.set_same_site(SameSite::Strict);
     cookie.set_path("/");
     return cookie;
 }
@@ -526,13 +535,13 @@ pub async fn check_if_username_exists(db: Database, username: &str) -> bool {
     return username_search != None;
 }
 
-pub async fn get_user_pinyin_list_string(db: Database, username: &str) -> Option<String> {
+pub async fn get_user_vocab_list_string(db: Database, username: &str) -> Option<String> {
     let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
     let query_doc = doc! { "username": username };
     let res = match coll.find_one(query_doc, None).await {
         Ok(query_res) => {
             match query_res {
-                Some(doc) => Some(doc.get("formatted_pinyin_list").and_then(Bson::as_str).unwrap().to_string()),
+                Some(doc) => Some(doc.get("unique_phrase_list").and_then(Bson::as_str).unwrap().to_string()),
                 None => None
             }            
         },
@@ -546,7 +555,7 @@ pub async fn get_user_pinyin_list_string(db: Database, username: &str) -> Option
 
 /* Private Functions */
 /// new_pinyin should be space-delimited formatted pinyin
-async fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, new_pinyin: &str) -> Result<(), Error> {
+fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &str, new_phrase: &CnEnDictEntry) -> Result<(), Error> {
     let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
     let query_doc = doc! { "username": username };
     match rt.block_on(coll.find_one(query_doc, None)) {
@@ -554,19 +563,33 @@ async fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &
             match query_res {
                 Some(doc) => {
                     // Update existing list
-                    let prev_doc: UserVocabPinyinList = from_bson(Bson::Document(doc)).unwrap();
-                    let mut formatted_pinyin_list = prev_doc.formatted_pinyin_list.clone();
-                    formatted_pinyin_list += ",";
-                    formatted_pinyin_list += new_pinyin.replace(" ", ",").as_str();
-
+                    let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
+                    let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
+                    // Add unique chars
+                    let trad_and_simp_str = String::with_capacity(50) + &*new_phrase.trad + &*new_phrase.simp;
+                    for c in (trad_and_simp_str).chars() {
+                        if !unique_phrase_list.contains(c) {
+                            unique_phrase_list += ",";
+                            unique_phrase_list += &c.to_string();
+                        }
+                    }
                     // Write to db
-                    prev_doc.try_update(db.clone(), rt.clone(), "formatted_pinyin_list", &formatted_pinyin_list)?;
+                    prev_doc.try_update(db.clone(), rt.clone(), "unique_phrase_list", &unique_phrase_list)?;
                 }
                 None => {
-                    // Create new instance
-                    let formatted_pinyin_list = new_pinyin.replace(" ", ",");
+                    println!("We got here");
+                    // Create new instance with unique chars, save to db
+                    let mut unique_phrase_list = String::with_capacity(50);
+                    let trad_and_simp_str = String::with_capacity(50) + &*new_phrase.trad + &*new_phrase.simp;
+                    for c in (trad_and_simp_str).chars() {
+                        if !unique_phrase_list.contains(c) {
+                            unique_phrase_list += &c.to_string();
+                            unique_phrase_list += ",";
+                        }
+                    }
+                    unique_phrase_list.pop(); // remove last comma
                     let username = username.to_string();
-                    let new_doc = UserVocabPinyinList { username, formatted_pinyin_list };
+                    let new_doc = UserVocabList { username, unique_phrase_list };
                     new_doc.try_insert(db.clone(), rt.clone())?;
                 }
             }
@@ -575,6 +598,7 @@ async fn append_to_user_pinyin_list_string(db: Database, rt: Handle, username: &
             println!("Error when searching for pinyin list for user {}: {:?}", username, e);
         }
     }
+    println!("We have exited");
     Ok(())
 }
 
@@ -604,7 +628,7 @@ fn tokenize_string(s: String) -> std::io::Result<String> {
 
 fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     let mut res = String::with_capacity(2500); // Using ~2500 characters as conservative estimate
-    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-content=\"Phrase not found in database.\">";
+    res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-trigger=\"focus\" data-bs-content=\"Phrase not found in database.\">";
     res += "<table style=\"display: inline-table;\">";
     res += "<tr></tr>"; // No pinyin found
     let mut phrase_td = String::with_capacity(10 * phrase.len()); // Adding ~10 chars per 3 bytes (1 chinese character), so this is conservative

@@ -47,15 +47,21 @@ def format_defn_html(defn):
 def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
     """ Takes CEDICT entry information and generates corresponding HTML """
     download_icon_loc = 'https://icons.getbootstrap.com/icons/box-arrow-down.svg'
-    pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{d}">{d}</td>' for d in formatted_pinyin.split(' ')])
-    pinyin_html = f'<tr>{pinyin_html}</tr>'
     def perform_render(phrase):
+        # get individual words (used in pinyin name)
+        word_list = [w for w in phrase]
+        pinyin_list = formatted_pinyin.split(' ')
+        assert len(word_list) == len(pinyin_list)
+        n_words = len(word_list)
+        # generate html
         res = ''
-        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" \
-            title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{formatted_pinyin.replace(" ", "_")}&quot;>\
+        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
+            title="{phrase} [{raw_pinyin}] <a role=&quot;button&quot; href=&quot;#{phrase}&quot;>\
             <img src=&quot;{download_icon_loc}&quot;></img></a>" data-bs-html="true">' # ... oh neptune...
         res += span_start.replace('            ', '')
         res += '<table style="display: inline-table;">'
+        pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{word_list[i]}">{pinyin_list[i]}</td>' for i in range(n_words)])
+        pinyin_html = f'<tr>{pinyin_html}</tr>'
         res += pinyin_html
         phrase_html = ''.join([f'<td>{w}</td>' for w in phrase])
         phrase_html = f'<tr>{phrase_html}</tr>'

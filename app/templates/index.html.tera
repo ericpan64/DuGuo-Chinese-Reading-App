@@ -27,8 +27,8 @@
 
 <h2>Acknowledgements</h2>
 <p>
-    Thank you to Martin Kess for providing the initial implementation (中文读机 from the OMSCS Education Technology course). It provided a very well-scoped architecture and strong foundation to build off-of.
+    Thank you to Martin Kess for providing the initial implementation (中文读机 from the OMSCS Education Technology course) which provided a very well-scoped architecture and strong foundation to build off-of.
 
-    The lookup functionality uses the CC-CEDICT which is generously shared on a Creative Commons license.
+    View the <a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github Repo</a> to view the stack and other notes on the project.
 </p>
 {% endblock content %}

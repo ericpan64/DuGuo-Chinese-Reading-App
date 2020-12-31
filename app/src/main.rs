@@ -104,12 +104,12 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_u
                 // Get html to render
                 let title = convert_rawstr_to_string(doc_title);
                 let doc_html = UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title);
-                let user_pinyin_list_string = get_user_pinyin_list_string(db.clone(), &username);
+                let user_vocab_list_string = get_user_vocab_list_string(db.clone(), &username);
 
                 let doc_res = rt.block_on(doc_html);
                 context.insert("paragraph_html", doc_res.unwrap_or_default());
-                let py_list_res = rt.block_on(user_pinyin_list_string);
-                context.insert("user_pinyin_list_string", py_list_res.unwrap_or_default());
+                let py_list_res = rt.block_on(user_vocab_list_string);
+                context.insert("user_vocab_list_string", py_list_res.unwrap_or_default());
             }
         },
         None =>  {
@@ -144,7 +144,7 @@ fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, v
     
     let username = rt.block_on(username_query).unwrap();
     let phrase_obj = rt.block_on(phrase_obj_creation);
-    rt.block_on(UserVocab::try_delete(db.clone(), username.clone(), phrase_obj.formatted_pinyin.clone()));
+    rt.block_on(UserVocab::try_delete(db.clone(), username.clone(), phrase_obj));
     return Redirect::to(uri!(user_profile: username));
 }
 
@@ -176,7 +176,7 @@ struct UserDocumentForm<'f> {
 
 #[derive(FromForm)]
 struct UserVocabForm<'f> {
-    formatted_pinyin: &'f RawStr,
+    saved_phrase: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
 
@@ -185,11 +185,8 @@ struct UserVocabForm<'f> {
 fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
     let TextForm { text } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
-    println!("Creating new doc...");
     let new_doc = rt.block_on(SandboxDoc::new(db.clone(), text_as_string));
-    println!("Doc created. Inserting new doc...");
     let inserted_id = new_doc.try_insert(db.clone(), rt.clone()).unwrap();
-    println!("Doc inserted");
     return Redirect::to(uri!(sandbox_view_doc: inserted_id));
 }
 
@@ -217,20 +214,21 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
 
 #[post("/api/vocab", data="<user_vocab>")]
 fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
-    let UserVocabForm { formatted_pinyin, from_doc_title } = user_vocab.into_inner();
-    let formatted_pinyin = convert_rawstr_to_string(formatted_pinyin);
+    let UserVocabForm { saved_phrase, from_doc_title } = user_vocab.into_inner();
+    let phrase = convert_rawstr_to_string(saved_phrase);
+    println!("{}", &phrase); // TODO: confirm hanzi survives this...
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
 
     let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookies.get(JWT_NAME)));
     let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_doc = rt.block_on(UserVocab::new(db.clone(), username.clone(), formatted_pinyin.clone(), from_doc_title));
+            let new_doc = rt.block_on(UserVocab::new(db.clone(), username.clone(), phrase.clone(), from_doc_title));
             match new_doc.try_insert(db.clone(), rt.clone()) {
                 Ok(_) => { Status::Accepted },
                 Err(_) => { 
-                    println!("Error when writing phrase {} for user {}", &formatted_pinyin, &username); 
+                    println!("Error when writing phrase {} for user {}", &phrase, &username); 
                     Status::BadRequest
-                } 
+                }
             }
         },
         None => {

@@ -2,7 +2,6 @@
 {% block title %} Login / Register {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
-
 <div class="container">
     {% if username is defined %}
     <h3>Currently logged-in as: {{username}}</h3>
@@ -14,10 +13,9 @@
         <br/>
         <input class="form-control" type="password" name="password" id="pw-login" placeholder="Password" required>
         <br/>
-        <button class="btn btn-outline-primary" type="submit">Log In</button>
+        <button class="btn btn-primary" type="submit">Log In</button>
         <br/>
     </form>
-
     <br/>
     <h1 class="h1">Register</h1>
     <br/>
@@ -28,21 +26,15 @@
         <br/>
         <input class="form-control" type="password" name="password" id="pw-reg" placeholder="Password" required>
         <br/>
-        <button class="btn btn-outline-primary" type="submit">Register</button>
+        <button class="btn btn-primary" type="submit">Register</button>
     </form>
-
     <br/>
-    <input class="form-check-input" type="checkbox" onclick="showPassword()">Show Password
-
+    <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
     <br/><br/>
-    <p>Note - the following characters are not allowed: '<', '>', '(', ')', ',', '\"', '.', ';', ':', '\''</p>
+    <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " . ; : \</p>
 </div>
 <script>
-    let message = "{{ message | default(value=0)}}";
-    if (message != "0") {
-        alert(message);
-    }
-
+    /// Toggle password visibility
     let showPassword = () => {
         let login_pw = document.getElementById("pw-login")
         let reg_pw = document.getElementById("pw-reg")
