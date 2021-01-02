@@ -8,15 +8,8 @@ workers = 2
 keep_alive = 5
 log = "normal"
 
-[staging]
-address = "0.0.0.0"
-port = 8000
-keep_alive = 5
-log = "normal"
-
 [production]
 address = "0.0.0.0"
 port = 8000
 keep_alive = 5
 log = "critical"
-# secret_key = "notactually"

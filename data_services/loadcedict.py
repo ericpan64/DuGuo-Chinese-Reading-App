@@ -1,10 +1,10 @@
 from pymongo import MongoClient
 from pypinyin import pinyin as pfmt
 import pandas as pd
-from config import DB_NAME, COLL_NAME, DB_PORT, DB_HOSTNAME # Note: this exists but is not published on this repo
+from config import DB_NAME, COLL_NAME, DB_PORT, DB_HOSTNAME, USERNAME, PASSWORD # Note: this exists but is not published on this repo
 
 # Connect to mongoDB
-client = MongoClient(DB_HOSTNAME, DB_PORT)
+client = MongoClient(DB_HOSTNAME, DB_PORT, username=USERNAME, password=PASSWORD)
 db = client[DB_NAME]
 coll = db[COLL_NAME]
 # coll.drop() # reload when testing
@@ -146,5 +146,9 @@ if __name__ == '__main__':
 
             print('Loaded. Sending to db...')
             coll.insert_many(entry_list)
+        
+        print('Creating an index on trad, simp phrases...')
+        coll.create_index([ ("trad", 1) ], unique=True)
+        coll.create_index([ ("simp", 1) ], unique=True)
         print('Completed')
 
