@@ -58,6 +58,12 @@ fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> 
     return Template::render("reader", context);
 }
 
+#[get("/feedback")]
+fn feedback() -> Template {
+    let context: HashMap<&str, &str> = HashMap::new();
+    return Template::render("feedback", context);
+}
+
 #[get("/u/<raw_username>")]
 fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
@@ -180,6 +186,13 @@ struct UserVocabForm<'f> {
     from_doc_title: &'f RawStr,
 }
 
+#[derive(FromForm)]
+struct UserFeedbackForm<'f> {
+    feedback: &'f RawStr,
+    contact: &'f RawStr,
+    datetime: &'f RawStr,
+}
+
 /* POST */
 #[post("/sandbox/upload", data = "<user_text>")]
 fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
@@ -284,6 +297,20 @@ fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, u
     return res_redirect;
 }
 
+#[post("/api/feedback", data = "<user_feedback>")]
+fn feedback_form(db: State<Database>, rt: State<Handle>, user_feedback: Form<UserFeedbackForm<'_>>) -> Redirect {
+    let UserFeedbackForm { feedback, contact, datetime } = user_feedback.into_inner();
+    let feedback = convert_rawstr_to_string(feedback);
+    let contact = convert_rawstr_to_string(contact);
+    let datetime = convert_rawstr_to_string(datetime);
+    let new_feedback = UserFeedback::new(feedback.clone(), contact.clone(), datetime);
+    match new_feedback.try_insert(db.clone(), rt.clone()) {
+        Ok(_) => {},
+        Err(e) => { println!("Error when submitting feedback {} for contact {}:\n\t{:?}", &feedback, &contact, e); }
+    };
+    return Redirect::to(uri!(feedback));
+}
+
 /* Server Startup */
 fn main() -> Result<(), mongodb::error::Error>{
     let async_runtime = Runtime::new().unwrap();
@@ -296,7 +323,7 @@ fn main() -> Result<(), mongodb::error::Error>{
         .manage(rt)
         .mount("/", routes![index, 
             login, login_form, register_form, 
-            sandbox, sandbox_upload, sandbox_view_doc,
+            sandbox, sandbox_upload, sandbox_view_doc, feedback, feedback_form,
             user_profile, logout_user, 
             user_doc_upload, user_vocab_upload, user_view_doc,
             delete_user_doc, delete_user_vocab])

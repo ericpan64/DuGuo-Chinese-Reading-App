@@ -5,7 +5,7 @@ import selectors
 import types
 
 # NLP import from: https://spacy.io/models/zh
-nlp = spacy.load("zh_core_web_lg")
+nlp = spacy.load("zh_core_web_sm")
 tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
 # Socket code adapted from: https://realpython.com/python-sockets

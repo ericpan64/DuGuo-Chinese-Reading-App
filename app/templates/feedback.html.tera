@@ -1,0 +1,33 @@
+{% extends "template" %}
+{% block title %} Feedback {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+
+
+<p>Let me know your thoughts below! Leave your contact info (optional) if you would like a response and/or are open to further discuss your thoughts.</p>
+<p>To report more systemic bugs, please open a <a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">Github Issue</a>.</p>
+<textarea name="feedback" form="upload" rows="10" cols="100" required>Add your feedback here!</textarea>
+<form action="/api/feedback" id="upload" onsubmit="addDateTime()" method="POST">
+    <input type="text" name="contact" placeholder="Contact (optional)">
+    <input class="form-control" type="hidden" name="datetime">
+    <br/><br/>
+    <button class="btn btn-outline-primary" type="submit">Submit</button>
+</form>
+<script>
+    // Update active navbar
+    document.getElementById("nav4").classList.add("active");
+    // Add datetime to form. Adapted from: https://stackoverflow.com/a/10211214/13073731
+    let addDateTime = () => {
+        let currentdate = new Date(); 
+        let datetime = "Sent on " + (currentdate.getMonth()+1) + "/"
+                        + currentdate.getDate() + "/" 
+                        + currentdate.getFullYear() + " @ "  
+                        + currentdate.getHours() + "_"  
+                        + currentdate.getMinutes() + "_" 
+                        + currentdate.getSeconds();
+        document.getElementsByName("datetime").forEach(e => e.value = datetime);
+        alert("Thanks for submitting feedback!");
+    }
+</script>
+
+{% endblock content %}

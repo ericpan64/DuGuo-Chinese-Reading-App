@@ -6,7 +6,7 @@ use config::{
     DB_HOSTNAME, DB_PORT, DATABASE_NAME,
     USER_COLL_NAME, SANDBOX_COLL_NAME, TOKENIZER_PORT,
     USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, CEDICT_COLL_NAME, 
-    USER_VOCAB_LIST_COLL_NAME,
+    USER_VOCAB_LIST_COLL_NAME, USER_FEEDBACK_COLL_NAME,
     functions::{
         str_to_hashed_string, 
         generate_jwt, 
@@ -84,6 +84,13 @@ pub struct UserVocab {
 pub struct UserVocabList {
     username: String,
     unique_phrase_list: String, // comma-delimited
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserFeedback {
+    feedback: String,
+    contact: String, // "" if none provided
+    datetime: String, // formatted in JS
 }
 
 /* Traits */
@@ -330,6 +337,18 @@ impl DatabaseItem for UserVocab {
 impl DatabaseItem for UserVocabList {
     fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
     fn primary_key(&self) -> String { return self.username.clone(); }
+}
+
+impl UserFeedback {
+    pub fn new(feedback: String, contact: String, datetime: String) -> Self {
+        let new_feedback = UserFeedback { feedback, contact, datetime };
+        return new_feedback;
+    }
+}
+
+impl DatabaseItem for UserFeedback {
+    fn collection_name(&self) -> &str { return USER_FEEDBACK_COLL_NAME; }
+    fn primary_key(&self) -> String { return self.datetime.clone(); }
 }
 
 /* Public Functions */

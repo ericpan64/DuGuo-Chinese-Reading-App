@@ -17,19 +17,21 @@
     <body class="container-fluid">
         <nav class="navbar navbar-expand navbar-dark navbar-static-top bg-primary">
             <div class="container">
-            {% if username is undefined %}
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/sandbox">Sandbox</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+                    {% if username is undefined %}
+                    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
+                    <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
+                    {% else %}
+                    <li class="nav-item"><a class="nav-link" id="nav1" href="/">About</a></li>
+                    <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
+                    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
+                    {% endif %}
                 </ul>
-            {% else %}
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="/">About</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/u/{{username}}">Profile</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/api/logout">Logout</a></li>
-                </ul>
-            {% endif %}       
+                    <li class="nav-item"><a class="nav-link" id="nav4" href="/feedback">Feedback</a></li>
+                    <li class="nav-item"><a class="nav-link" id="nav5" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github</a></li>
+                </ul>      
             </div>
         </nav>
         <br/>

@@ -7,7 +7,6 @@
 <p>
     Profile not found
 </p>
-
 {% else %}
 <h1>{{ username }}</h1>
     {% if logged_in_username is undefined %}
@@ -43,4 +42,8 @@
         <p> Currently viewing other user. </p>
     {% endif%}
 {% endif %}
+<script>
+    // Update active navbar
+    document.getElementById("nav2").classList.add("active");
+</script>
 {% endblock content %}
