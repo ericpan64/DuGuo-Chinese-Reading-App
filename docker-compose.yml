@@ -40,6 +40,6 @@ services:
       dockerfile: ./app/rust.Dockerfile
     restart: on-failure
     ports:
-      - 8000:8000
+      - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
     depends_on:
       - tokenizer-server

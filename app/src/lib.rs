@@ -4,7 +4,8 @@
 mod config;
 use config::{
     DB_HOSTNAME, DB_PORT, DATABASE_NAME,
-    USER_COLL_NAME, SANDBOX_COLL_NAME, TOKENIZER_PORT,
+    DB_USERNAME, DB_PASSWORD,
+    USER_COLL_NAME, SANDBOX_COLL_NAME, TOKENIZER_PORT, TOKENIZER_HOSTNAME,
     USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, CEDICT_COLL_NAME, 
     USER_VOCAB_LIST_COLL_NAME, USER_FEEDBACK_COLL_NAME,
     functions::{
@@ -353,7 +354,7 @@ impl DatabaseItem for UserFeedback {
 
 /* Public Functions */
 pub fn connect_to_mongodb(rt: Handle) -> Result<Database, Error> {
-    let uri = format!("mongodb://{}:{}/", DB_HOSTNAME, DB_PORT);
+    let uri = format!("mongodb://{}:{}@{}:{}/", DB_USERNAME, DB_PASSWORD, DB_HOSTNAME, DB_PORT);
     let client = rt.block_on(Client::with_uri_str(&uri))?;
     let db: Database = client.database(DATABASE_NAME);
     return Ok(db);
@@ -654,7 +655,7 @@ async fn insert_one_doc(coll: Collection, doc: Document) -> Result<(), Error> {
 
 fn tokenize_string(s: String) -> std::io::Result<String> {
     // Connect to tokenizer service, send and read results
-    let mut stream = TcpStream::connect(format!("{}:{}", DB_HOSTNAME, TOKENIZER_PORT))?;
+    let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
     stream.write(s.as_bytes())?;
     let n_bytes = s.as_bytes().len();
     let mut tokenized_bytes = vec![0; n_bytes * 2]; // max size includes original 'n_bytes' + at most 'n_bytes' commas

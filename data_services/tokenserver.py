@@ -10,7 +10,7 @@ tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
 # Socket code adapted from: https://realpython.com/python-sockets
 sel = selectors.DefaultSelector()
-HOST = '127.0.0.1' # Opt for numeric address
+HOST = 'tokenizer-server' # Opt for numeric address when possible
 PORT = 8881
 IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
@@ -50,6 +50,7 @@ def service_connection(key, mask):
 
 if __name__ == '__main__':
     # Multi-threaded connections
+    print("Starting socket server...")
     lsock  = socket.socket(IPV4, TCP)
     lsock.bind((HOST, PORT))
     lsock.listen()
