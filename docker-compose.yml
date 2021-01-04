@@ -14,17 +14,6 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=example
     volumes:
       - mongo-data:/data/db
-  mongo-express:
-    image: mongo-express
-    restart: always
-    ports:
-      - 8081:8081
-    environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=example
-      - ME_CONFIG_MONGODB_SERVER=mongodb
-    depends_on:
-      - mongodb
   tokenizer-server:
     build: 
       context: .
@@ -43,3 +32,15 @@ services:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
     depends_on:
       - tokenizer-server
+  # # Optional Database GUI Container
+  # mongo-express:
+  #   image: mongo-express
+  #   restart: always
+  #   ports:
+  #     - 8081:8081
+  #   environment:
+  #     - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+  #     - ME_CONFIG_MONGODB_ADMINPASSWORD=example
+  #     - ME_CONFIG_MONGODB_SERVER=mongodb
+  #   depends_on:
+  #     - mongodb

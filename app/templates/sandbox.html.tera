@@ -6,7 +6,7 @@
 
 <p>Try-out the app by uploading some text!</p>
 <textarea name="text" form="upload" rows="20" cols="100" required>今天我感觉很好！您怎么样？</textarea>
-<form action="/sandbox/upload" id="upload" method="POST">
+<form action="/api/sandbox-upload" id="upload" method="POST">
     <button class="btn btn-outline-primary" type="submit">Upload</button>
 </form>
 <script>
