@@ -15,18 +15,14 @@ services:
     volumes:
       - mongo-data:/data/db
   tokenizer-server:
-    build: 
-      context: .
-      dockerfile: ./data_services/python.Dockerfile
+    image: ericpan64/duguo-tokenizer
     restart: on-failure
     ports:
       - 8881:8881
     depends_on:
       - mongodb
   rocket-web-server:
-    build: 
-      context: .
-      dockerfile: ./app/rust.Dockerfile
+    image: ericpan64/duguo-rocket
     restart: on-failure
     ports:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
