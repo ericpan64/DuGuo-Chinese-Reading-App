@@ -17,24 +17,14 @@ use ::duguo::*; // lib.rs
 #[get("/")]
 fn index(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
-    let cookie_lookup = cookies.get(JWT_NAME);
-    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup));
-    match username_from_cookie {
-        Some(username) => { context.insert("username", username); },
-        None =>  {}
-    }
+    rt.block_on(add_user_cookie_to_context(&cookies, db.clone(), &mut context));
     return Template::render("index", context);
 }
 
 #[get("/login")]
 fn login(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
-    let cookie_lookup = cookies.get(JWT_NAME);
-    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup));
-    match username_from_cookie {
-        Some(username) => { context.insert("username", username); },
-        None =>  {}
-    }
+    rt.block_on(add_user_cookie_to_context(&cookies, db.clone(), &mut context));
     return Template::render("login", context);
 }
 
@@ -61,12 +51,7 @@ fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> 
 #[get("/feedback")]
 fn feedback(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
-    let cookie_lookup = cookies.get(JWT_NAME);
-    let username_from_cookie = rt.block_on(get_username_from_cookie(db.clone(), cookie_lookup));
-    match username_from_cookie {
-        Some(username) => { context.insert("username", username); },
-        None =>  {}
-    }
+    rt.block_on(add_user_cookie_to_context(&cookies, db.clone(), &mut context));
     return Template::render("feedback", context);
 }
 

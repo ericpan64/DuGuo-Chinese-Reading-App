@@ -22,10 +22,11 @@ use mongodb::{
     Client, Collection, Database
 };
 use rocket::{
-    http::{RawStr, Cookie, SameSite},
+    http::{RawStr, Cookie, Cookies, SameSite},
 };
 use std::io::prelude::*;
 use std::net::TcpStream;
+use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -358,6 +359,16 @@ pub fn connect_to_mongodb(rt: Handle) -> Result<Database, Error> {
     let client = rt.block_on(Client::with_uri_str(&uri))?;
     let db: Database = client.database(DATABASE_NAME);
     return Ok(db);
+}
+
+pub async fn add_user_cookie_to_context(cookies: &Cookies<'_>, db: Database, context: &mut HashMap<&str, String>) -> bool {
+    let cookie_lookup = (*cookies).get(JWT_NAME);
+    let username_from_cookie = get_username_from_cookie(db.clone(), cookie_lookup).await;
+    let res = match username_from_cookie {
+        Some(username) => { (*context).insert("username", username); true},
+        None => { false }
+    };
+    return res;
 }
 
 /// Returns String::new() if UTF-8 error is encountered
