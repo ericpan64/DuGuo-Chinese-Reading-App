@@ -15,14 +15,14 @@ services:
     volumes:
       - mongo-data:/data/db
   tokenizer-server:
-    image: ericpan64/duguo-tokenizer
+    image: 137013170545.dkr.ecr.us-west-1.amazonaws.com/duguo-tokenizer
     restart: on-failure
     ports:
       - 8881:8881
     depends_on:
       - mongodb
   rocket-web-server:
-    image: ericpan64/duguo-rocket
+    image: 137013170545.dkr.ecr.us-west-1.amazonaws.com/duguo-app
     restart: on-failure
     ports:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
