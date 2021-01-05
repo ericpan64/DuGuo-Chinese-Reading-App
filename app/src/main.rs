@@ -11,8 +11,13 @@ use rocket::{
 use rocket_contrib::templates::Template;
 use mongodb::Database;
 use tokio::runtime::{Runtime, Handle};
-use ::duguo::*; // lib.rs
 
+// Implemented Imports
+use ::duguo::*; // lib.rs
+use ::duguo::{
+    html_rendering::*,
+    cookie_handling::*
+};
 /* GET */
 #[get("/")]
 fn index(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Template {
@@ -38,7 +43,7 @@ fn sandbox() -> Template {
 fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
-    let html = match rt.block_on(get_sandbox_document(db.clone(), doc_id)) {
+    let html = match rt.block_on(SandboxDoc::find_doc_from_id(db.clone(), doc_id)) {
         Some(text) => { rt.block_on(convert_string_to_tokenized_html(db.clone(), text)) },
         None => String::new()
     };
@@ -59,7 +64,7 @@ fn feedback(cookies: Cookies, db: State<Database>, rt: State<Handle>) -> Templat
 fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let username = convert_rawstr_to_string(raw_username);
-    match rt.block_on(check_if_username_exists(db.clone(), &username)) {
+    match rt.block_on(User::check_if_username_exists(&db, &username)) {
         true => { 
             context.insert("username", username.clone()); 
         },
@@ -87,7 +92,7 @@ fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_us
 fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     let username = convert_rawstr_to_string(raw_username);
-    match rt.block_on(check_if_username_exists(db.clone(), &username)) {
+    match rt.block_on(User::check_if_username_exists(&db, &username)) {
         true => { 
             context.insert("username", username.clone()); 
         },
@@ -101,7 +106,7 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_u
                 // Get html to render
                 let title = convert_rawstr_to_string(doc_title);
                 let doc_html = UserDoc::get_body_html_from_user_doc(db.clone(), &username, &title);
-                let user_vocab_list_string = get_user_vocab_list_string(db.clone(), &username);
+                let user_vocab_list_string = UserVocabList::get_user_vocab_list_string(db.clone(), &username);
 
                 let doc_res = rt.block_on(doc_html);
                 context.insert("paragraph_html", doc_res.unwrap_or_default());
