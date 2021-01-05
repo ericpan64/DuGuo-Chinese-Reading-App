@@ -39,9 +39,9 @@ use uuid::Uuid;
 
 /* Public Functions */
 /// Connectivity
-pub fn connect_to_mongodb(rt: Handle) -> Result<Database, Error> {
+pub fn connect_to_mongodb(rt: &Handle) -> Result<Database, Error> {
     let uri = format!("mongodb://{}:{}@{}:{}/", DB_USERNAME, DB_PASSWORD, DB_HOSTNAME, DB_PORT);
-    let client = rt.block_on(Client::with_uri_str(&uri))?;
+    let client = (*rt).block_on(Client::with_uri_str(&uri))?;
     let db: Database = client.database(DATABASE_NAME);
     return Ok(db);
 }
@@ -60,14 +60,14 @@ pub fn convert_rawstr_to_string(s: &RawStr) -> String {
     return res;
 }
 
-pub async fn check_password(db: Database, username: String, pw_to_check: String) -> bool {
-    let coll = db.collection(USER_COLL_NAME);
-    let hashed_pw = str_to_hashed_string(pw_to_check.as_str());
-    let query_doc = doc! { "username": username, "pw_hash": hashed_pw.clone() };
+pub async fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
+    let coll = (*db).collection(USER_COLL_NAME);
+    let hashed_pw = str_to_hashed_string(pw_to_check);
+    let query_doc = doc! { "username": username, "pw_hash": &hashed_pw };
     let res = match coll.find_one(query_doc, None).await.unwrap() {
         Some(document) => {
             let saved_hash = document.get("pw_hash").and_then(Bson::as_str).expect("No password was stored");
-            saved_hash == hashed_pw
+            saved_hash == &hashed_pw
         },
         None => false
     };
@@ -83,32 +83,29 @@ pub trait DatabaseItem {
     fn as_bson(&self) -> Bson where Self: Serialize {
         return to_bson(self).unwrap();
     }
-    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> where Self: Serialize {
-        let coll = db.collection(self.collection_name());
+    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> where Self: Serialize {
+        let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
-        match rt.block_on(coll.insert_one(new_doc, None)) {
+        match (*rt).block_on(coll.insert_one(new_doc, None)) {
             Ok(_) => {}
             Err(e) => { return Err(e); }
         }
-        return Ok(self.primary_key());
+        return Ok(self.primary_key().to_string());
     }
-    fn try_update(&self, db: Database, rt: Handle, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
-        let coll = db.collection(self.collection_name());
+    fn try_update(&self, db: &Database, rt: &Handle, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
+        let coll = (*db).collection(self.collection_name());
         let update_doc = doc! { key: new_value };
         let update_query = doc! { "$set": update_doc };
-        match rt.block_on(coll.update_one(self.as_document(), update_query, None)) {
+        match (*rt).block_on(coll.update_one(self.as_document(), update_query, None)) {
             Ok(_) => {},
             Err(e) => { return Err(e); }
         }
-        return Ok(self.primary_key());
+        return Ok(self.primary_key().to_string());
     }
-    // fn find_document(db: Database, query_doc: Document) -> Option<Document> {
-    //     let coll = db.collection(self.collection_name());
-    // }
 
     // Requires Implementation
     fn collection_name(&self) -> &str;
-    fn primary_key(&self) -> String;
+    fn primary_key(&self) -> &str;
 }
 
 /* Enums */
@@ -175,13 +172,13 @@ pub struct UserFeedback {
 
 /* Trait Implementation */
 impl DatabaseItem for User {
-    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> {
-        let coll = db.collection(USER_COLL_NAME);
-        let can_register = rt.block_on(User::check_if_username_and_email_are_available(db, &self.username, &self.email));
+    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> {
+        let coll = (*db).collection(USER_COLL_NAME);
+        let can_register = (*rt).block_on(User::check_if_username_and_email_are_available(db, &self.username, &self.email));
         let mut message = String::new();
         if can_register {
             let new_doc = self.as_document();
-            match rt.block_on(coll.insert_one(new_doc, None)) {
+            match (*rt).block_on(coll.insert_one(new_doc, None)) {
                 Ok(_) => {
                     let success_msg = format!("Registration successful! Username: {}", self.username);
                     message.push_str(&success_msg);
@@ -192,58 +189,58 @@ impl DatabaseItem for User {
         return Ok(message);
     }
     fn collection_name(&self) -> &str { return USER_COLL_NAME; }
-    fn primary_key(&self) -> String {
-        return self.username.clone();
+    fn primary_key(&self) -> &str {
+        return &self.username;
     }
 }
 
 impl DatabaseItem for SandboxDoc {
     fn collection_name(&self) -> &str { return SANDBOX_COLL_NAME; }
-    fn primary_key(&self) -> String { return self.doc_id.clone(); }
+    fn primary_key(&self) -> &str { return &self.doc_id; }
 }
 
 impl DatabaseItem for UserDoc {
     fn collection_name(&self) -> &str { return USER_DOC_COLL_NAME; }
     /// NOTE: this is not unique per document, a unique primary_key is username + title.
-    fn primary_key(&self) -> String { return self.username.clone(); }
+    fn primary_key(&self) -> &str { return &self.username; }
 }
 
 impl DatabaseItem for CnEnDictEntry {
     fn collection_name(&self) -> &str { return CEDICT_COLL_NAME; }
-    fn primary_key(&self) -> String { return self.trad.clone(); }
+    fn primary_key(&self) -> &str { return &self.trad; }
 }
 
 impl DatabaseItem for UserVocab {
-    fn try_insert(&self, db: Database, rt: Handle) -> Result<String, Error> where Self: Serialize {
-        let coll = db.collection(self.collection_name());
+    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> where Self: Serialize {
+        let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
-        match rt.block_on(coll.insert_one(new_doc, None)) {
+        match (*rt).block_on(coll.insert_one(new_doc, None)) {
             Ok(_) => {
-                UserVocabList::append_to_user_vocab_list(db, rt.clone(), &self.username, &self.phrase)?;
+                UserVocabList::append_to_user_vocab_list(db, rt, &self.username, &self.phrase)?;
             },
             Err(e) => { return Err(e); }
         }
-        return Ok(self.primary_key());
+        return Ok(self.primary_key().to_string());
     }
 
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
-    fn primary_key(&self) -> String { return self.phrase.trad.clone(); } // phrase.simp is also a unique, primary key
+    fn primary_key(&self) -> &str { return &self.phrase.trad; } // phrase.simp is also a unique, primary key
 }
 
 impl DatabaseItem for UserVocabList {
     fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
-    fn primary_key(&self) -> String { return self.username.clone(); }
+    fn primary_key(&self) -> &str { return &self.username; }
 }
 
 impl DatabaseItem for UserFeedback {
     fn collection_name(&self) -> &str { return USER_FEEDBACK_COLL_NAME; }
-    fn primary_key(&self) -> String { return self.datetime.clone(); }
+    fn primary_key(&self) -> &str { return &self.datetime; }
 }
 
 /* Struct Implementation */
 impl User {
     pub fn new(username: String, password: String, email: String) -> Self {
-        let pw_hash = str_to_hashed_string(password.as_str());
+        let pw_hash = str_to_hashed_string(&password);
         let new_user = User { username, pw_hash, email };
         return new_user;
     }
@@ -253,8 +250,8 @@ impl User {
         return (coll.find_one(doc! {"username": username }, None).await.unwrap()) == None;
     }
 
-    async fn check_if_username_and_email_are_available(db: Database, username: &str, email: &str) -> bool {
-        let coll = db.collection(USER_COLL_NAME);
+    async fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
+        let coll = (*db).collection(USER_COLL_NAME);
         let username_query = coll.find_one(doc! {"username": username }, None).await.unwrap();
         let email_query = coll.find_one(doc! {"email": email}, None).await.unwrap();
         return (username_query == None) && (email_query == None);
@@ -262,15 +259,15 @@ impl User {
 }
 
 impl SandboxDoc {
-    pub async fn new(db: Database, body: String) -> Self {
+    pub async fn new(db: &Database, body: String) -> Self {
         let doc_id = Uuid::new_v4().to_string();
-        let body_html = html_rendering::convert_string_to_tokenized_html(db.clone(), body.clone()).await;
+        let body_html = html_rendering::convert_string_to_tokenized_html(db, &body).await;
         let new_doc = SandboxDoc { doc_id, body, body_html };
         return new_doc;
     }
 
-    pub async fn find_doc_from_id(db: Database, doc_id: String) -> Option<String> {
-        let coll = db.collection(SANDBOX_COLL_NAME);
+    pub async fn find_doc_from_id(db: &Database, doc_id: String) -> Option<String> {
+        let coll = (*db).collection(SANDBOX_COLL_NAME);
         let query_doc = doc! { "doc_id": doc_id };
         let res = match coll.find_one(query_doc, None).await.unwrap() {
             Some(doc) => Some(doc.get("body").and_then(Bson::as_str).expect("No body was stored").to_string()),
@@ -281,10 +278,10 @@ impl SandboxDoc {
 }
 
 impl UserDoc {
-    pub async fn new(db: Database, username: String, desired_title: String, body: String) -> Self {
-        let body_html = html_rendering::convert_string_to_tokenized_html(db.clone(), body.clone()).await;
+    pub async fn new(db: &Database, username: String, desired_title: String, body: String) -> Self {
+        let body_html = html_rendering::convert_string_to_tokenized_html(db, &body).await;
         // If title is non-unique, try appending digits until match
-        let coll = db.collection(USER_DOC_COLL_NAME);
+        let coll = (*db).collection(USER_DOC_COLL_NAME);
         let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title}, None).await.unwrap()) != None;
         let title = match title_exists {
             true => {
@@ -294,7 +291,7 @@ impl UserDoc {
                 while title_exists {
                     count += 1;
                     let appended = format!("-{}", count);
-                    new_title = desired_title.clone() + appended.as_str();
+                    new_title = desired_title.clone() + appended.as_str(); // need .clone() here because of loop
                     title_exists = (coll.find_one(doc! {"username": &username, "title": &new_title}, None).await.unwrap()) != None;
                 }
                 new_title
@@ -305,8 +302,8 @@ impl UserDoc {
         return new_doc;
     }
 
-    pub async fn get_body_html_from_user_doc(db: Database, username: &str, title: &str) -> Option<String> {
-        let coll = db.collection(USER_DOC_COLL_NAME);
+    pub async fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
+        let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title };
         let doc_body = match coll.find_one(query_doc, None).await.unwrap() {
             Some(doc) => Some(doc.get("body_html").and_then(Bson::as_str).unwrap().to_string()),
@@ -315,8 +312,8 @@ impl UserDoc {
         return doc_body;
     }
 
-    pub async fn try_delete(db: Database, username: &str, title: &str) -> bool {
-        let coll = db.collection(USER_DOC_COLL_NAME);
+    pub async fn try_delete(db: &Database, username: &str, title: &str) -> bool {
+        let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title }; 
         let res = match coll.delete_one(query_doc, None).await {
             Ok(delete_res) => delete_res.deleted_count == 1,
@@ -327,12 +324,12 @@ impl UserDoc {
 }
 
 impl CnEnDictEntry {
-    pub async fn new(db: Database, phrase_str: &str) -> Self {
+    pub async fn new(db: &Database, phrase_str: &str) -> Self {
         // Try simplified, then traditional
-        let res = match CnEnDictEntry::lookup_phrase(db.clone(), "simp", phrase_str).await {
+        let res = match CnEnDictEntry::lookup_phrase(db, "simp", phrase_str).await {
             Some(obj) => obj,
             None => {
-                match CnEnDictEntry::lookup_phrase(db.clone(), "trad", phrase_str).await {
+                match CnEnDictEntry::lookup_phrase(db, "trad", phrase_str).await {
                     Some(obj) => obj,
                     None => CnEnDictEntry::generate_empty_phrase()
                 }
@@ -342,8 +339,8 @@ impl CnEnDictEntry {
     }
 
     // TODO: refactor this to apply for DatabaseItem trait
-    pub async fn lookup_phrase(db: Database, key: &str, value: &str) -> Option<Self> {
-        let coll = db.collection(CEDICT_COLL_NAME);
+    pub async fn lookup_phrase(db: &Database, key: &str, value: &str) -> Option<Self> {
+        let coll = (*db).collection(CEDICT_COLL_NAME);
         let query_doc = doc! { key: value };
         let res: Option<Self> = match coll.find_one(query_doc, None).await.unwrap() {
             Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
@@ -369,14 +366,14 @@ impl CnEnDictEntry {
 }
 
 impl UserVocab {
-    pub async fn new(db: Database, username: String, saved_phrase: String, from_doc_title: String) -> Self {
+    pub async fn new(db: &Database, username: String, saved_phrase: String, from_doc_title: String) -> Self {
         // Try simplified, then traditional
         let mut cn_type = CnType::Simplified;
-        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db.clone(), "simp", &saved_phrase).await {
+        let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db, "simp", &saved_phrase).await {
             Some(sp) => sp,
             None => {
                 cn_type = CnType::Traditional;
-                match CnEnDictEntry::lookup_phrase(db.clone(), "trad", &saved_phrase).await {
+                match CnEnDictEntry::lookup_phrase(db, "trad", &saved_phrase).await {
                     Some(tp) => tp,
                     None => CnEnDictEntry::generate_empty_phrase()
                 }
@@ -386,14 +383,14 @@ impl UserVocab {
         return new_vocab;
     }
 
-    pub fn try_delete(db: Database, rt: Handle, username: String, phrase: CnEnDictEntry) -> bool {
-        let coll = db.collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": &username, "phrase.trad": &phrase.trad, "phrase.simp": &phrase.simp };
-        let mut res = match rt.block_on(coll.delete_one(query_doc, None)) {
+    pub fn try_delete(db: &Database, rt: &Handle, username: &str, phrase: CnEnDictEntry) -> bool {
+        let coll = (*db).collection(USER_VOCAB_COLL_NAME);
+        let query_doc = doc! { "username": username, "phrase.trad": &phrase.trad, "phrase.simp": &phrase.simp };
+        let mut res = match (*rt).block_on(coll.delete_one(query_doc, None)) {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
         };
-        match UserVocabList::remove_from_user_vocab_list(db.clone(), rt, &username, &phrase) {
+        match UserVocabList::remove_from_user_vocab_list(db, rt, username, &phrase) {
             Ok(_) => { },
             Err(_) => { res = false; }
         }
@@ -402,8 +399,8 @@ impl UserVocab {
 }
 
 impl UserVocabList {
-    pub async fn get_user_vocab_list_string(db: Database, username: &str) -> Option<String> {
-        let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    pub async fn get_user_vocab_list_string(db: &Database, username: &str) -> Option<String> {
+        let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username };
         let res = match coll.find_one(query_doc, None).await {
             Ok(query_res) => {
@@ -420,10 +417,10 @@ impl UserVocabList {
         return res;
     }
 
-    fn append_to_user_vocab_list(db: Database, rt: Handle, username: &str, new_phrase: &CnEnDictEntry) -> Result<(), Error> {
-        let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    fn append_to_user_vocab_list(db: &Database, rt: &Handle, username: &str, new_phrase: &CnEnDictEntry) -> Result<(), Error> {
+        let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username };
-        match rt.block_on(coll.find_one(query_doc, None)) {
+        match (*rt).block_on(coll.find_one(query_doc, None)) {
             Ok(query_res) => {
                 match query_res {
                     Some(doc) => {
@@ -439,7 +436,7 @@ impl UserVocabList {
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db.clone(), rt.clone(), "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, rt, "unique_phrase_list", &unique_phrase_list)?;
                     }
                     None => {
                         // Create new instance with unique chars
@@ -454,7 +451,7 @@ impl UserVocabList {
                         // Write to db
                         let username = username.to_string();
                         let new_doc = UserVocabList { username, unique_phrase_list };
-                        new_doc.try_insert(db.clone(), rt.clone())?;
+                        new_doc.try_insert(db, rt)?;
                     }
                 }
             },
@@ -465,10 +462,10 @@ impl UserVocabList {
         return Ok(());
     }
     
-    fn remove_from_user_vocab_list(db: Database, rt: Handle, username: &str, phrase_to_remove: &CnEnDictEntry) -> Result<(), Error> {
-        let coll = db.collection(USER_VOCAB_LIST_COLL_NAME);
+    fn remove_from_user_vocab_list(db: &Database, rt: &Handle, username: &str, phrase_to_remove: &CnEnDictEntry) -> Result<(), Error> {
+        let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username };
-        match rt.block_on(coll.find_one(query_doc, None)) {
+        match (*rt).block_on(coll.find_one(query_doc, None)) {
             Ok(query_res) => {
                 match query_res {
                     Some(doc) => {
@@ -485,7 +482,7 @@ impl UserVocabList {
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db.clone(), rt.clone(), "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, rt, "unique_phrase_list", &unique_phrase_list)?;
                     },
                     None => {}
                 }
@@ -523,10 +520,10 @@ pub mod html_rendering {
         return Ok(res);
     }
 
-    pub async fn convert_string_to_tokenized_html(db: Database, s: String) -> String {
-        let tokenized_string = tokenize_string(s).expect("Tokenizer connection error");
+    pub async fn convert_string_to_tokenized_html(db: &Database, s: &str) -> String {
+        let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
         let n_phrases = tokenized_string.matches(',').count();
-        let coll = db.collection(CEDICT_COLL_NAME);
+        let coll = (*db).collection(CEDICT_COLL_NAME);
         // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per chars
         let mut res = String::with_capacity(n_phrases * 2500);
         for phrase in tokenized_string.split(',') {
@@ -558,9 +555,9 @@ pub mod html_rendering {
         return res;
     }
     
-    pub async fn render_document_table(db: Database, username: &str) -> String {
+    pub async fn render_document_table(db: &Database, username: &str) -> String {
         // get all documents for user
-        let coll = db.collection(USER_DOC_COLL_NAME);
+        let coll = (*db).collection(USER_DOC_COLL_NAME);
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
         res += "<tr><th>Title</th><th>Preview</th><th>Delete</th></tr>\n";
@@ -591,7 +588,7 @@ pub mod html_rendering {
                     if body_chars.count() > preview_count {
                         content_preview += "...";
                     }
-                    // let interactive_content_preview = convert_string_to_tokenized_html(db.clone(), content_preview);
+                    // let interactive_content_preview = convert_string_to_tokenized_html(db, content_preview);
                     res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
                 }
             },
@@ -603,8 +600,8 @@ pub mod html_rendering {
         return res;
     }
     
-    pub async fn render_vocab_table(db: Database, username: &str) -> String {
-        let coll = db.collection(USER_VOCAB_COLL_NAME);
+    pub async fn render_vocab_table(db: &Database, username: &str) -> String {
+        let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
         res += format!("<tr><th>{}</th><th>{}</th><th>{}</th></tr>\n", "Term", "Saved From", "Delete").as_str();
@@ -678,9 +675,9 @@ pub mod cookie_handling {
         return cookie;
     }
 
-    pub async fn add_user_cookie_to_context(cookies: &Cookies<'_>, db: Database, context: &mut HashMap<&str, String>) -> bool {
+    pub async fn add_user_cookie_to_context(cookies: &Cookies<'_>, db: &Database, context: &mut HashMap<&str, String>) -> bool {
         let cookie_lookup = (*cookies).get(JWT_NAME);
-        let username_from_cookie = get_username_from_cookie(db.clone(), cookie_lookup).await;
+        let username_from_cookie = get_username_from_cookie(db, cookie_lookup).await;
         let res = match username_from_cookie {
             Some(username) => { (*context).insert("username", username); true},
             None => { false }
@@ -688,11 +685,11 @@ pub mod cookie_handling {
         return res;
     }
 
-    pub async fn get_username_from_cookie(db: Database, cookie_lookup: Option<&Cookie<'static>>) -> Option<String> {
+    pub async fn get_username_from_cookie(db: &Database, cookie_lookup: Option<&Cookie<'static>>) -> Option<String> {
         let mut res = None;
         if let Some(ref login_cookie) = cookie_lookup {
             let jwt_to_check = login_cookie.value();
-            res = validate_jwt_and_get_username(db.clone(), jwt_to_check.to_string()).await;
+            res = validate_jwt_and_get_username(db, jwt_to_check).await;
         }
         return res;
     }
