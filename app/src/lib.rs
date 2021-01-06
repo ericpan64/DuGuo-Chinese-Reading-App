@@ -247,7 +247,7 @@ impl User {
 
     pub async fn check_if_username_exists(db: &Database, username: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
-        return (coll.find_one(doc! {"username": username }, None).await.unwrap()) == None;
+        return (coll.find_one(doc! {"username": username }, None).await.unwrap()) != None;
     }
 
     async fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {

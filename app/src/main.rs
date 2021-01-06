@@ -237,33 +237,29 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, u
 }
 
 #[post("/api/login", data = "<user_input>")]
-fn login_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserLoginForm<'_>>) -> Redirect {
+fn login_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserLoginForm<'_>>) -> Status {
     let UserLoginForm { username, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
 
     let is_valid_password = rt.block_on(check_password(&db, &username, &password));
-    let mut context = HashMap::new();
-    let res_redirect = match is_valid_password {
+    let res_status = match is_valid_password {
         true => {
             let new_cookie = generate_http_cookie(username, password);
             cookies.add(new_cookie);
-            Redirect::to(uri!(index))
+            Status::Accepted
         },
         false => {
-            // (record login attempt in database)
-            // TODO: figure-out better way to display info
-            let password_incorrect_msg = format!("Incorrect password for {}. N incorrect attempts remaining for today", username);
-            context.insert("message", password_incorrect_msg);
-            Redirect::to(uri!(login))
+            // (TODO: record login attempt in database, limit 8 per day)
+            Status::Unauthorized
         }
     };
-    return res_redirect;
+    return res_status;
 }
 
 // TODO: Change message handling to something neater, then update this to redirect instead of render
 #[post("/api/register", data = "<user_input>")]
-fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserRegisterForm<'_>>) -> Redirect {
+fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user_input: Form<UserRegisterForm<'_>>) -> Status {
     let UserRegisterForm { username, email, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
@@ -271,15 +267,15 @@ fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, u
 
     let new_user = User::new(username.clone(), password.clone(), email); // clone() makes sense here
     // TODO: figure-out way to handle registration error cases
-    let res_redirect = match new_user.try_insert(&db, &rt) {
+    let res_status = match new_user.try_insert(&db, &rt) {
         Ok(_) => {
             let new_cookie = generate_http_cookie(username, password);
             cookies.add(new_cookie);
-            Redirect::to(uri!(index))
+            Status::Accepted
         },
-        Err(_) => { Redirect::to(uri!(login)) }
+        Err(_) => { Status::UnprocessableEntity }
     };
-    return res_redirect;
+    return res_status;
 }
 
 #[post("/api/feedback", data = "<user_feedback>")]
@@ -288,10 +284,10 @@ fn feedback_form(db: State<Database>, rt: State<Handle>, user_feedback: Form<Use
     let feedback = convert_rawstr_to_string(feedback);
     let contact = convert_rawstr_to_string(contact);
     let datetime = convert_rawstr_to_string(datetime);
-    let new_feedback = UserFeedback::new(feedback, contact, datetime);
+    let new_feedback = UserFeedback::new(feedback.clone(), contact.clone(), datetime);
     match new_feedback.try_insert(&db, &rt) {
         Ok(_) => {},
-        Err(e) => { println!("Error when submitting feedback:\n\t{:?}", e); }
+        Err(e) => { println!("Error when submitting feedback {} / contact: {}:\n\t{:?}", &feedback, &contact, e); }
     };
     return Redirect::to(uri!(feedback));
 }
