@@ -20,6 +20,6 @@ chrono = "0.4.19"
 
 # Docs: https://api.rocket.rs/v0.4/rocket_contrib/
 [dependencies.rocket_contrib]
-version = "0.4.5"
+version = "0.4.6"
 default-features = false
 features = ["handlebars_templates", "tera_templates"]

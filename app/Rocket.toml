@@ -2,15 +2,9 @@
 forms = 1024000 # 1MB
 
 [development]
-address = "127.0.0.1"
-port = 8000
-workers = 2
-keep_alive = 5
-log = "normal"
-
-[staging]
 address = "0.0.0.0"
 port = 8000
+workers = 2
 keep_alive = 5
 log = "normal"
 
@@ -19,4 +13,3 @@ address = "0.0.0.0"
 port = 8000
 keep_alive = 5
 log = "critical"
-# secret_key = "notactually"

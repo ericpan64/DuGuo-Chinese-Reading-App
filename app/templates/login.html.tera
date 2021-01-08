@@ -8,10 +8,10 @@
     {% endif %}
     <h1 class="h1">Login</h1>
     <br/>
-    <form action="/api/login" id="login" method="POST">
+    <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
         <br/>
-        <input class="form-control" type="password" name="password" id="pw-login" placeholder="Password" required>
+        <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
         <br/>
         <button class="btn btn-primary" type="submit">Log In</button>
         <br/>
@@ -19,21 +19,70 @@
     <br/>
     <h1 class="h1">Register</h1>
     <br/>
-    <form action="/api/register" id="register" method="POST">
+    <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
         <br/>
-        <input class="form-control" type="text" name="email" placeholder="Email" required>
+        <input class="form-control" type="email" name="email" placeholder="Email" required>
         <br/>
-        <input class="form-control" type="password" name="password" id="pw-reg" placeholder="Password" required>
+        <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
         <br/>
         <button class="btn btn-primary" type="submit">Register</button>
     </form>
     <br/>
     <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
     <br/><br/>
-    <p>Note - the following characters are <em>not</em> allowed: , < > ( ) " ; : \</p>
+    <p>Note - the following characters are <em>not</em> allowed: , < > ! ( ) { } " ' ; : \</p>
 </div>
 <script>
+    // Update active navbar
+    document.getElementById("nav3").classList.add("active");
+    
+    // Add server response for form submissions. Ref: https://stackoverflow.com/a/47675314
+    let attemptLogin = () => {
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/login", true);
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhr.onload = () => {
+            if (xhr.status == 202) {
+                alert(`Successfully logged in!`);
+                window.location.href = '/'; // redirect to index
+            } else if (xhr.status == 401) {
+                alert(`Login attempt failed, try again.`);
+            } else {
+                alert(`Error when trying to login. Try again and/or open a Github issue`);
+            }
+        }
+        xhr.onerror = () => {
+            alert(`Error when trying to login. Try again and/or open a Github issue`);
+        }
+        let formData = new FormData(document.getElementById("login-form"));
+        let params = new URLSearchParams(formData);
+        console.log(params.toString())
+        xhr.send(params.toString());
+    }
+    let attemptRegister = () => {
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/register");
+        xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhr.onload = () => {
+            if (xhr.status == 202) {
+                alert('Successfully registered!');
+                window.location.href = '/'; // redirect to index
+            } else if (xhr.status == 422) {
+                alert(`Registration failed, username and/or email are taken. Try again.`);
+            } else {
+                alert(`Error when trying to register. Try again and/or open a Github issue`);
+            }
+        }
+        xhr.onerror = () => {
+            alert(`Error when trying to register. Try again and/or open a Github issue`);
+        }
+        let formData = new FormData(document.getElementById("register-form"));
+        let params = new URLSearchParams(formData);
+        console.log(params.toString())
+        xhr.send(params.toString());
+    }
+
     /// Toggle password visibility
     let showPassword = () => {
         let login_pw = document.getElementById("pw-login")

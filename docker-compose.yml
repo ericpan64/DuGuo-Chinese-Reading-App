@@ -1,16 +1,41 @@
-version: "3.8"
+# Note: this docker-compose file is used to build/run the project _locally_
+# Separate configuration is used when deploying to AWS.
+
+version: "3.3"
+volumes:
+  mongo-data:
+    driver: local
 services:
-  mongo:
+  mongodb:
     image: mongo
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-  mongo-express:
-    image: mongo-express
+    container_name: mongodb
     restart: always
     ports:
-      - 8081:8081
+      - 27017:27017
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    volumes:
+      - mongo-data:/data/db
+  tokenizer-server:
+    build:
+      context: ./data_services
+      dockerfile: python.Dockerfile
+    container_name: duguo-tokenizer
+    restart: on-failure
+    ports:
+      - 8881:8881
+    depends_on:
+      - mongodb
+  rocket-web-server:
+    build:
+      context: ./app
+      dockerfile: rust.Dockerfile
+    container_name: duguo-app
+    depends_on:
+      - tokenizer-server
+    ports:
+      - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
+    # volumes:
+    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app/src:/src/
+    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app/templates:/templates/
