@@ -40,9 +40,8 @@ use uuid::Uuid;
 /* Public Functions */
 /// Connectivity
 pub fn connect_to_mongodb(rt: &Handle) -> Result<Database, Error> {
-    let uri = format!("mongodb://{}:{}@{}:{}/", DB_USERNAME, DB_PASSWORD, DB_HOSTNAME, DB_PORT);
-    let client = (*rt).block_on(Client::with_uri_str(&uri))?;
-    let db: Database = client.database(DATABASE_NAME);
+    let client = (*rt).block_on(Client::with_uri_str(DB_URI))?;
+    let db: Database = client.database(DB_NAME);
     return Ok(db);
 }
 
@@ -56,7 +55,7 @@ pub fn convert_rawstr_to_string(s: &RawStr) -> String {
         }
     };
     // Note: can't sanitize '/' since that breaks default character encoding
-    res = res.replace(&['<', '>', '(', ')', ',', '\"', '\'', '\\', ';', '{', '}', ':'][..], "");
+    res = res.replace(&['<', '>', '(', ')', '!', '\"', '\'', '\\', ';', '{', '}', ':'][..], "");
     return res;
 }
 

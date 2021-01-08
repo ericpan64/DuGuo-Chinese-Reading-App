@@ -3,6 +3,7 @@ from spacy.tokenizer import Tokenizer
 import socket
 import selectors
 import types
+from config import TOKENIZER_HOST, TOKENIZER_PORT
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
@@ -10,8 +11,6 @@ tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
 # Socket code adapted from: https://realpython.com/python-sockets
 sel = selectors.DefaultSelector()
-HOST = 'tokenizer-server' # Opt for numeric address when possible
-PORT = 8881
 IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
 MAX_BUF = 102400 # 1MB
@@ -52,9 +51,9 @@ if __name__ == '__main__':
     # Multi-threaded connections
     print("Starting socket server...")
     lsock  = socket.socket(IPV4, TCP)
-    lsock.bind((HOST, PORT))
+    lsock.bind((TOKENIZER_HOST, TOKENIZER_PORT))
     lsock.listen()
-    print('listening on', (HOST, PORT))
+    print('listening on', (TOKENIZER_HOST, TOKENIZER_PORT))
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
 
@@ -68,7 +67,7 @@ if __name__ == '__main__':
 
     # # Single threaded connections
     # with socket.socket(IPV4, TCP) as s:
-    #     s.bind((HOST, PORT))
+    #     s.bind((TOKENIZER_HOST, TOKENIZER_PORT))
     #     s.listen()
     #     conn, addr = s.accept()
     #     with conn:

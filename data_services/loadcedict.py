@@ -1,10 +1,10 @@
 from pymongo import MongoClient
 from pypinyin import pinyin as pfmt
 import pandas as pd
-from config import DB_NAME, COLL_NAME, DB_PORT, DB_HOSTNAME, USERNAME, PASSWORD # Note: this exists but is not published on this repo
+from config import DB_NAME, COLL_NAME, DB_URI # Note: this exists but is not published on this repo
 
 # Connect to mongoDB
-client = MongoClient(DB_HOSTNAME, DB_PORT, username=USERNAME, password=PASSWORD)
+client = MongoClient(DB_URI)
 db = client[DB_NAME]
 coll = db[COLL_NAME]
 # coll.drop() # reload when testing
