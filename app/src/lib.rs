@@ -506,6 +506,24 @@ impl UserFeedback {
 pub mod html_rendering {
     use super::*;
 
+    fn is_english_phrase(s: &str) -> bool {
+        // English chars use 1 byte, Chinese chars use 3 bytes
+        return s.len() == s.chars().count();
+    }
+
+    fn has_chinese_punctuation(s: &str) -> bool {
+        // Chinese punctuation is a Chinese char, however shouldn't be rendered as such
+        const PUNCT: [char; 10] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：'];
+        let mut res = false;
+        for c in s.chars() {
+            if PUNCT.contains(&c) {
+                res = true;
+                break;
+            }
+        }
+        return res;
+    }
+
     fn tokenize_string(s: String) -> std::io::Result<String> {
         // Connect to tokenizer service, send and read results
         let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
@@ -520,12 +538,27 @@ pub mod html_rendering {
     }
 
     pub async fn convert_string_to_tokenized_html(db: &Database, s: &str) -> String {
+        const DELIM: char = '~';
         let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
-        let n_phrases = tokenized_string.matches(',').count();
+        let n_phrases = tokenized_string.matches(DELIM).count();
         let coll = (*db).collection(CEDICT_COLL_NAME);
         // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per chars
         let mut res = String::with_capacity(n_phrases * 2500);
-        for phrase in tokenized_string.split(',') {
+        for phrase in tokenized_string.split(DELIM) {
+            // Skip lookup for phrases with no Chinese chars
+            if is_english_phrase(&phrase) || has_chinese_punctuation(&phrase) {
+                // handle newlines, else render word aligned with other text
+                if phrase.contains('\n') {
+                    res += &phrase.replace('\n', "<br>");
+                } else {
+                    let mut new_phrase = String::with_capacity(250);
+                    new_phrase += "<span><table style=\"display: inline-table; text-align: center;\"><tr><td></td></tr><tr><td>";
+                    new_phrase += &phrase.replace('\n', "<br>");
+                    new_phrase += "</td></tr></table></span>";
+                    res += &new_phrase;
+                }
+                continue;
+            }
             // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
             // if none match, then generate the phrase witout the pinyin
             let trad_query = coll.find_one(doc! { "trad": &phrase }, None).await.unwrap();
