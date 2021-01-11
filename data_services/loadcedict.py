@@ -8,7 +8,7 @@ from config import DB_NAME, COLL_NAME, DB_URI # Note: this exists but is not pub
 client = MongoClient(DB_URI)
 db = client[DB_NAME]
 coll = db[COLL_NAME]
-# coll.drop() # reload when testing
+coll.drop() # reload when testing
 
 # Track set of Traditional/Simplified characters with duplicate entries.
 # Skip them for now (seek to merge definitions in the future)
@@ -59,13 +59,16 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
         zhuyin_list = zhuyin.split(' ')
         # handle case for non-chinese character pinyin getting "stuck" (e.g. ['AA'] should be ['A', 'A'])
         if len(word_list) > len(pinyin_list):
-            # from inspection, this is always first or last item. Hard-code for edge cases (['dǎ', 'call'], ['mǔ', 'tāi', 'solo'])
-            if pinyin_list[0] not in {'dǎ', 'mǔ'} and len(pinyin_list[0]) > 1:
-                non_chinese_chars = [c for c in pinyin_list[0]] 
-                pinyin_list = non_chinese_chars + pinyin_list[1:]
+            # from inspection, this is always first or last item. Hard-code for edge cases (['dǎ', 'call'], ['mǔ', 'tāi', 'solo'], ['kǎ', 'lā', 'OK'])
+            split_first_non_chinese_phrase = lambda pylist: [c for c in pylist[0]] + pylist[1:]
+            split_last_non_chinese_phrase = lambda pylist: pylist[:-1] + [c for c in pylist[-1]]
+            if pinyin_list[0] not in {'dǎ', 'mǔ', 'kǎ'} and len(pinyin_list[0]) > 1:
+                pinyin_list = split_first_non_chinese_phrase(pinyin_list)
+                zhuyin_list = split_first_non_chinese_phrase(zhuyin_list)
             elif len(pinyin_list[-1]) > 1:
-                non_chinese_chars = [c for c in pinyin_list[-1]] 
-                pinyin_list = pinyin_list[:-1] + non_chinese_chars
+                pinyin_list = split_last_non_chinese_phrase(pinyin_list)
+                zhuyin_list = split_last_non_chinese_phrase(zhuyin_list)
+        # print(f"word_list  : {word_list}\npinyin_list: {pinyin_list}\nzhuyin_list: {zhuyin_list}")
         assert len(word_list) == len(pinyin_list)
         assert len(word_list) == len(zhuyin_list)
         return word_list, pinyin_list, zhuyin_list
@@ -79,7 +82,7 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
         phonetics = raw_pinyin if use_pinyin else zhuyin
         span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
             title="{phrase} [{phonetics}] \
-            <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a>    \
+            <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a> \
             <a role=&quot;button&quot; href=&quot;#{phrase}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
             data-bs-html="true">' # ... dear neptune...
         res += span_start.replace('            ', '')
@@ -101,7 +104,7 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
         
     res_pinyin = perform_render(use_pinyin=True)
     res_zhuyin = perform_render(use_pinyin=False)
-    return (res_pinyin, res_pinyin)
+    return (res_pinyin, res_zhuyin)
 
 if __name__ == '__main__':
     # Load CEDICT from file to mongoDB
