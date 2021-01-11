@@ -8,7 +8,7 @@
 /// ├── check_password: Fn
 /// |
 /// ├── DatabaseItem: Trait
-/// ├── CnType: Enum
+/// ├── {CnType, CnPhonetics}: Enums
 /// ├── {User, SandboxDoc, UserDoc, CnEnDictEntry, UserVocab, UserVocabList, UserFeedback}: Structs
 /// │   └── Impl DatabaseItem for all Structs
 /// |   └── Impl for all Structs
@@ -114,12 +114,20 @@ enum CnType {
     Simplified
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+enum CnPhonetics {
+    Pinyin,
+    Zhuyin
+}
+
 /* Structs */
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     username: String,
     pw_hash: String,
     email: String,
+    cn_type: CnType,
+    cn_phonetics: CnPhonetics,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -188,9 +196,7 @@ impl DatabaseItem for User {
         return Ok(message);
     }
     fn collection_name(&self) -> &str { return USER_COLL_NAME; }
-    fn primary_key(&self) -> &str {
-        return &self.username;
-    }
+    fn primary_key(&self) -> &str { return &self.username; }
 }
 
 impl DatabaseItem for SandboxDoc {
@@ -238,15 +244,32 @@ impl DatabaseItem for UserFeedback {
 
 /* Struct Implementation */
 impl User {
+    fn default_settings() -> (CnType, CnPhonetics) {
+        return (CnType::Simplified, CnPhonetics::Pinyin);
+    }
+
     pub fn new(username: String, password: String, email: String) -> Self {
         let pw_hash = str_to_hashed_string(&password);
-        let new_user = User { username, pw_hash, email };
+        let (cn_type, cn_phonetics) = User::default_settings();
+        let new_user = User { username, pw_hash, email, cn_type, cn_phonetics };
         return new_user;
     }
 
     pub async fn check_if_username_exists(db: &Database, username: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
         return (coll.find_one(doc! {"username": username }, None).await.unwrap()) != None;
+    }
+
+    async fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
+        let coll = (*db).collection(USER_COLL_NAME);
+        let res_tup = match coll.find_one(doc! {"username": username }, None).await.unwrap() {
+            Some(user_doc) => {
+                let User { cn_type, cn_phonetics, ..} = from_bson(Bson::Document(user_doc)).unwrap();
+                (cn_type, cn_phonetics)
+            },
+            None => { User::default_settings() }
+        };
+        return res_tup;
     }
 
     async fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
@@ -513,7 +536,7 @@ pub mod html_rendering {
 
     fn has_chinese_punctuation(s: &str) -> bool {
         // Chinese punctuation is a Chinese char, however shouldn't be rendered as such
-        const PUNCT: [char; 10] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：'];
+        const PUNCT: [char; 13] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥'];
         let mut res = false;
         for c in s.chars() {
             if PUNCT.contains(&c) {

@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from pypinyin import pinyin as pfmt
+from pypinyin import Style
 import pandas as pd
 from config import DB_NAME, COLL_NAME, DB_URI # Note: this exists but is not published on this repo
 
@@ -45,16 +46,18 @@ def format_defn_html(defn):
         res += f'{i+1}. {d}<br/>'
     return res
 
-def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
+def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin):
     """ Takes CEDICT entry information and generates corresponding HTML """
     download_icon_loc = 'https://icons.getbootstrap.com/icons/download.svg'
     sound_icon_loc = 'https://icons.getbootstrap.com/icons/mic.svg'
-    def perform_render(phrase):
+
+    # Helper fn
+    def get_phrase_data_as_lists():
         # get individual words (used in pinyin name)
         word_list = [w for w in phrase]
         pinyin_list = formatted_pinyin.split(' ')
+        zhuyin_list = zhuyin.split(' ')
         # handle case for non-chinese character pinyin getting "stuck" (e.g. ['AA'] should be ['A', 'A'])
-        # Note: this is not pretty, but it works!
         if len(word_list) > len(pinyin_list):
             # from inspection, this is always first or last item. Hard-code for edge cases (['dǎ', 'call'], ['mǔ', 'tāi', 'solo'])
             if pinyin_list[0] not in {'dǎ', 'mǔ'} and len(pinyin_list[0]) > 1:
@@ -64,28 +67,41 @@ def render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn):
                 non_chinese_chars = [c for c in pinyin_list[-1]] 
                 pinyin_list = pinyin_list[:-1] + non_chinese_chars
         assert len(word_list) == len(pinyin_list)
+        assert len(word_list) == len(zhuyin_list)
+        return word_list, pinyin_list, zhuyin_list
+
+    # Helper fn
+    def perform_render(use_pinyin):
         # generate html
+        word_list, pinyin_list, zhuyin_list = get_phrase_data_as_lists()
         n_words = len(word_list)
         res = ''
+        phonetics = raw_pinyin if use_pinyin else zhuyin
         span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
-            title="{phrase} [{raw_pinyin}] \
+            title="{phrase} [{phonetics}] \
             <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a>    \
             <a role=&quot;button&quot; href=&quot;#{phrase}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
             data-bs-html="true">' # ... dear neptune...
         res += span_start.replace('            ', '')
         res += '<table style="display: inline-table; text-align: center;">'
-        pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{word_list[i]}">{pinyin_list[i]}</td>' for i in range(n_words)])
-        pinyin_html = f'<tr>{pinyin_html}</tr>'
-        res += pinyin_html
+        if use_pinyin:
+            pinyin_html = ''.join([f'<td style="visibility: visible" class="pinyin" name="{word_list[i]}">{pinyin_list[i]}</td>' for i in range(n_words)])
+            pinyin_html = f'<tr>{pinyin_html}</tr>'
+            res += pinyin_html
+        else:
+            zhuyin_html = ''.join([f'<td style="visibility: visible" class="zhuyin" name="{word_list[i]}">{zhuyin_list[i]}</td>' for i in range(n_words)])
+            zhuyin_html = f'<tr>{zhuyin_html}</tr>'
+            res += zhuyin_html
         phrase_html = ''.join([f'<td class="phrase">{w}</td>' for w in phrase])
         phrase_html = f'<tr>{phrase_html}</tr>'
         res += phrase_html
         res += '</table>'
         res += '</span>'
         return res
-    res_trad = perform_render(trad)
-    res_simp = perform_render(simp)
-    return (res_trad, res_simp)
+        
+    res_pinyin = perform_render(use_pinyin=True)
+    res_zhuyin = perform_render(use_pinyin=False)
+    return (res_pinyin, res_pinyin)
 
 if __name__ == '__main__':
     # Load CEDICT from file to mongoDB
@@ -121,6 +137,9 @@ if __name__ == '__main__':
                 flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
                 formatted_simp = convert_digits_to_chars(simp)
                 formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
+
+                # get zhuyin (BOPOMOFO)
+                zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
                 
                 # handle case where lines can be merged (based on formatted pinyin)
                 if curr_matches_prev(trad, simp, formatted_pinyin):
@@ -128,7 +147,8 @@ if __name__ == '__main__':
                     defn = last_entry['def'] + defn[1:]
 
                 # render html
-                trad_html, simp_html = render_phrase_table_html(trad, simp, raw_pinyin, formatted_pinyin, defn)
+                trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
+                simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
 
                 # append entry
                 entry_list.append({
@@ -138,7 +158,10 @@ if __name__ == '__main__':
                     'formatted_pinyin': formatted_pinyin,
                     'def': defn,
                     'trad_html': trad_html,
-                    'simp_html': simp_html
+                    'simp_html': simp_html,
+                    'zhuyin': zhuyin,
+                    'trad_zhuyin_html': trad_zhuyin_html,
+                    'simp_zhuyin_html': simp_zhuyin_html
                 })
             
                 # update prev items
