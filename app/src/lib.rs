@@ -561,7 +561,7 @@ pub mod html_rendering {
     }
 
     pub async fn convert_string_to_tokenized_html(db: &Database, s: &str) -> String {
-        const DELIM: char = '~';
+        const DELIM: char = '$';
         let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
         let n_phrases = tokenized_string.matches(DELIM).count();
         let coll = (*db).collection(CEDICT_COLL_NAME);

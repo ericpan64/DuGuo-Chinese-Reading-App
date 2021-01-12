@@ -17,7 +17,7 @@ MAX_BUF = 102400 # 1MB
 
 def tokenize_str(s):
     tokens = tokenizer(s)
-    delimited_str = '~'.join([str(t) for t in tokens])
+    delimited_str = '$'.join([str(t) for t in tokens])
     return delimited_str
 
 def accept_wrapper(sock):
