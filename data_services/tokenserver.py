@@ -17,6 +17,17 @@ IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
 MAX_BUF = 102400 # 1MB
 
+def is_english_phrase(p):
+    """ 
+    For given phrase, if figures-out if it is entirely alphanumeric characters.
+
+    Chinese chars use 3 bytes, so a phrase with Chinese chars will return false.
+
+    Ex. len('京报') = 2
+        len(bytes('京报', 'utf-8')) = 6
+    """
+    return len(p) == len(bytes(p, 'utf-8'))
+
 def tokenize_str(s):
     """
     Given the input text s, tokenize and return as $-delimited phrases,
@@ -28,14 +39,34 @@ def tokenize_str(s):
         Output: "祝`zhù$你`nǐ$有`yǒu$美好`měi hǎo$的`de$天`tiān$！`！"
     """
     flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
-    reversed_pinyin_list = flatten_list(pfmt(s, style=Style.TONE3, neutral_tone_with_five=True))[::-1]
+    init_pinyin_list = flatten_list(pfmt(s, style=Style.TONE3, neutral_tone_with_five=True))
     tokens = tokenizer(s)
-    delimited_list = [''] * len(tokens) # pre-allocate size
-    for i in range(len(tokens)):
-        pyin_list = [''] * len(tokens[i])
-        for j in range(len(tokens[i])):
-            pyin_list[j] = reversed_pinyin_list.pop()
-        pyin = ' '.join(pyin_list)
+    n_tokens = len(tokens)
+    n_pinyin  = len(s)
+    pinyin_list = [''] * n_pinyin # pre-allocate since known size
+    # Handle special characters to match tokenizer output
+    # for special characters within an english phrase, tokenizer splits it but pfmt doesn't
+    # for spaces, tokenizer ignores but pfmt doesn't
+    i, j = 0, 0
+    while i < len(init_pinyin_list) and j < n_pinyin:
+        curr_pinyin = init_pinyin_list[i]
+        curr_pinyin = [str(t) for t in list(tokenizer(curr_pinyin))]
+        n_phrase = len(curr_pinyin)
+        pinyin_list[j:j+n_phrase] = curr_pinyin
+        i += 1
+        j += n_phrase
+    pinyin_list = [py for py in pinyin_list if py not in {'', ' '}]
+    reversed_pinyin_list = pinyin_list[::-1]
+    # Generate delimited string
+    delimited_list = [''] * n_tokens # pre-allocate since known size
+    for i in range(n_tokens):
+        if is_english_phrase(str(tokens[i])):
+            pyin = reversed_pinyin_list.pop()
+        else:
+            pyin_list = [''] * len(tokens[i])
+            for j in range(len(tokens[i])):
+                pyin_list[j] = reversed_pinyin_list.pop()
+            pyin = ' '.join(pyin_list)
         delimited_list[i] = f"{tokens[i]}`{pyin}"
     delimited_str = '$'.join(delimited_list)
     return delimited_str
