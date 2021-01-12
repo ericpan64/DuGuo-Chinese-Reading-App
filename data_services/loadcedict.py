@@ -10,14 +10,16 @@ db = client[DB_NAME]
 coll = db[COLL_NAME]
 coll.drop() # reload when testing
 
-# Track set of Traditional/Simplified characters with duplicate entries.
-# Skip them for now (seek to merge definitions in the future)
-get_first_col_as_set = lambda fn: set(pd.read_csv(fn).iloc[:, 0])
-simp_dups = get_first_col_as_set('static/simplified_duplicates.csv')
-trad_dups = get_first_col_as_set('static/traditional_duplicates.csv')
+# # Track set of Traditional/Simplified characters with duplicate entries.
+# # Skip them for now (seek to merge definitions in the future)
+# get_first_col_as_set = lambda fn: set(pd.read_csv(fn).iloc[:, 0])
+# trad_dups = get_first_col_as_set('static/traditional_duplicates.csv')
+# simp_dups = get_first_col_as_set('static/simplified_duplicates.csv')
 
 def convert_digits_to_chars(s):
-    """ Formats edge-case characters from pypinyin (pfmt) library """
+    """
+    Formats edge-case characters from pypinyin (pfmt) library
+    """
     repl_dict = {
         '1': '一',
         '2': '二',
@@ -35,23 +37,36 @@ def convert_digits_to_chars(s):
         s = s.replace(k, v)
     return s
 
-def format_defn_html(defn):
-    """ Takes /-delimited definition and generates corresponding HTML """
-    # Input: /The first definition/The second definition/ ...
-    # Output: 1. The first definition\n2. The second definition\n ...
+def format_defn_html(defn_in):
+    """ 
+    Takes delimited definition and generates corresponding HTML.
+
+    Multiple definitions must be delimited by the '$' character (used bc it isn't in CEDICT)
+
+    Input: "/The first definition/The second definition/$/Alternate first definition/Alternate second definition..."
+    Output: "1. The first definition<br>2. The second definition<hr>1. Alternate first definition<br>2. Alternate second definition..."
+    """
     res = ''
-    clean_defn = defn.replace('\"', '\'') # some entries in CEDICT use " character
-    defns = clean_defn.split('/')[1:-1] # removes first and last splits, which are '' in this case
-    for (i, d) in enumerate(defns):
-        res += f'{i+1}. {d}<br/>'
+    split_defn = defn_in.split('$')
+    for i, defn in enumerate(split_defn):
+        clean_defn = defn.replace('\"', '\'') # some entries in CEDICT use " character
+        defns = clean_defn.split('/')[1:-1] # removes first and last splits, which are '' in this case
+        for j, d in enumerate(defns):
+            if j != len(defns) - 1:
+                res += f'{j+1}. {d}<br>'
+            elif i != len(split_defn) - 1 :
+                res += f'{j+1}. {d}<hr>'
+            else:
+                res += f'{j+1}. {d}'
     return res
 
 def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin):
-    """ Takes CEDICT entry information and generates corresponding HTML """
+    """ 
+    Takes CEDICT entry information and generates corresponding HTML
+    """
     download_icon_loc = 'https://icons.getbootstrap.com/icons/download.svg'
     sound_icon_loc = 'https://icons.getbootstrap.com/icons/mic.svg'
 
-    # Helper fn
     def get_phrase_data_as_lists():
         # get individual words (used in pinyin name)
         word_list = [w for w in phrase]
@@ -73,7 +88,6 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
         assert len(word_list) == len(zhuyin_list)
         return word_list, pinyin_list, zhuyin_list
 
-    # Helper fn
     def perform_render(use_pinyin):
         # generate html
         word_list, pinyin_list, zhuyin_list = get_phrase_data_as_lists()
@@ -108,73 +122,68 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
 
 if __name__ == '__main__':
     # Load CEDICT from file to mongoDB
-    cedict_path = 'static/cedict_ts.u8'
     if coll.estimated_document_count() > 100000:
         print('CEDICT is already loaded -- skipping operation...')
     else:
-        # Track lines with identical pinyin + phrase
-        prev_trad, prev_simp, prev_formatted_pinyin = None, None, None
-        curr_matches_prev = lambda t, s, fp: (prev_trad == t) and (prev_simp == s) and (prev_formatted_pinyin == fp)
+        # Parse file        
+        cedict_path = 'static/sorted_cedict_ts.csv'
+        print(f'Loading CEDICT from {cedict_path} - this takes a few seconds...')
+        cedict_df = pd.read_csv(cedict_path, index_col=0)
+        entry_list = []
+        prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
+        for idx, row in cedict_df.iterrows():
+            trad, simp, raw_pinyin, defn = row
 
-        # Parse file
-        print('Loading CEDICT - this takes a few seconds...')
-        with open(cedict_path, encoding='utf8') as f:
-            entry_list = []
-            for line in f:
-                # skip no-data lines
-                line = line.strip()
-                if len(line) == 0 or line[0] == '#':
-                    continue
+            # skip cases where definition is a "variant of" another CEDICT entry
+            if "variant of" in defn:
+                continue
 
-                # get CEDICT components
-                trad, simp, rest = [token for token in line.split(' ', 2)]
-                close_bracket = rest.find(']')  # close bracket on pinyin
-                raw_pinyin = rest[1:close_bracket]
-                defn = rest[close_bracket+2:]
+            # # skip cases with duplicate entries (identified in static/*.csv files)
+            # if (trad in trad_dups):
+            #     continue
 
-                # skip cases with duplicate entries (identified in static/*.csv files)
-                if (trad in trad_dups) or (simp in simp_dups):
-                    continue
+            # get formatted pinyin
+            flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+            formatted_simp = convert_digits_to_chars(simp)
+            formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
 
-                # get formatted pinyin
-                flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
-                formatted_simp = convert_digits_to_chars(simp)
-                formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
-
-                # get zhuyin (BOPOMOFO)
-                zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
-                
-                # handle case where lines can be merged (based on formatted pinyin)
-                if curr_matches_prev(trad, simp, formatted_pinyin):
-                    last_entry = entry_list.pop()
-                    defn = last_entry['def'] + defn[1:]
-
-                # render html
-                trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
-                simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
-
-                # append entry
-                entry_list.append({
-                    'trad': trad,
-                    'simp': simp,
-                    'raw_pinyin': raw_pinyin,
-                    'formatted_pinyin': formatted_pinyin,
-                    'def': defn,
-                    'trad_html': trad_html,
-                    'simp_html': simp_html,
-                    'zhuyin': zhuyin,
-                    'trad_zhuyin_html': trad_zhuyin_html,
-                    'simp_zhuyin_html': simp_zhuyin_html
-                })
+            # get zhuyin (BOPOMOFO)
+            zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
             
-                # update prev items
-                prev_trad, prev_simp, prev_formatted_pinyin = trad, simp, formatted_pinyin
+            # handle case where lines can be merged (based on raw_pinyin)
+            # NOTE: this does cause some data loss for traditional entries with matching simplified phrases, ignoring for now
+            if (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
+                last_entry = entry_list.pop()
+                defn = last_entry['def'] + '$' + defn
 
-            print('Loaded. Sending to db...')
-            coll.insert_many(entry_list)
+            # render html
+            trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
+            simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
+
+            # append entry
+            entry_list.append({
+                'trad': trad,
+                'simp': simp,
+                'raw_pinyin': raw_pinyin,
+                'def': defn,
+                'formatted_pinyin': formatted_pinyin,
+                'trad_html': trad_html,
+                'simp_html': simp_html,
+                'zhuyin': zhuyin,
+                'trad_zhuyin_html': trad_zhuyin_html,
+                'simp_zhuyin_html': simp_zhuyin_html
+            })
         
+            # update prev items
+            prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
+
+        print('Loaded. Sending to db...')
+        coll.insert_many(entry_list)
         print('Creating an index on trad, simp phrases...')
-        coll.create_index([ ("trad", 1) ], unique=True)
-        coll.create_index([ ("simp", 1) ], unique=True)
+        coll.create_index([ ("simp", 1) ])
+        coll.create_index([ ("trad", 1) ])
+        print('Creating dual index on trad+raw_pinyin, unique dual index on simp+raw_pinyin...')
+        coll.create_index([ ("simp", 1), ("raw_pinyin", -1) ], unique=True)
+        coll.create_index([ ("trad", 1), ("raw_pinyin", -1) ])
         print('Completed')
 
