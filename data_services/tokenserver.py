@@ -5,7 +5,7 @@ import selectors
 import types
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
-from config import TOKENIZER_HOST, TOKENIZER_PORT
+from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
@@ -15,7 +15,6 @@ tokenizer = nlp.Defaults.create_tokenizer(nlp)
 sel = selectors.DefaultSelector()
 IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
-MAX_BUF = 102400 # 1MB
 
 TONE_CHAR_SET = {
     'ā','ē','ī','ō','ū','ǖ','Ā','Ē','Ī','Ō','Ū','Ǖ',

@@ -24,11 +24,7 @@ Afterwards:
 import pandas as pd
 from os import remove
 from os.path import exists
-
-CEDICT_ORIG_PATH = 'static/cedict_ts.u8'
-CEDICT_CSV_PATH = 'static/delimited_cedict_ts.txt'
-SORTED_CEDICT_CSV_PATH = 'static/sorted_cedict_ts.csv'
-N_COMMENTS = 30 # number of commented lines on top of original CEDICT file
+from config import CEDICT_ORIG_PATH, CEDICT_CSV_PATH, SORTED_CEDICT_CSV_PATH, N_COMMENTS
 
 def generate_delimited_cedict(input_path, output_path):
     """ 
