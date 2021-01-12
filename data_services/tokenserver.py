@@ -3,6 +3,8 @@ from spacy.tokenizer import Tokenizer
 import socket
 import selectors
 import types
+from pypinyin import pinyin as pfmt
+from pypinyin import Style
 from config import TOKENIZER_HOST, TOKENIZER_PORT
 
 # NLP import from: https://spacy.io/models/zh
@@ -16,8 +18,26 @@ TCP = socket.SOCK_STREAM
 MAX_BUF = 102400 # 1MB
 
 def tokenize_str(s):
+    """
+    Given the input text s, tokenize and return as $-delimited phrases,
+        where each phrase is `-delimited in the format: phrase`formatted_pinyin
+        Pinyin is space-delimited for a multi-word phrase
+
+    Example:
+        Input : "祝你有美好的天！"
+        Output: "祝`zhù$你`nǐ$有`yǒu$美好`měi hǎo$的`de$天`tiān$！`！"
+    """
+    flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+    reversed_pinyin_list = flatten_list(pfmt(s, style=Style.TONE3, neutral_tone_with_five=True))[::-1]
     tokens = tokenizer(s)
-    delimited_str = '$'.join([str(t) for t in tokens])
+    delimited_list = [''] * len(tokens) # pre-allocate size
+    for i in range(len(tokens)):
+        pyin_list = [''] * len(tokens[i])
+        for j in range(len(tokens[i])):
+            pyin_list[j] = reversed_pinyin_list.pop()
+        pyin = ' '.join(pyin_list)
+        delimited_list[i] = f"{tokens[i]}`{pyin}"
+    delimited_str = '$'.join(delimited_list)
     return delimited_str
 
 def accept_wrapper(sock):
