@@ -65,7 +65,7 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
     Takes CEDICT entry information and generates corresponding HTML
     """
     download_icon_loc = 'https://icons.getbootstrap.com/icons/download.svg'
-    sound_icon_loc = 'https://icons.getbootstrap.com/icons/mic.svg'
+    sound_icon_loc = 'https://icons.getbootstrap.com/icons/volume-up-fill.svg'
 
     def get_phrase_data_as_lists():
         # get individual words (used in pinyin name)
