@@ -536,7 +536,7 @@ pub mod html_rendering {
 
     fn has_chinese_punctuation(s: &str) -> bool {
         // Chinese punctuation is a Chinese char, however shouldn't be rendered as such
-        const PUNCT: [char; 13] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥'];
+        const PUNCT: [char; 14] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—'];
         let mut res = false;
         for c in s.chars() {
             if PUNCT.contains(&c) {
@@ -552,7 +552,7 @@ pub mod html_rendering {
         let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
         stream.write(s.as_bytes())?;
         let n_bytes = s.as_bytes().len();
-        let mut tokenized_bytes = vec![0; n_bytes * 5]; // max size includes original 'n_bytes' + at most 2*'n_bytes' delimiters + 2*'n_bytes' for pinyin
+        let mut tokenized_bytes = vec![0; n_bytes * 8]; // max size includes original n_bytes + at most 3*n_bytes delimiters + 4*n_bytes for pinyin
         stream.read(&mut tokenized_bytes)?;
     
         let mut res = String::from_utf8(tokenized_bytes).unwrap();
@@ -572,6 +572,7 @@ pub mod html_rendering {
             let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
             let phrase = token_vec[0];
             let raw_pinyin = token_vec[1];
+            let formatted_pinyin = token_vec[2];
             // Skip lookup for phrases with no Chinese chars
             if is_english_phrase(&phrase) || has_chinese_punctuation(&phrase) {
                 // handle newlines, else render word aligned with other text
@@ -586,10 +587,15 @@ pub mod html_rendering {
                 }
                 continue;
             }
+            // TODO: add handling for Traditional/Simplified lookup
             // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
             // if none match, then generate the phrase witout the pinyin
-            let trad_query = coll.find_one(doc! { "trad": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
-            let simp_query = coll.find_one(doc! { "simp": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
+            let mut trad_query = coll.find_one(doc! { "trad": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
+            let mut simp_query = coll.find_one(doc! { "simp": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
+            if trad_query == None && simp_query == None {
+                trad_query = coll.find_one(doc! { "trad": &phrase, "formatted_pinyin": formatted_pinyin }, None).await.unwrap();
+                simp_query = coll.find_one(doc! { "simp": &phrase, "formatted_pinyin": formatted_pinyin }, None).await.unwrap();
+            }
             if trad_query == None && simp_query == None {
                 // Append "not found" html
                 let phrase_html = generate_html_for_not_found_phrase(phrase);
