@@ -5,7 +5,12 @@
     {% if paragraph_html is undefined %}
         Document not found, check the document title!
     {% else %}
-        <p>Note: To use "Hide Saved Pinyin" on phrases saved this session, reload the page!</p>
+        <h3>Instructions</h3>
+        <ul>
+            <li><strong>Click</strong> on a phrase to view more information, speech-to-text, and save it to your dictionary.</li>
+            <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase.</li>
+            <li>Use the buttons below to toggle pinyin settings.</li>
+        </ul>
         <div id="buttons" class="container">
             <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin()">Hide Saved Pinyin</button>
             <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin()">Hide All Pinyin</button>
@@ -29,7 +34,6 @@
     {% else %}
     let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
-
     let all_pinyin_list = document.getElementsByClassName("pinyin");
     let hideSavedPinyin = () => {
         user_saved_phrase_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
