@@ -2,19 +2,44 @@ from pymongo import MongoClient
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
 import pandas as pd
-from config import DB_NAME, COLL_NAME, DB_URI # Note: this exists but is not published on this repo
+from config import *
 
-# Connect to mongoDB
-client = MongoClient(DB_URI)
-db = client[DB_NAME]
-coll = db[COLL_NAME]
-# coll.drop() # reload when testing
 
-# # Track set of Traditional/Simplified characters with duplicate entries.
-# # Skip them for now (seek to merge definitions in the future)
-# get_first_col_as_set = lambda fn: set(pd.read_csv(fn).iloc[:, 0])
-# trad_dups = get_first_col_as_set('static/traditional_duplicates.csv')
-# simp_dups = get_first_col_as_set('static/simplified_duplicates.csv')
+def init_mongodb():
+    """
+    Connects to mongoDB, creates indices, and returns collection for CEDICT load
+    """
+    client = MongoClient(DB_URI)
+    db = client[DB_NAME]
+    colls = {
+        'cedict': db[CEDICT_COLL_NAME],
+        'user': db[USER_COLL_NAME],
+        'user_docs': db[USER_DOC_COLL_NAME],
+        'user_vocab': db[USER_VOCAB_COLL_NAME],
+        'user_vocab_list': db[USER_VOCAB_LIST_COLL_NAME]
+    }
+    # CEDICT Indices
+    colls['cedict'].create_index([ ("simp", 1) ])
+    colls['cedict'].create_index([ ("trad", 1) ])
+    colls['cedict'].create_index([ ("simp", 1), ("raw_pinyin", -1) ], unique=True)
+    colls['cedict'].create_index([ ("trad", 1), ("raw_pinyin", -1) ])
+    # User Indices
+    colls['user'].create_index([ ("username", 1)], unique=True)
+    colls['user'].create_index([ ("email", 1)], unique=True)
+    colls['user'].create_index([ ("username", 1), ("email", 1)], unique=True)
+    # User Doc Indices
+    colls['user_docs'].create_index([ ("username", 1)])
+    colls['user_docs'].create_index([ ("username", 1), ("title", 1)], unique=True)
+    # User Vocab Indices
+    colls['user_vocab'].create_index([ ("username", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("cn_type", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase.simp", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase.trad", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase.simp", 1), ("phrase.raw_pinyin", -1)], unique=True)
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase.trad", 1), ("phrase.raw_pinyin", -1)], unique=True)
+    # User Vocab List Index
+    colls['user_vocab_list'].create_index([ ("username", 1) ], unique=True)
+    return colls['cedict']
 
 def convert_digits_to_chars(s):
     """
@@ -120,70 +145,65 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
     res_zhuyin = perform_render(use_pinyin=False)
     return (res_pinyin, res_zhuyin)
 
-if __name__ == '__main__':
-    # Load CEDICT from file to mongoDB
+def load_cedict(coll):
+    """
+    Performs the CEDICT load into the specified collection
+    """
     if coll.estimated_document_count() > 100000:
         print('CEDICT is already loaded -- skipping operation...')
-    else:
-        # Parse file        
-        cedict_path = 'static/sorted_cedict_ts.csv'
-        print(f'Loading CEDICT from {cedict_path} - this takes a few seconds...')
-        cedict_df = pd.read_csv(cedict_path, index_col=0)
-        entry_list = []
-        prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
-        for idx, row in cedict_df.iterrows():
-            trad, simp, raw_pinyin, defn = row
+        return
 
-            # skip cases where definition is a "variant of" another CEDICT entry
-            if "variant of" in defn:
-                continue
+    SORTED_CEDICT_CSV_PATH = 'static/sorted_cedict_ts.csv'
+    print(f'Loading CEDICT from {SORTED_CEDICT_CSV_PATH} - this takes a few seconds...')
+    cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
+    entry_list = []
+    prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
+    for _, row in cedict_df.iterrows():
+        trad, simp, raw_pinyin, defn = row
 
-            # # skip cases with duplicate entries (identified in static/*.csv files)
-            # if (trad in trad_dups):
-            #     continue
+        # skip cases where definition is a "variant of" another CEDICT entry
+        if "variant of" in defn:
+            continue
 
-            # get formatted pinyin
-            flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
-            formatted_simp = convert_digits_to_chars(simp)
-            formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
+        # get formatted pinyin
+        flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+        formatted_simp = convert_digits_to_chars(simp)
+        formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
 
-            # get zhuyin (BOPOMOFO)
-            zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
-            
-            # handle case where lines can be merged (based on raw_pinyin)
-            # NOTE: this does cause some data loss for traditional entries with matching simplified phrases, ignoring for now
-            if (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
-                last_entry = entry_list.pop()
-                defn = last_entry['def'] + '$' + defn
-
-            # render html
-            trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
-            simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
-
-            # append entry
-            entry_list.append({
-                'trad': trad,
-                'simp': simp,
-                'raw_pinyin': raw_pinyin,
-                'def': defn,
-                'formatted_pinyin': formatted_pinyin,
-                'trad_html': trad_html,
-                'simp_html': simp_html,
-                'zhuyin': zhuyin,
-                'trad_zhuyin_html': trad_zhuyin_html,
-                'simp_zhuyin_html': simp_zhuyin_html
-            })
+        # get zhuyin (BOPOMOFO)
+        zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
         
-            # update prev items
-            prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
+        # handle case where lines can be merged (based on raw_pinyin)
+        # NOTE: this does cause some data loss for traditional entries with matching simplified phrases, treating as negligible
+        if (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
+            last_entry = entry_list.pop()
+            defn = last_entry['def'] + '$' + defn
 
-        print('Loaded. Sending to db...')
-        coll.insert_many(entry_list)
-        print('Creating an index on trad, simp phrases...')
-        coll.create_index([ ("simp", 1) ])
-        coll.create_index([ ("trad", 1) ])
-        print('Creating dual index on trad+raw_pinyin, unique dual index on simp+raw_pinyin...')
-        coll.create_index([ ("simp", 1), ("raw_pinyin", -1) ], unique=True)
-        coll.create_index([ ("trad", 1), ("raw_pinyin", -1) ])
-        print('Completed')
+        # render html
+        trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
+        simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
 
+        # append entry
+        entry_list.append({
+            'trad': trad,
+            'simp': simp,
+            'raw_pinyin': raw_pinyin,
+            'def': defn,
+            'formatted_pinyin': formatted_pinyin,
+            'trad_html': trad_html,
+            'simp_html': simp_html,
+            'zhuyin': zhuyin,
+            'trad_zhuyin_html': trad_zhuyin_html,
+            'simp_zhuyin_html': simp_zhuyin_html
+        })
+    
+        # update prev items
+        prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
+
+    print('Loaded. Sending to db...')
+    coll.insert_many(entry_list)
+    return
+
+if __name__ == '__main__':
+    cedict_coll = init_mongodb()
+    load_cedict(cedict_coll)

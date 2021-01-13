@@ -11,7 +11,11 @@ N_COMMENTS = 30 # number of commented lines on top of original CEDICT file
 
 # loadcedict.py
 DB_NAME = 'duguo'
-COLL_NAME = 'cedict'
+USER_COLL_NAME = 'users'
+USER_DOC_COLL_NAME = 'docs'
+USER_VOCAB_COLL_NAME = 'vocab'
+USER_VOCAB_LIST_COLL_NAME = 'vocab-list'
+CEDICT_COLL_NAME = 'cedict'
 DB_URI = 'mongodb://root:example@mongodb:27017/'
 
 # tokenserver.py
