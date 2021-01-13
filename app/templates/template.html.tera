@@ -85,7 +85,7 @@
                         if (xhr.status == 202) {
                             alert(`Successfully added ${py_string} to your dictionary!`);
                         } else {
-                            alert(`Error when adding ${py_string} to dictionary. Create an account and/or open a Github issue`);
+                            alert(`Error when adding ${py_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should provide some feedback :-)`);
                         }
                         switchOffWordVisibility(py_string);
                     }
