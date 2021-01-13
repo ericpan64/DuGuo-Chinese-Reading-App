@@ -3,9 +3,10 @@ from spacy.tokenizer import Tokenizer
 import socket
 import selectors
 import types
+import pandas as pd
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
-from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF
+from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF, SORTED_CEDICT_CSV_PATH
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
@@ -24,16 +25,29 @@ TONE_CHAR_SET = {
     'ü','Ü',
 }
 
-def is_english_phrase(p):
-    """ 
-    For given phrase, if figures-out if it is entirely alphanumeric characters.
+CEDICT_DF = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
+CEDICT_SET = set(CEDICT_DF.iloc[:, 0]).union(set(CEDICT_DF.iloc[:, 1]))
 
-    Chinese chars use 3 bytes, so a phrase with Chinese chars will return false.
+# Chinese chars use 3 bytes, so a phrase with Chinese chars will return false.
+# Ex. len('京报') = 2
+#     len(bytes('京报', 'utf-8')) = 6
+entire_phrase_is_english = lambda p: len(p) == len(bytes(p, 'utf-8'))
+entire_phrase_is_chinese = lambda p: (3 * len(p)) == len(bytes(p, 'utf-8'))
+flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+is_fmt_pinyin = lambda py: len(set(py).intersection(TONE_CHAR_SET)) > 0
 
-    Ex. len('京报') = 2
-        len(bytes('京报', 'utf-8')) = 6
+def break_down_large_token_into_subtoken_list(t):
     """
-    return len(p) == len(bytes(p, 'utf-8'))
+    Applies divide & conquer approach to break-down a larger token into list of CEDICT-only components
+    """
+    # Base cases: found in CEDICT, or Chinese punctuation, or English phrase
+    if t in CEDICT_SET or len(t) == 1 or entire_phrase_is_english(t):
+        return [t]
+    n = len(t)
+    mid = int(n/2) # round down for odd #'s
+    left_tokens = break_down_large_token_into_subtoken_list(t[0:mid])
+    right_tokens = break_down_large_token_into_subtoken_list(t[mid: n])
+    return left_tokens + right_tokens
 
 def tokenize_str(s):
     """
@@ -44,21 +58,36 @@ def tokenize_str(s):
         Input : "祝你有美好的天！"
         Output: "祝`zhu4`zhù$你`ni3`nǐ$有`you3`yǒu$美好`mei3 hao3`měi hǎo$的`de5`de$天`tian1`tiān$！`！`！"
     """
-    flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
     tokens = tokenizer(s)
     n_pinyin  = len(s)
+    # str_tokens = [str(t) for t in tokens]
+    # Break-down phrases that are not in CEDICT to lesser components
+    str_tokens = [''] * max([len(t) for t in tokens]) * len(tokens) # pre-allocate upper-bound, clean-up after
+    j = 0
+    for i in range(len(tokens)):
+        t = str(tokens[i])
+        if not entire_phrase_is_chinese(t) or t in CEDICT_SET:
+            str_tokens[j] = t
+            j += 1
+        else:
+            # use divide-and-conquer approach: recursively split until all tokens are accounted for
+            subtokens = break_down_large_token_into_subtoken_list(t)
+            n_st = len(subtokens)
+            str_tokens[j: n_st] = subtokens
+            j += n_st
+    while str_tokens[-1] == '':
+        str_tokens.pop()
     # Handle special characters to match tokenizer output
     # for special characters within an alphanumeric phrase, tokenizer splits it but pfmt doesn't
     # for spaces, tokenizer ignores but pfmt doesn't
-    is_fmt_pinyin = lambda py: len(set(py).intersection(TONE_CHAR_SET)) > 0
     def get_corrected_syntax_for_pinyin_list(style):
         init_pinyin_list = flatten_list(pfmt(s, style=style, neutral_tone_with_five=True))
         pinyin_list = [''] * n_pinyin # pre-allocate since known size
         i, j = 0, 0
         while i < len(init_pinyin_list) and j < n_pinyin:
             curr_pinyin = init_pinyin_list[i]
-            # formatted pinyin needs separate handling since it's a alphanumeric str with special character
-            # ... that we _don't_ want to tokenize!
+            # formatted pinyin needs separate handling since it's an alphanumeric  
+            # str with a special character that we _don't_ want to tokenize!
             if is_fmt_pinyin(curr_pinyin):
                 pinyin_list[j] = curr_pinyin
                 j += 1
@@ -73,24 +102,23 @@ def tokenize_str(s):
     reversed_raw_pinyin_list = get_corrected_syntax_for_pinyin_list(Style.TONE3)[::-1] # works
     reversed_fmt_pinyin_list = get_corrected_syntax_for_pinyin_list(None)[::-1] # breaks b/c tokenizer splits special chars
     # Generate delimited string
-    n_tokens = len(tokens)
+    n_tokens = len(str_tokens)
     delimited_list = [''] * n_tokens # pre-allocate since known size
     for i in range(n_tokens):
-        if is_english_phrase(str(tokens[i])):
+        if entire_phrase_is_english(str_tokens[i]):
             raw_pinyin = reversed_raw_pinyin_list.pop()
             fmt_pinyin = reversed_fmt_pinyin_list.pop()
         else:
-            raw_pyin_list = [''] * len(tokens[i])
-            fmt_pyin_list = [''] * len(tokens[i])
-            for j in range(len(tokens[i])):
+            raw_pyin_list = [''] * len(str_tokens[i])
+            fmt_pyin_list = [''] * len(str_tokens[i])
+            for j in range(len(str_tokens[i])):
                 raw_pyin_list[j] = reversed_raw_pinyin_list.pop()
                 fmt_pyin_list[j] = reversed_fmt_pinyin_list.pop()
             raw_pinyin = ' '.join(raw_pyin_list)
             fmt_pinyin = ' '.join(fmt_pyin_list)
-        delimited_list[i] = f"{tokens[i]}`{raw_pinyin}`{fmt_pinyin}"
+        delimited_list[i] = f"{str_tokens[i]}`{raw_pinyin}`{fmt_pinyin}"
     delimited_str = '$'.join(delimited_list)
     return delimited_str
-
 
 def accept_wrapper(sock):
     conn, addr = sock.accept()

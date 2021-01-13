@@ -8,7 +8,7 @@ from config import DB_NAME, COLL_NAME, DB_URI # Note: this exists but is not pub
 client = MongoClient(DB_URI)
 db = client[DB_NAME]
 coll = db[COLL_NAME]
-coll.drop() # reload when testing
+# coll.drop() # reload when testing
 
 # # Track set of Traditional/Simplified characters with duplicate entries.
 # # Skip them for now (seek to merge definitions in the future)
