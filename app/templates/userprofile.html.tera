@@ -22,10 +22,10 @@
                 </div>
 
                 <h4>Upload Document</h4>
-                <form class="form" action="/api/upload" id="user-doc-form" method="POST">
+                <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton()" method="POST">
                     <input type="text" name="title" placeholder="Document Title" required>
-                    <textarea class="form-control" name="body" form="user-doc-form" rows="10" cols="50"></textarea>
-                    <button class="btn btn-outline-primary" type="submit">Upload Document</button>
+                    <textarea class="form-control" name="body" form="user-doc-form" rows="10" cols="50" required></textarea>
+                    <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload Document</button>
                 </form>
             </div>
             
@@ -45,5 +45,10 @@
 <script>
     // Update active navbar
     document.getElementById("nav2").classList.add("active");
+
+    let switchToLoadingButton = () => {
+        document.getElementById("upload-button").innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>`;
+    }
 </script>
 {% endblock content %}
