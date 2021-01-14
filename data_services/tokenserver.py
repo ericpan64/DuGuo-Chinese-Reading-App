@@ -66,7 +66,9 @@ def tokenize_str(s):
     j = 0
     for i in range(len(tokens)):
         t = str(tokens[i])
-        if not entire_phrase_is_chinese(t) or t in CEDICT_SET:
+        if t == ' ':
+            continue
+        elif t in CEDICT_SET or not entire_phrase_is_chinese(t):
             str_tokens[j] = t
             j += 1
         else:

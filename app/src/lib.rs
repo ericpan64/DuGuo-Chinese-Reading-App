@@ -29,6 +29,7 @@ use mongodb::{
     Client, Database
 };
 use rocket::http::RawStr;
+use scraper::{Html, Selector};
 use std::{
     io::prelude::*,
     net::TcpStream,
@@ -143,6 +144,7 @@ pub struct UserDoc {
     title: String,
     body: String,
     body_html: String,
+    from_url: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -260,17 +262,18 @@ impl User {
         return (coll.find_one(doc! {"username": username }, None).await.unwrap()) != None;
     }
 
-    async fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
-        let coll = (*db).collection(USER_COLL_NAME);
-        let res_tup = match coll.find_one(doc! {"username": username }, None).await.unwrap() {
-            Some(user_doc) => {
-                let User { cn_type, cn_phonetics, ..} = from_bson(Bson::Document(user_doc)).unwrap();
-                (cn_type, cn_phonetics)
-            },
-            None => { User::default_settings() }
-        };
-        return res_tup;
-    }
+    // Integrate this later
+    // async fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
+    //     let coll = (*db).collection(USER_COLL_NAME);
+    //     let res_tup = match coll.find_one(doc! {"username": username }, None).await.unwrap() {
+    //         Some(user_doc) => {
+    //             let User { cn_type, cn_phonetics, ..} = from_bson(Bson::Document(user_doc)).unwrap();
+    //             (cn_type, cn_phonetics)
+    //         },
+    //         None => { User::default_settings() }
+    //     };
+    //     return res_tup;
+    // }
 
     async fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
@@ -300,7 +303,7 @@ impl SandboxDoc {
 }
 
 impl UserDoc {
-    pub async fn new(db: &Database, username: String, desired_title: String, body: String) -> Self {
+    pub async fn new(db: &Database, username: String, desired_title: String, body: String, url: Option<String>) -> Self {
         let body_html = html_rendering::convert_string_to_tokenized_html(db, &body).await;
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -320,8 +323,31 @@ impl UserDoc {
             },
             false => { desired_title }
         };
-        let new_doc = UserDoc { username, title, body, body_html };
+        let from_url = match url {
+            Some(url) => url,
+            None => String::new()
+        };
+        let new_doc = UserDoc { username, title, body, body_html, from_url };
         return new_doc;
+    }
+
+    pub async fn from_url(db: &Database, username: String, url: String) -> Self {
+        // make request
+        let resp = reqwest::blocking::get(&url).unwrap()
+            .text().unwrap();
+        let html = Html::parse_document(&resp);
+        // get title
+        let title_selector = Selector::parse("title").unwrap();
+        let title_text: String = html.select(&title_selector)
+            .next().unwrap()
+            .text().collect();
+        // get body from all headers, paragraphs in-order
+        let body_selector = Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
+        let mut body_text = String::with_capacity(resp.len());
+        for item in  html.select(&body_selector) {
+            body_text += &item.text().collect::<String>();
+        }
+        return UserDoc::new(db, username, title_text, body_text, Some(url)).await;
     }
 
     pub async fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
@@ -389,6 +415,7 @@ impl CnEnDictEntry {
 
 impl UserVocab {
     pub async fn new(db: &Database, username: String, saved_phrase: String, from_doc_title: String) -> Self {
+        // TODO: add Simplified/Traditional config for the user
         // Try simplified, then traditional
         let mut cn_type = CnType::Simplified;
         let phrase: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db, "simp", &saved_phrase).await {

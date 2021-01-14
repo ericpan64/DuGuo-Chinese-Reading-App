@@ -169,6 +169,11 @@ struct UserDocumentForm<'f> {
 }
 
 #[derive(FromForm)]
+struct UserUrlForm<'f> {
+    url: &'f RawStr,
+}
+
+#[derive(FromForm)]
 struct UserVocabForm<'f> {
     saved_phrase: &'f RawStr,
     from_doc_title: &'f RawStr,
@@ -191,6 +196,29 @@ fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextFo
     return Redirect::to(uri!(sandbox_view_doc: inserted_id));
 }
 
+#[post("/api/url-upload", data = "<user_url>")]
+fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) ->Redirect {
+    let UserUrlForm { url } = user_url.into_inner();
+    let url = convert_rawstr_to_string(url); // Note: ':' is removed
+    // read http header if present
+    let url = url.replace("http//", "http://");
+    let url = url.replace("https//", "https://");
+    let username_from_cookie = rt.block_on(get_username_from_cookie(&db, cookies.get(JWT_NAME)));
+    let res_redirect = match username_from_cookie {
+        Some(username) => { 
+            let new_doc = rt.block_on(UserDoc::from_url(&db, username, url));
+            match new_doc.try_insert(&db, &rt) {
+                Ok(username) => { Redirect::to(uri!(user_profile: username)) },
+                Err(_) => { Redirect::to(uri!(index)) } 
+            }
+        },
+        None => {
+            Redirect::to(uri!(index))
+        }
+    };
+    return res_redirect;
+}
+
 #[post("/api/upload", data="<user_doc>")]
 fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
     let UserDocumentForm { title, body } = user_doc.into_inner();
@@ -200,7 +228,7 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
     let username_from_cookie = rt.block_on(get_username_from_cookie(&db, cookies.get(JWT_NAME)));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = rt.block_on(UserDoc::new(&db, username, title, body));
+            let new_doc = rt.block_on(UserDoc::new(&db, username, title, body, None));
             match new_doc.try_insert(&db, &rt) {
                 Ok(username) => { Redirect::to(uri!(user_profile: username)) },
                 Err(_) => { Redirect::to(uri!(index)) } 
@@ -306,7 +334,7 @@ fn main() -> Result<(), mongodb::error::Error>{
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc, feedback, feedback_form,
             user_profile, logout_user, 
-            user_doc_upload, user_vocab_upload, user_view_doc,
+            user_doc_upload, user_url_upload, user_vocab_upload, user_view_doc,
             delete_user_doc, delete_user_vocab])
         .launch();
 
