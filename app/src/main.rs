@@ -8,7 +8,10 @@ use rocket::{
     http::{RawStr, Cookie, Cookies, Status},
     State,
 };
-use rocket_contrib::templates::Template;
+use rocket_contrib::{
+    templates::Template,
+    serve::StaticFiles
+};
 use mongodb::Database;
 use tokio::runtime::{Runtime, Handle};
 
@@ -336,6 +339,7 @@ fn main() -> Result<(), mongodb::error::Error>{
             user_profile, logout_user, 
             user_doc_upload, user_url_upload, user_vocab_upload, user_view_doc,
             delete_user_doc, delete_user_vocab])
+        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/static")))
         .launch();
 
     return Ok(());

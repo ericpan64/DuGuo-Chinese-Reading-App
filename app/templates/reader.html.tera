@@ -12,8 +12,8 @@
             <li>Use the buttons below to toggle pinyin settings.</li>
         </ul>
         <div id="buttons" class="container">
-            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin()">Hide Saved Pinyin</button>
-            <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin()">Hide All Pinyin</button>
+            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin(user_saved_phrase_list)">Hide Saved Pinyin</button>
+            <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin(user_saved_phrase_list)">Hide All Pinyin</button>
             <button id="reset-all" class="btn btn-primary" onclick="resetAllPinyin()">Reset All Pinyin</button>
         </div>
         <br/>
@@ -25,8 +25,8 @@
     {% if username is undefined %}
     document.title = "Sandbox";
     {% else %}
-    let current_url_arr = window.location.href.split("/");
-    document.title = current_url_arr[current_url_arr.length - 1];
+    let current_url = window.location.href.split("/");
+    document.title = current_url[current_url.length - 1];
     {% endif %}
     /// Button Functionality
     {% if user_vocab_list_string is undefined %}
@@ -34,19 +34,6 @@
     {% else %}
     let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
-    let all_pinyin_list = document.getElementsByClassName("pinyin");
-    let hideSavedPinyin = () => {
-        user_saved_phrase_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
-    }
-    let hideAllPinyin = () => { 
-        for (let i = 0; i < all_pinyin_list.length; i++) {
-            switchToHidden(all_pinyin_list[i]);
-        }   
-    }
-    let resetAllPinyin = () => {
-        for (let i = 0; i < all_pinyin_list.length; i++) {
-            switchToVisible(all_pinyin_list[i]);
-        }   
-    }
 </script>
+<script src="/static/handlePinyin.js"></script>
 {% endblock content %}
