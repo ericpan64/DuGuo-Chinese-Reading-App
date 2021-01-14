@@ -6,16 +6,11 @@
 
 <p>Try-out the app by uploading some text!</p>
 <textarea name="text" form="upload" rows="20" cols="100" required>祝你有美好的天！</textarea>
-<form action="/api/sandbox-upload" id="upload" onsubmit="switchToLoadingButton()" method="POST">
+<form action="/api/sandbox-upload" id="upload" onsubmit="switchToLoadingButton('upload-button')" method="POST">
     <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload</button>
 </form>
 <script>
     // Update active navbar
     document.getElementById("nav2").classList.add("active");
-
-    let switchToLoadingButton = () => {
-        document.getElementById("upload-button").innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            <span class="sr-only">Loading...</span>`;
-    }
 </script>
 {% endblock content %}

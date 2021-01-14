@@ -41,11 +41,16 @@
         </div>
     </body>
     <script>
-        // Enable pop-ups
-        let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-        let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-            return new bootstrap.Popover(popoverTriggerEl)
-        })
+    // Enable pop-ups
+    let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl)
+    })
+    // Update to Loading Button onsubmit
+    let switchToLoadingButton = (id) => {
+        document.getElementById(id).innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span class="sr-only">Loading...</span>`;
+    }
     </script>
     <script src="/static/handleHash.js"></script>
 </html>
