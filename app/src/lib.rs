@@ -137,6 +137,7 @@ pub struct SandboxDoc {
     doc_id: String,
     body: String,
     body_html: String,
+    from_url: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -285,12 +286,31 @@ impl User {
 }
 
 impl SandboxDoc {
-    pub async fn new(db: &Database, body: String) -> Self {
+    pub async fn new(db: &Database, body: String, url: Option<String>) -> Self {
         let doc_id = Uuid::new_v4().to_string();
         let body_html = html_rendering::convert_string_to_tokenized_html(db, &body).await;
-        let new_doc = SandboxDoc { doc_id, body, body_html };
+        let from_url = match url {
+            Some(url) => url,
+            None => String::new()
+        };
+        let new_doc = SandboxDoc { doc_id, body, body_html, from_url };
         return new_doc;
     }
+
+    pub async fn from_url(db: &Database, url: String) -> Self {
+        // make request
+        let resp = reqwest::blocking::get(&url).unwrap()
+            .text().unwrap();
+        let html = Html::parse_document(&resp);
+        // get body from all headers, paragraphs in-order
+        let body_selector = Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
+        let mut body_text = String::with_capacity(resp.len());
+        for item in  html.select(&body_selector) {
+            body_text += &item.text().collect::<String>();
+        }
+        return SandboxDoc::new(db, body_text, Some(url)).await;
+    }
+
 
     pub async fn find_doc_from_id(db: &Database, doc_id: String) -> Option<String> {
         let coll = (*db).collection(SANDBOX_COLL_NAME);
@@ -598,7 +618,6 @@ pub mod html_rendering {
         const PINYIN_DELIM: char = '`';
         let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
         let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
-        eprintln!("tokenized_string: {:?}\nn_phrases: {:?}", tokenized_string.len(), n_phrases);
         let coll = (*db).collection(CEDICT_COLL_NAME);
         // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per chars
         let mut res = String::with_capacity(n_phrases * 2500);

@@ -5,9 +5,17 @@
 
 
 <p>Try-out the app by uploading some text!</p>
-<textarea name="text" form="upload" rows="20" cols="100" required>祝你有美好的天！</textarea>
 <form action="/api/sandbox-upload" id="upload" onsubmit="switchToLoadingButton('upload-button')" method="POST">
+    <textarea name="text" form="upload" rows="5" cols="100" required>祝你有美好的天！</textarea>
+    <br>
     <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload</button>
+</form>
+<br>
+<p>Or try uploading a URL to a Chinese article</p>
+<form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+    <input type="text" name="url" placeholder="Document URL" required>
+    <br><br>
+    <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
 </form>
 <script>
     // Update active navbar

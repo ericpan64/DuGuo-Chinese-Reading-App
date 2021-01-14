@@ -194,13 +194,16 @@ struct UserFeedbackForm<'f> {
 fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
     let TextForm { text } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
-    let new_doc = rt.block_on(SandboxDoc::new(&db, text_as_string));
-    let inserted_id = new_doc.try_insert(&db, &rt).unwrap();
-    return Redirect::to(uri!(sandbox_view_doc: inserted_id));
+    let new_doc = rt.block_on(SandboxDoc::new(&db, text_as_string, None));
+    let res_redirect = match new_doc.try_insert(&db, &rt) {
+        Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
+        Err(_) => { Redirect::to(uri!(index)) } 
+    };
+    return res_redirect;
 }
 
 #[post("/api/url-upload", data = "<user_url>")]
-fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) ->Redirect {
+fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
     let UserUrlForm { url } = user_url.into_inner();
     let url = convert_rawstr_to_string(url); // Note: ':' is removed
     // read http header if present
@@ -215,8 +218,13 @@ fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
                 Err(_) => { Redirect::to(uri!(index)) } 
             }
         },
+        // Do Sandbox Upload
         None => {
-            Redirect::to(uri!(index))
+            let new_doc = rt.block_on(SandboxDoc::from_url(&db, url));
+            match new_doc.try_insert(&db, &rt) {
+                Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
+                Err(_) => { Redirect::to(uri!(index)) }
+            }
         }
     };
     return res_redirect;
