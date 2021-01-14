@@ -32,7 +32,8 @@ use rocket::http::RawStr;
 use scraper::{Html, Selector};
 use std::{
     io::prelude::*,
-    net::TcpStream,
+    net::{Shutdown, TcpStream},
+    time::Duration,
 };
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -563,7 +564,7 @@ pub mod html_rendering {
 
     fn has_chinese_punctuation(s: &str) -> bool {
         // Chinese punctuation is a Chinese char, however shouldn't be rendered as such
-        const PUNCT: [char; 14] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—'];
+        const PUNCT: [char; 15] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—', '；'];
         let mut res = false;
         for c in s.chars() {
             if PUNCT.contains(&c) {
@@ -577,13 +578,18 @@ pub mod html_rendering {
     fn tokenize_string(s: String) -> std::io::Result<String> {
         // Connect to tokenizer service, send and read results
         let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
+        stream.set_read_timeout(Some(Duration::new(5,0))).expect("set_read_timeout call failed");
+        stream.set_write_timeout(Some(Duration::new(5,0))).expect("set_write_timeout call failed");
+        stream.set_ttl(100).expect("set_ttl call failed");
         stream.write(s.as_bytes())?;
+        std::thread::sleep(Duration::new(1,0)); // TODO: figure-out why data is only inconsistently read
         let n_bytes = s.as_bytes().len();
         let mut tokenized_bytes = vec![0; n_bytes * 8]; // max size includes original n_bytes + at most 3*n_bytes delimiters + 4*n_bytes for pinyin
         stream.read(&mut tokenized_bytes)?;
-    
-        let mut res = String::from_utf8(tokenized_bytes).unwrap();
-        res = res.trim_matches(char::from(0)).to_string(); // remove trailing '0' chars
+        std::thread::sleep(Duration::new(1,0)); // TODO: figure-out why data is only inconsistently read
+        stream.shutdown(Shutdown::Both).expect("shutdown call failed");
+        tokenized_bytes.retain(|x| *x != 0); // removes _all_ '0' entries
+        let res = String::from_utf8(tokenized_bytes).unwrap();
         return Ok(res);
     }
 
@@ -592,6 +598,7 @@ pub mod html_rendering {
         const PINYIN_DELIM: char = '`';
         let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
         let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
+        eprintln!("tokenized_string: {:?}\nn_phrases: {:?}", tokenized_string.len(), n_phrases);
         let coll = (*db).collection(CEDICT_COLL_NAME);
         // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per chars
         let mut res = String::with_capacity(n_phrases * 2500);

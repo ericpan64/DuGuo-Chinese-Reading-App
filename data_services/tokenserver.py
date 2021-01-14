@@ -1,8 +1,11 @@
 import spacy
 from spacy.tokenizer import Tokenizer
 import socket
+from socket import error as SocketError
+import errno
 import selectors
 import types
+import time
 import pandas as pd
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
@@ -134,19 +137,26 @@ def service_connection(key, mask):
     sock = key.fileobj
     data = key.data
     if mask & selectors.EVENT_READ:
-        recv_data = sock.recv(MAX_BUF)  # Should be ready to read
-        if recv_data:
-            # run NLP parser, then send results back
-            recv_data = tokenize_str(str(recv_data ,'utf-8'))
-            data.outb += bytes(recv_data, 'utf-8')
-        else:
-            print('closing connection to', data.addr)
-            sel.unregister(sock)
-            sock.close()
+        try:
+            recv_data = sock.recv(MAX_BUF)  # Should be ready to read
+            if recv_data:
+                # run NLP parser, then send results back
+                recv_data = tokenize_str(str(recv_data ,'utf-8'))
+                data.outb += bytes(recv_data, 'utf-8')
+            else:
+                print('closing connection to', data.addr)
+                sel.unregister(sock)
+                sock.close()
+        except SocketError as e:
+            if e.errno != errno.ECONNRESET:
+                raise e
+            print(f'connection to {data.addr} was reset by sender')
+            pass
     if mask & selectors.EVENT_WRITE:
         if data.outb:
-            print('echoing', repr(data.outb), 'to', data.addr)
+            # print('sending', repr(data.outb), 'to', data.addr)
             sent = sock.send(data.outb)  # Should be ready to write
+            # time.sleep(1.0)
             data.outb = data.outb[sent:]
 
 if __name__ == '__main__':
