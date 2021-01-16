@@ -36,6 +36,7 @@ use std::{
     net::{Shutdown, TcpStream},
     time::Duration,
 };
+use chrono::Utc;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -141,6 +142,7 @@ pub struct User {
     email: String,
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
+    created_on: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -152,6 +154,7 @@ pub struct SandboxDoc {
     from_url: String,
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
+    created_on: String
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -164,6 +167,7 @@ pub struct UserDoc {
     from_url: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
+    created_on: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -177,7 +181,7 @@ pub struct CnEnDictEntry {
     def: String,
     zhuyin: String,
     trad_zhuyin_html: String,
-    simp_zhuyin_html: String,
+    simp_zhuyin_html: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -191,12 +195,13 @@ pub struct UserVocab {
     /// If pinyin, formatted_pinyin
     phrase_phonetics: String, 
     phrase_html: String,
+    created_on: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocabList {
     username: String,
-    // Comma-delimited String 
+    /// Comma-delimited String
     unique_phrase_list: String, 
     cn_type: CnType
 }
@@ -206,7 +211,7 @@ pub struct UserFeedback {
     feedback: String,
     /// If none, String::new()
     contact: String, 
-    datetime: String, // formatted in JS
+    created_on: String
 }
 
 
@@ -303,7 +308,7 @@ impl DatabaseItem for UserVocabList {
 
 impl DatabaseItem for UserFeedback {
     fn collection_name(&self) -> &str { return USER_FEEDBACK_COLL_NAME; }
-    fn primary_key(&self) -> &str { return &self.datetime; }
+    fn primary_key(&self) -> &str { return &self.created_on; }
 }
 
 /* Struct Implementation */
@@ -315,7 +320,8 @@ impl User {
     pub fn new(username: String, password: String, email: String) -> Self {
         let pw_hash = str_to_hashed_string(&password);
         let (cn_type, cn_phonetics) = User::default_settings();
-        let new_user = User { username, pw_hash, email, cn_type, cn_phonetics };
+        let created_on = Utc::now().to_string();
+        let new_user = User { username, pw_hash, email, cn_type, cn_phonetics, created_on };
         return new_user;
     }
 
@@ -390,7 +396,8 @@ impl SandboxDoc {
             Some(url) => url,
             None => String::new()
         };
-        let new_doc = SandboxDoc { doc_id, body, body_html, from_url, cn_type, cn_phonetics };
+        let created_on = Utc::now().to_string();
+        let new_doc = SandboxDoc { doc_id, body, body_html, from_url, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
 
@@ -445,7 +452,8 @@ impl UserDoc {
             Some(url) => url,
             None => String::new()
         };
-        let new_doc = UserDoc { username, title, body, body_html, from_url, cn_type, cn_phonetics };
+        let created_on = Utc::now().to_string();
+        let new_doc = UserDoc { username, title, body, body_html, from_url, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
 
@@ -564,12 +572,13 @@ impl UserVocab {
                 }
             }
         };
+        let created_on = Utc::now().to_string();
         // extract relevant info from phrase
         let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
-            username, from_doc_title, 
-            cn_type, cn_phonetics, 
-            phrase, def, phrase_phonetics, phrase_html 
+            username, from_doc_title, def,
+            phrase, phrase_phonetics, phrase_html,
+            cn_type, cn_phonetics, created_on
         };
         return new_vocab;
     }
@@ -689,8 +698,9 @@ impl UserVocabList {
 }
 
 impl UserFeedback {
-    pub fn new(feedback: String, contact: String, datetime: String) -> Self {
-        let new_feedback = UserFeedback { feedback, contact, datetime };
+    pub fn new(feedback: String, contact: String) -> Self {
+        let created_on = Utc::now().to_string();
+        let new_feedback = UserFeedback { feedback, contact, created_on };
         return new_feedback;
     }
 }

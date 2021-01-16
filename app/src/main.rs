@@ -202,7 +202,6 @@ struct UserVocabForm<'f> {
 struct UserFeedbackForm<'f> {
     feedback: &'f RawStr,
     contact: &'f RawStr,
-    datetime: &'f RawStr,
 }
 
 /* POST */
@@ -378,11 +377,10 @@ fn register_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, u
 
 #[post("/api/feedback", data = "<user_feedback>")]
 fn feedback_form(db: State<Database>, rt: State<Handle>, user_feedback: Form<UserFeedbackForm<'_>>) -> Redirect {
-    let UserFeedbackForm { feedback, contact, datetime } = user_feedback.into_inner();
+    let UserFeedbackForm { feedback, contact } = user_feedback.into_inner();
     let feedback = convert_rawstr_to_string(feedback);
     let contact = convert_rawstr_to_string(contact);
-    let datetime = convert_rawstr_to_string(datetime);
-    let new_feedback = UserFeedback::new(feedback.clone(), contact.clone(), datetime);
+    let new_feedback = UserFeedback::new(feedback.clone(), contact.clone());
     match new_feedback.try_insert(&db, &rt) {
         Ok(_) => {},
         Err(e) => { println!("Error when submitting feedback {} / contact: {}:\n\t{:?}", &feedback, &contact, e); }
