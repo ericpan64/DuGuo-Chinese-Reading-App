@@ -4,7 +4,6 @@ from pypinyin import Style
 import pandas as pd
 from config import *
 
-
 def init_mongodb():
     """
     Connects to mongoDB, creates indices, and returns collection for CEDICT load
@@ -29,16 +28,16 @@ def init_mongodb():
     colls['user'].create_index([ ("username", 1), ("email", 1)], unique=True)
     # User Doc Indices
     colls['user_docs'].create_index([ ("username", 1)])
-    colls['user_docs'].create_index([ ("username", 1), ("title", 1)], unique=True)
+    colls['user_docs'].create_index([ ("username", 1), ("cn_type", 1), ("cn_phonetics", 1)])
+    colls['user_docs'].create_index([ ("username", 1), ("title", 1), ("cn_type", 1), ("cn_phonetics", 1)], unique=True)
     # User Vocab Indices
     colls['user_vocab'].create_index([ ("username", 1)])
-    colls['user_vocab'].create_index([ ("username", 1), ("cn_type", 1)])
-    colls['user_vocab'].create_index([ ("username", 1), ("phrase.simp", 1)])
-    colls['user_vocab'].create_index([ ("username", 1), ("phrase.trad", 1)])
-    colls['user_vocab'].create_index([ ("username", 1), ("phrase.simp", 1), ("phrase.raw_pinyin", -1)], unique=True)
-    colls['user_vocab'].create_index([ ("username", 1), ("phrase.trad", 1), ("phrase.raw_pinyin", -1)], unique=True)
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("cn_type", 1), ("cn_phonetics", 1)])
+    colls['user_vocab'].create_index([ ("username", 1), ("phrase", 1), ("cn_type", 1), ("cn_phonetics", 1)], unique=True)
     # User Vocab List Index
-    colls['user_vocab_list'].create_index([ ("username", 1) ], unique=True)
+    colls['user_vocab_list'].create_index([ ("username", 1) ])
+    colls['user_vocab_list'].create_index([ ("username", 1), ("cn_type", 1) ], unique=True)
     return colls['cedict']
 
 def convert_digits_to_chars(s):

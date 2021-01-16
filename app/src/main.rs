@@ -47,7 +47,7 @@ fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> 
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
     let html = match rt.block_on(SandboxDoc::find_doc_from_id(&db, doc_id)) {
-        Some(text) => { rt.block_on(convert_string_to_tokenized_html(&db, &text)) },
+        Some(text) => text,
         None => String::new()
     };
     if &html != "" {
@@ -71,11 +71,14 @@ fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_us
     match rt.block_on(get_username_from_cookie(&db, cookies.get(JWT_NAME))) {
         Some(s) => { 
             if &s == &username {
+                let (cn_type, cn_phonetics) = rt.block_on(User::get_user_settings(&db, &username));
                 let doc_html = rt.block_on(render_document_table(&db, &username));
                 let vocab_html = rt.block_on(render_vocab_table(&db, &username));
             
                 context.insert("doc_table", doc_html);
-                context.insert("vocab_table", vocab_html);           
+                context.insert("vocab_table", vocab_html);
+                context.insert("cn_type", cn_type.to_string());
+                context.insert("cn_phonetics", cn_phonetics.to_string());           
             }
             context.insert("logged_in_username", s);
         },
@@ -96,6 +99,7 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_u
         Some(s) => { 
             if &s == &username {
                 // Get html to render
+                let (_, cn_phonetics) = rt.block_on(User::get_user_settings(&db, &username));
                 let title = convert_rawstr_to_string(doc_title);
                 let doc_html_res = UserDoc::get_body_html_from_user_doc(&db, &username, &title);
                 let user_vocab_list_string_res = UserVocabList::get_user_vocab_list_string(&db, &username);
@@ -104,11 +108,10 @@ fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_u
                 context.insert("paragraph_html", doc_res);
                 let vocab_list_res = rt.block_on(user_vocab_list_string_res).unwrap_or_default();
                 context.insert("user_vocab_list_string", vocab_list_res);
+                context.insert("cn_phonetics", cn_phonetics.to_string());
             }
         },
-        None =>  {
-            context.insert("paragraph_html", String::from("<p>Not authenticated as user</p>"));
-        }
+        None =>  { context.insert("paragraph_html", String::from("<p>Not authenticated as user</p>")); }
     }
     if rt.block_on(User::check_if_username_exists(&db, &username)) == true {
         context.insert("username", username); 
@@ -136,12 +139,11 @@ fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc
 #[get("/api/delete-vocab/<vocab_phrase>")]
 fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_phrase: &RawStr) -> Redirect {
     let phrase_string = convert_rawstr_to_string(vocab_phrase);
-    let phrase_obj_creation = CnEnDictEntry::new(&db, &phrase_string);
     let username_query = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     
     let username = rt.block_on(username_query).unwrap();
-    let phrase_obj = rt.block_on(phrase_obj_creation);
-    UserVocab::try_delete(&db, &rt, &username, phrase_obj);
+    let (cn_type, _) = rt.block_on(User::get_user_settings(&db, &username));
+    UserVocab::try_delete(&db, &rt, &username, &phrase_string, &cn_type);
     return Redirect::to(uri!(user_profile: username));
 }
 
@@ -161,8 +163,17 @@ struct UserRegisterForm<'f> {
 }
 
 #[derive(FromForm)]
-struct TextForm<'f> {
+struct SandboxForm<'f> {
     text: &'f RawStr,
+    cn_type: &'f RawStr,
+    cn_phonetics: &'f RawStr,
+}
+
+#[derive(FromForm)]
+struct SandboxUrlForm<'f> {
+    url: &'f RawStr,
+    cn_type: &'f RawStr,
+    cn_phonetics: &'f RawStr,
 }
 
 #[derive(FromForm)]
@@ -172,8 +183,13 @@ struct UserDocumentForm<'f> {
 }
 
 #[derive(FromForm)]
-struct UserUrlForm<'f> {
+struct UrlForm<'f> {
     url: &'f RawStr,
+}
+
+#[derive(FromForm)]
+struct UserSettingForm<'f> {
+    setting: &'f RawStr,
 }
 
 #[derive(FromForm)]
@@ -190,11 +206,40 @@ struct UserFeedbackForm<'f> {
 }
 
 /* POST */
+#[post("/api/update-settings", data = "<user_setting>")]
+fn update_settings(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_setting: Form<UserSettingForm<'_>>) -> Status {
+    let UserSettingForm { setting } = user_setting.into_inner();
+    let setting = convert_rawstr_to_string(setting);
+    let username_from_cookie = rt.block_on(get_username_from_cookie(&db, cookies.get(JWT_NAME)));
+    let res_status = match username_from_cookie {
+        Some(username) => {
+            let cn_type = match setting.as_str() {
+                "trad" => Some(CnType::Traditional),
+                "simp" => Some(CnType::Simplified),
+                _ => None,
+            };
+            let cn_phonetics = match setting.as_str() {
+                "pinyin" => Some(CnPhonetics::Pinyin),
+                "zhuyin" => Some(CnPhonetics::Zhuyin),
+                _ => None,
+            };
+            match User::update_user_settings(&db, &rt, &username, cn_type, cn_phonetics) {
+                Ok(_) => Status::Accepted,
+                Err(_) => Status::BadRequest
+            }
+        },
+        None => Status::Unauthorized
+    };
+    return res_status;
+}
+
 #[post("/api/sandbox-upload", data = "<user_text>")]
-fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextForm<'_>>) -> Redirect {
-    let TextForm { text } = user_text.into_inner();    
+fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<SandboxForm<'_>>) -> Redirect {
+    let SandboxForm { text, cn_type, cn_phonetics } = user_text.into_inner();    
     let text_as_string = convert_rawstr_to_string(text);
-    let new_doc = rt.block_on(SandboxDoc::new(&db, text_as_string, None));
+    let cn_type = convert_rawstr_to_string(cn_type);
+    let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
+    let new_doc = rt.block_on(SandboxDoc::new(&db, text_as_string, cn_type, cn_phonetics, None));
     let res_redirect = match new_doc.try_insert(&db, &rt) {
         Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
         Err(_) => { Redirect::to(uri!(index)) } 
@@ -202,9 +247,27 @@ fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<TextFo
     return res_redirect;
 }
 
+
+#[post("/api/sandbox-url-upload", data = "<user_url>")]
+fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form<SandboxUrlForm<'_>>) -> Redirect {
+    let SandboxUrlForm { url, cn_type, cn_phonetics } = user_url.into_inner();
+    let url = convert_rawstr_to_string(url); // Note: ':' is removed
+    let cn_type = convert_rawstr_to_string(cn_type);
+    let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
+    // read http header if present
+    let url = url.replace("http//", "http://");
+    let url = url.replace("https//", "https://");
+    let new_doc = rt.block_on(SandboxDoc::from_url(&db, url, cn_type, cn_phonetics));
+    let res_redirect = match new_doc.try_insert(&db, &rt) {
+        Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
+        Err(_) => { Redirect::to(uri!(index)) }
+    };
+    return res_redirect;
+}
+
 #[post("/api/url-upload", data = "<user_url>")]
-fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
-    let UserUrlForm { url } = user_url.into_inner();
+fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UrlForm<'_>>) -> Redirect {
+    let UrlForm { url } = user_url.into_inner();
     let url = convert_rawstr_to_string(url); // Note: ':' is removed
     // read http header if present
     let url = url.replace("http//", "http://");
@@ -215,17 +278,13 @@ fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
             let new_doc = rt.block_on(UserDoc::from_url(&db, username, url));
             match new_doc.try_insert(&db, &rt) {
                 Ok(username) => { Redirect::to(uri!(user_profile: username)) },
-                Err(_) => { Redirect::to(uri!(index)) } 
+                Err(e) => { 
+                    eprintln!("Exception when inserting doc from url: {:?}", e);
+                    Redirect::to(uri!(index)) 
+                } 
             }
         },
-        // Do Sandbox Upload
-        None => {
-            let new_doc = rt.block_on(SandboxDoc::from_url(&db, url));
-            match new_doc.try_insert(&db, &rt) {
-                Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
-                Err(_) => { Redirect::to(uri!(index)) }
-            }
-        }
+        None => { Redirect::to(uri!(index)) }
     };
     return res_redirect;
 }
@@ -263,8 +322,8 @@ fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, u
         Some(username) => { 
             let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title));
             match new_vocab.try_insert(&db, &rt) {
-                Ok(_) => { Status::Accepted },
-                Err(_) => { Status::BadRequest }
+                Ok(_) => Status::Accepted,
+                Err(_) => Status::ExpectationFailed
             }
         },
         None => {
@@ -281,7 +340,7 @@ fn login_form(mut cookies: Cookies, db: State<Database>, rt: State<Handle>, user
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
 
-    let is_valid_password = rt.block_on(check_password(&db, &username, &password));
+    let is_valid_password = rt.block_on(User::check_password(&db, &username, &password));
     let res_status = match is_valid_password {
         true => {
             let new_cookie = generate_http_cookie(username, password);
@@ -344,7 +403,7 @@ fn main() -> Result<(), mongodb::error::Error>{
         .mount("/", routes![index, 
             login, login_form, register_form, 
             sandbox, sandbox_upload, sandbox_view_doc, feedback, feedback_form,
-            user_profile, logout_user, 
+            user_profile, logout_user, update_settings,
             user_doc_upload, user_url_upload, user_vocab_upload, user_view_doc,
             delete_user_doc, delete_user_vocab])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/static")))

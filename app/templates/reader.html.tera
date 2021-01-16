@@ -9,12 +9,18 @@
         <ul>
             <li><strong>Click</strong> on a phrase to view more information, speech-to-text, and save it to your dictionary.</li>
             <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase.</li>
-            <li>Use the buttons below to toggle pinyin settings.</li>
+            <li>Use the buttons below to toggle phonetics settings.</li>
         </ul>
         <div id="buttons" class="container">
-            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPinyin(user_saved_phrase_list)">Hide Saved Pinyin</button>
-            <button id="hide-all" class="btn btn-primary" onclick="hideAllPinyin(user_saved_phrase_list)">Hide All Pinyin</button>
-            <button id="reset-all" class="btn btn-primary" onclick="resetAllPinyin()">Reset All Pinyin</button>
+            {% if cn_phonetics == "Zhuyin" %}
+            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Zhuyin</button>
+            <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics(all_zhuyin_list)">Hide All Zhuyin</button>
+            <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics(all_zhuyin_list)">Reset All Zhuyin</button>
+            {% else %}
+            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Pinyin</button>
+            <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics(all_pinyin_list)">Hide All Pinyin</button>
+            <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics(all_pinyin_list)">Reset All Pinyin</button>
+            {% endif %}
         </div>
         <br/>
         {{ paragraph_html | safe }}
@@ -35,5 +41,5 @@
     let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
 </script>
-<script src="/static/handlePinyin.js"></script>
+<script src="/static/handlePhonetics.js"></script>
 {% endblock content %}

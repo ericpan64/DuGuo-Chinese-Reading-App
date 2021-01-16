@@ -12,8 +12,32 @@
     {% if logged_in_username is undefined %}
         <p> Log-in to view documents + vocab! </p>
     {% elif logged_in_username == username %}
+        <h4>Settings</h4>
+            <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if cn_phonetics == "Zhuyin" %}
+            Use Zhuyin
+            {% else %}
+            Use Pinyin
+            {% endif %}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a class="dropdown-item" href="#$pinyin">Use Pinyin</a></li>
+            <li><a class="dropdown-item" href="#$zhuyin">Use Zhuyin (Bopomofo)</a></li>
+            </ul>
+            <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if cn_type == "Traditional" %}
+            Use Traditional
+            {% else %}
+            Use Simplified
+            {% endif %}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
+            <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
+            </ul>
+        <br><br>
         <div class="row">
-            <div class="col-6">
+            <div class="col-md">
                 {# Document Table #}
                 <h4>View Documents</h4>
                 <div style="overflow-y: auto">
@@ -37,7 +61,7 @@
                             <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Document</button>
                         </form>
             </div>
-            <div class="col-6">
+            <div class="col-md">
                 <h4>View Saved Vocab</h4>
                 {# Vocab Table #}
                 <div style="overflow-y: auto">
