@@ -415,11 +415,17 @@ impl SandboxDoc {
         return SandboxDoc::new(db, body_text, cn_type, cn_phonetics, Some(url)).await;
     }
 
-    pub async fn find_doc_from_id(db: &Database, doc_id: String) -> Option<String> {
+    pub async fn get_doc_html_and_phonetics_from_id(db: &Database, doc_id: String) -> Option<(String, String)> {
         let coll = (*db).collection(SANDBOX_COLL_NAME);
         let query_doc = doc! { "doc_id": doc_id };
+        let mut doc_html = String::new();
+        let mut cn_phonetics = String::new();
         let res = match coll.find_one(query_doc, None).await.unwrap() {
-            Some(doc) => Some(doc.get("body_html").and_then(Bson::as_str).expect("No body_html was stored").to_string()),
+            Some(doc) => {
+                doc_html += doc.get("body_html").and_then(Bson::as_str).expect("No body_html was stored");
+                cn_phonetics += doc.get("cn_phonetics").and_then(Bson::as_str).expect("No phonetic info was stored");
+                Some((doc_html, cn_phonetics))       
+            },
             None => None
         };
         return res;

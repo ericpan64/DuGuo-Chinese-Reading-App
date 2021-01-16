@@ -46,10 +46,11 @@ fn sandbox() -> Template {
 fn sandbox_view_doc(db: State<Database>, rt: State<Handle>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
-    let html = match rt.block_on(SandboxDoc::find_doc_from_id(&db, doc_id)) {
-        Some(text) => text,
-        None => String::new()
+    let (html, cn_phonetics) = match rt.block_on(SandboxDoc::get_doc_html_and_phonetics_from_id(&db, doc_id)) {
+        Some((text, phonetics)) => (text, phonetics),
+        None => (String::new(), String::new())
     };
+    context.insert("cn_phonetics", &cn_phonetics);
     if &html != "" {
         context.insert("paragraph_html", &html);
     }
