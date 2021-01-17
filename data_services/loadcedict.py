@@ -157,11 +157,16 @@ def load_cedict(coll):
     cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
     entry_list = []
     prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
+    prev_defn = '$'
     for _, row in cedict_df.iterrows():
         trad, simp, raw_pinyin, defn = row
 
         # skip cases where definition is a "variant of" another CEDICT entry
         if "variant of" in defn:
+            continue
+        
+        # skip case where previous entry is superset of current
+        if (prev_raw_pinyin == raw_pinyin) and defn in prev_defn:
             continue
 
         # get formatted pinyin
@@ -172,9 +177,12 @@ def load_cedict(coll):
         # get zhuyin (BOPOMOFO)
         zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
         
+        # handle case where current entry is superset of previous
+        if (prev_raw_pinyin == raw_pinyin) and (prev_defn in defn):
+            last_entry = entry_list.pop()
         # handle case where lines can be merged (based on raw_pinyin)
         # NOTE: this does cause some data loss for traditional entries with matching simplified phrases, treating as negligible
-        if (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
+        elif (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
             last_entry = entry_list.pop()
             defn = last_entry['def'] + '$' + defn
 
@@ -198,6 +206,7 @@ def load_cedict(coll):
     
         # update prev items
         prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
+        prev_defn = defn
 
     print('Loaded. Sending to db...')
     coll.insert_many(entry_list)
