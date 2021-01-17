@@ -288,9 +288,7 @@ impl DatabaseItem for UserVocab {
         let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
         match (*rt).block_on(coll.insert_one(new_doc, None)) {
-            Ok(_) => {
-                UserVocabList::append_to_user_vocab_list(db, rt, &self.username, &self.phrase, self.cn_type.as_str())?;
-            },
+            Ok(_) => { UserVocabList::append_to_user_vocab_list(db, rt, &self.username, &self.phrase, self.cn_type.as_str())?; },
             Err(e) => { return Err(e); }
         }
         return Ok(self.primary_key().to_string());
@@ -345,11 +343,10 @@ impl User {
         let coll = (*db).collection(USER_COLL_NAME);
         let res_tup = match coll.find_one(doc! {"username": username }, None).await.unwrap() {
             Some(user_doc) => {
-                // TODO: verify this is fine
                 let User { cn_type, cn_phonetics, ..} = from_bson(Bson::Document(user_doc)).unwrap();
                 (cn_type, cn_phonetics)
             },
-            None => { User::default_settings() }
+            None => User::default_settings()
         };
         return res_tup;
     }
@@ -532,19 +529,11 @@ impl CnEnDictEntry {
     fn get_vocab_data(&self, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
         // Order: (phrase, def, phrase_phonetics, phrase_html)
         let def = &self.def;
-        let (phrase, phrase_phonetics, phrase_html) = match *cn_type {
-            CnType::Traditional => {
-                match *cn_phonetics {
-                    CnPhonetics::Pinyin => (&self.trad, &self.formatted_pinyin, &self.trad_html),
-                    CnPhonetics::Zhuyin => (&self.trad, &self.zhuyin, &self.trad_zhuyin_html)
-                }
-            },
-            CnType::Simplified => {
-                match *cn_phonetics {
-                    CnPhonetics::Pinyin => (&self.simp, &self.formatted_pinyin, &self.simp_html),
-                    CnPhonetics::Zhuyin => (&self.simp, &self.zhuyin, &self.simp_zhuyin_html)
-                }
-            }
+        let (phrase, phrase_phonetics, phrase_html) = match (cn_type, cn_phonetics) {
+            (CnType::Traditional, CnPhonetics::Pinyin) => (&self.trad, &self.formatted_pinyin, &self.trad_html),
+            (CnType::Traditional, CnPhonetics::Zhuyin) => (&self.trad, &self.zhuyin, &self.trad_zhuyin_html),
+            (CnType::Simplified, CnPhonetics::Pinyin) => (&self.simp, &self.formatted_pinyin, &self.simp_html),
+            (CnType::Simplified, CnPhonetics::Zhuyin) => (&self.simp, &self.zhuyin, &self.simp_zhuyin_html)
         };
         return (phrase.to_string(), def.to_string(), phrase_phonetics.to_string(), phrase_html.to_string());
     }
@@ -663,9 +652,7 @@ impl UserVocabList {
                     }
                 }
             },
-            Err(e) => { 
-                eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e);
-            }
+            Err(e) => { eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e); }
         }
         return Ok(());
     }
@@ -695,9 +682,7 @@ impl UserVocabList {
                     None => {}
                 }
             },
-            Err(e) => { 
-                eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e);
-            }
+            Err(e) => { eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e); }
         }
         return Ok(());
     }
@@ -851,9 +836,7 @@ pub mod html_rendering {
                     res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
                 }
             },
-            Err(e) => {
-                eprintln!("Error when searching for documents for user {}: {:?}", username, e);
-            }
+            Err(e) => { eprintln!("Error when searching for documents for user {}: {:?}", username, e); }
         }
         res += "</table>";
         return res;
@@ -879,9 +862,7 @@ pub mod html_rendering {
                     res += &row;
                 }
             },
-            Err(e) => {
-                eprintln!("Error when searching for vocab for user {}: {:?}", username, e);
-            }
+            Err(e) => { eprintln!("Error when searching for vocab for user {}: {:?}", username, e); }
         }
         res += "</table>";
         return res;
@@ -930,8 +911,11 @@ pub mod cookie_handling {
         let cookie_lookup = (*cookies).get(JWT_NAME);
         let username_from_cookie = get_username_from_cookie(db, cookie_lookup).await;
         let res = match username_from_cookie {
-            Some(username) => { (*context).insert("username", username); true},
-            None => { false }
+            Some(username) => { 
+                (*context).insert("username", username);
+                true
+            },
+            None => false
         };
         return res;
     }

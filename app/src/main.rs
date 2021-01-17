@@ -83,7 +83,7 @@ fn user_profile(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_us
             }
             context.insert("logged_in_username", s);
         },
-        None =>  { }
+        None => { }
     }
     if rt.block_on(User::check_if_username_exists(&db, &username)) == true {
         context.insert("username", username); 
@@ -241,8 +241,8 @@ fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<Sandbo
     let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
     let new_doc = rt.block_on(SandboxDoc::new(&db, text_as_string, cn_type, cn_phonetics, None));
     let res_redirect = match new_doc.try_insert(&db, &rt) {
-        Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
-        Err(_) => { Redirect::to(uri!(index)) } 
+        Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),
+        Err(_) => Redirect::to(uri!(index))
     };
     return res_redirect;
 }
@@ -259,8 +259,8 @@ fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form<San
     let url = url.replace("https//", "https://");
     let new_doc = rt.block_on(SandboxDoc::from_url(&db, url, cn_type, cn_phonetics));
     let res_redirect = match new_doc.try_insert(&db, &rt) {
-        Ok(inserted_id) => { Redirect::to(uri!(sandbox_view_doc: inserted_id)) },
-        Err(_) => { Redirect::to(uri!(index)) }
+        Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),
+        Err(_) => Redirect::to(uri!(index))
     };
     return res_redirect;
 }
@@ -277,14 +277,14 @@ fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
         Some(username) => { 
             let new_doc = rt.block_on(UserDoc::from_url(&db, username, url));
             match new_doc.try_insert(&db, &rt) {
-                Ok(username) => { Redirect::to(uri!(user_profile: username)) },
+                Ok(username) => Redirect::to(uri!(user_profile: username)),
                 Err(e) => { 
                     eprintln!("Exception when inserting doc from url: {:?}", e);
                     Redirect::to(uri!(index)) 
                 } 
             }
         },
-        None => { Redirect::to(uri!(index)) }
+        None => Redirect::to(uri!(index))
     };
     return res_redirect;
 }
@@ -300,13 +300,14 @@ fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, use
         Some(username) => { 
             let new_doc = rt.block_on(UserDoc::new(&db, username, title, body, None));
             match new_doc.try_insert(&db, &rt) {
-                Ok(username) => { Redirect::to(uri!(user_profile: username)) },
-                Err(_) => { Redirect::to(uri!(index)) } 
+                Ok(username) => Redirect::to(uri!(user_profile: username)),
+                Err(e) => {
+                    eprintln!("Exception when inserting doc: {:?}", e);
+                    Redirect::to(uri!(index))
+                }
             }
         },
-        None => {
-            Redirect::to(uri!(index))
-        }
+        None => Redirect::to(uri!(index))
     };
     return res_redirect;
 }
