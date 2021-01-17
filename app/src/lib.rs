@@ -801,11 +801,12 @@ pub mod html_rendering {
     
     pub async fn render_document_table(db: &Database, username: &str) -> String {
         // get all documents for user
+        const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username).await;
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
-        res += "<tr><th>Title</th><th>Preview</th><th>Delete</th></tr>\n";
+        res += "<tr><th>Title</th><th>Preview (plaintext)</th><th>Created On (UTC)</th><th>Delete</th></tr>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
         match coll.find(query_doc, None).await {
             Ok(mut cursor) => {
@@ -813,10 +814,9 @@ pub mod html_rendering {
                 while let Some(item) = cursor.next().await {
                     // unwrap BSON document
                     let user_doc = item.unwrap();
-                    let UserDoc { body, title, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
-                    let delete_button = format!("<a href=\"/api/delete-doc/{}\">X</a>", &title);
+                    let UserDoc { body, title, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
+                    let delete_button = format!("<a href=\"/api/delete-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
                     let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
-    
                     // from body, get first n characters as content preview
                     let n = 10;
                     let mut b = [0; 3];
@@ -833,7 +833,7 @@ pub mod html_rendering {
                     if body_chars.count() > preview_count {
                         content_preview += "...";
                     }
-                    res += format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, delete_button).as_str();
+                    res += format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, &created_on[0..10], delete_button).as_str();
                 }
             },
             Err(e) => { eprintln!("Error when searching for documents for user {}: {:?}", username, e); }
@@ -843,11 +843,12 @@ pub mod html_rendering {
     }
     
     pub async fn render_vocab_table(db: &Database, username: &str) -> String {
+        const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username).await;
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
-        res += format!("<tr><th>{}</th><th>{}</th><th>{}</th></tr>\n", "Term", "Saved From", "Delete").as_str();
+        res += "<tr><th>Term</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
         match coll.find(query_doc, None).await {
             Ok(mut cursor) => {
@@ -855,10 +856,9 @@ pub mod html_rendering {
                 while let Some(item) = cursor.next().await {
                     // unwrap BSON document
                     let user_doc = item.unwrap();
-                    let UserVocab { from_doc_title, phrase, phrase_html, .. } = from_bson(Bson::Document(user_doc)).unwrap();
-                    // TODO add user settings for traditional/simplified config. For now, default to traditional
-                    let delete_button = format!("<a href=\"/api/delete-vocab/{}\">X</a>", phrase);
-                    let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, &delete_button);
+                    let UserVocab { from_doc_title, phrase, phrase_html, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap();
+                    let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
+                    let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, &created_on[0..10], &delete_button);
                     res += &row;
                 }
             },
