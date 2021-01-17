@@ -76,10 +76,5 @@
 <script>
     // Update active navbar
     document.getElementById("nav2").classList.add("active");
-
-    let switchToLoadingButton = (id) => {
-        document.getElementById(id).innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            <span class="sr-only">Loading...</span>`;
-    }
 </script>
 {% endblock content %}
