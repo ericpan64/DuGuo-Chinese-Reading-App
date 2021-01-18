@@ -11,10 +11,10 @@
 <h2>Getting Started</h2>
 
     All you need is to copy & paste the Chinese text you want to read. DuGuo will render the article body into an interactive playground that facilitates learning and tracking progress.
+
+    Almost all Chinese phrases are clickable on this website -- <span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. to give it a try<br/>" title="试试看 [shi4 shi4 kan4] <a role=&quot;button&quot; href=&quot;#~试试看&quot;><img src=&quot;https://icons.getbootstrap.com/icons/mic.svg&quot;></img></a>    <a role=&quot;button&quot; href=&quot;#试试看&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">试试看</span>! Click on a phrase to get the definition, speech-to-text, and an option to record it as "learned".
     <br/>
-    Try the <a href="/sandbox">Sandbox mode</a> to demo the application, or make an account to save files!
-    <br/>
-    Otherwise, <a href="/login">create an account</a> to save documents and learned vocabulary.
+    Try the <a href="/sandbox">Sandbox mode</a> to demo the application, or make an account to save files! Otherwise, <a href="/login">create an account</a> to save documents and learned vocabulary.
 {% else %}
 <h1><span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. hello<br/>2. hi<br/>" title="你好 [ni3 hao3] <a role=&quot;button&quot; href=&quot;#~你好&quot;><img src=&quot;https://icons.getbootstrap.com/icons/mic.svg&quot;></img></a>    <a role=&quot;button&quot; href=&quot;#你好&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">你好</span>
 , {{username}} </h1>

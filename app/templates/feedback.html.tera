@@ -9,25 +9,12 @@
 <textarea name="feedback" form="upload" rows="10" cols="100" required>Add your feedback here!</textarea>
 <form action="/api/feedback" id="upload" onsubmit="addDateTime()" method="POST">
     <input type="text" name="contact" placeholder="Contact (optional)">
-    <input class="form-control" type="hidden" name="datetime">
     <br/><br/>
     <button class="btn btn-outline-primary" type="submit">Submit</button>
 </form>
 <script>
     // Update active navbar
     document.getElementById("nav4").classList.add("active");
-    // Add datetime to form. Adapted from: https://stackoverflow.com/a/10211214/13073731
-    let addDateTime = () => {
-        let currentdate = new Date(); 
-        let datetime = "Sent on " + (currentdate.getMonth()+1) + "/"
-                        + currentdate.getDate() + "/" 
-                        + currentdate.getFullYear() + " @ "  
-                        + currentdate.getHours() + "_"  
-                        + currentdate.getMinutes() + "_" 
-                        + currentdate.getSeconds();
-        document.getElementsByName("datetime").forEach(e => e.value = datetime);
-        alert("Thanks for submitting feedback!");
-    }
 </script>
 
 {% endblock content %}

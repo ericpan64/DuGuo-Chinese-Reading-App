@@ -12,28 +12,59 @@
     {% if logged_in_username is undefined %}
         <p> Log-in to view documents + vocab! </p>
     {% elif logged_in_username == username %}
+        <h4>Settings</h4>
+            <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if cn_phonetics == "Zhuyin" %}
+            Use Zhuyin
+            {% else %}
+            Use Pinyin
+            {% endif %}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a class="dropdown-item" href="#$pinyin">Use Pinyin</a></li>
+            <li><a class="dropdown-item" href="#$zhuyin">Use Zhuyin (Bopomofo)</a></li>
+            </ul>
+            <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if cn_type == "Traditional" %}
+            Use Traditional
+            {% else %}
+            Use Simplified
+            {% endif %}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
+            <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
+            </ul>
+        <br><br>
         <div class="row">
             <div class="col-md">
                 {# Document Table #}
-                {# TODO Add overflow-y css code #}
                 <h4>View Documents</h4>
-                <div style="overflow-x:auto">
+                <div style="overflow-y: auto">
                 {{ doc_table | safe }}
                 </div>
-
-                <h4>Upload Document</h4>
-                <form class="form" action="/api/upload" id="user-doc-form" method="POST">
-                    <input type="text" name="title" placeholder="Document Title" required>
-                    <textarea class="form-control" name="body" form="user-doc-form" rows="10" cols="50"></textarea>
-                    <button class="btn btn-outline-primary" type="submit">Upload Document</button>
-                </form>
+                 <h4>Upload Document</h4>
+                    <br>
+                        <h5>Auto-Parse from URL</h5>
+                        <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                            <input type="text" name="url" placeholder="Document URL" required>
+                            <br><br>
+                            <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
+                        </form>
+                        <br>
+                        <h5>Copy & Paste</h5>
+                        <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
+                            <input type="text" name="title" placeholder="Document Title" required>
+                            <br><br>
+                            <textarea class="form-control" name="body" form="user-doc-form" rows="5" cols="35" required></textarea>
+                            <br>
+                            <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
+                        </form>
             </div>
-            
             <div class="col-md">
                 <h4>View Saved Vocab</h4>
                 {# Vocab Table #}
-                {# TODO Add overflow-y css code #}
-                <div style="overflow-x:auto">
+                <div style="overflow-y: auto">
                 {{ vocab_table | safe }}
                 </div>
             </div>
