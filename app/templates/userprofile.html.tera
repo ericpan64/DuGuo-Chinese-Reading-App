@@ -45,13 +45,6 @@
                 </div>
                  <h4>Upload Document</h4>
                     <br>
-                        <h5>Auto-Parse from URL</h5>
-                        <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
-                            <input type="text" name="url" placeholder="Document URL" required>
-                            <br><br>
-                            <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
-                        </form>
-                        <br>
                         <h5>Copy & Paste</h5>
                         <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
                             <input type="text" name="title" placeholder="Document Title" required>
@@ -59,6 +52,13 @@
                             <textarea class="form-control" name="body" form="user-doc-form" rows="5" cols="35" required></textarea>
                             <br>
                             <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
+                        </form>
+                        <br>
+                        <h5>Auto-Parse from URL</h5>
+                        <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                            <input type="text" name="url" placeholder="Document URL" required>
+                            <br><br>
+                            <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
                         </form>
             </div>
             <div class="col-md">
