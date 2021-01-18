@@ -58,7 +58,7 @@
                             <br><br>
                             <textarea class="form-control" name="body" form="user-doc-form" rows="5" cols="35" required></textarea>
                             <br>
-                            <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Document</button>
+                            <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
                         </form>
             </div>
             <div class="col-md">
