@@ -398,7 +398,7 @@ impl SandboxDoc {
         return new_doc;
     }
 
-    pub async fn from_url(db: &Database, cn_type: String, cn_phonetics: String, url: String) -> Self {
+    pub async fn from_url(db: &Database, url: String, cn_type: String, cn_phonetics: String) -> Self {
         // make request
         let resp = reqwest::blocking::get(&url).unwrap()
             .text().unwrap();

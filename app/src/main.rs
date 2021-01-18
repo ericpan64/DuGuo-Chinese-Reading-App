@@ -402,7 +402,8 @@ fn main() -> Result<(), mongodb::error::Error>{
         .manage(rt)
         .mount("/", routes![index, 
             login, login_form, register_form, 
-            sandbox, sandbox_upload, sandbox_view_doc, feedback, feedback_form,
+            sandbox, sandbox_upload, sandbox_url_upload, sandbox_view_doc, 
+            feedback, feedback_form,
             user_profile, logout_user, update_settings,
             user_doc_upload, user_url_upload, user_vocab_upload, user_view_doc,
             delete_user_doc, delete_user_vocab])
