@@ -9,11 +9,16 @@ import time
 import pandas as pd
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
+import opencc
 from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF, SORTED_CEDICT_CSV_PATH
+import sys
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
 tokenizer = nlp.Defaults.create_tokenizer(nlp)
+
+# Traditional -> Simplified Converter (~67% less lossy than Simp->Trad for CEDICT)
+trad_converter = opencc.OpenCC('t2s.json')
 
 # Socket code adapted from: https://realpython.com/python-sockets
 sel = selectors.DefaultSelector()
@@ -55,12 +60,14 @@ def break_down_large_token_into_subtoken_list(t):
 def tokenize_str(s):
     """
     Given the input text s, tokenize and return as $-delimited phrases,
-        where each phrase is `-delimited in the format: phrase`raw_pinyin`formatted_pinyin
+        where each phrase is `-delimited in the format: simp_phrase`raw_pinyin`formatted_pinyin
         Pinyin is space-delimited for a multi-word phrase
     Example:
         Input : "祝你有美好的天！"
         Output: "祝`zhu4`zhù$你`ni3`nǐ$有`you3`yǒu$美好`mei3 hao3`měi hǎo$的`de5`de$天`tian1`tiān$！`！`！"
     """
+    # Convert to Simplified, then tokenize
+    s = trad_converter.convert(s)
     tokens = tokenizer(s)
     n_pinyin  = len(s)
     # str_tokens = [str(t) for t in tokens]
@@ -156,7 +163,8 @@ def service_connection(key, mask):
         if data.outb:
             # print('sending', repr(data.outb), 'to', data.addr)
             sent = sock.send(data.outb)  # Should be ready to write
-            # time.sleep(1.0)
+            print(f"number of bytes sent from tokenizer: {sent}", file=sys.stderr)
+            time.sleep(1.0)
             data.outb = data.outb[sent:]
 
 if __name__ == '__main__':

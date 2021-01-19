@@ -1,6 +1,6 @@
 # Find a way to slim this down later...
 FROM python:3.8.7
-RUN pip install spacy pandas pypinyin pymongo dnspython
+RUN pip install spacy pandas pypinyin pymongo dnspython opencc
 RUN python -m spacy download zh_core_web_sm
 WORKDIR /token-server
 COPY . .
