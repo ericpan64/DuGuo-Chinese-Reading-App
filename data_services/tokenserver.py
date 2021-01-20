@@ -25,14 +25,6 @@ sel = selectors.DefaultSelector()
 IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
 
-TONE_CHAR_SET = {
-    'ā','ē','ī','ō','ū','ǖ','Ā','Ē','Ī','Ō','Ū','Ǖ',
-    'á','é','í','ó','ú','ǘ','Á','É','Í','Ó','Ú','Ǘ',
-    'ǎ','ě','ǐ','ǒ','ǔ','ǚ','Ǎ','Ě','Ǐ','Ǒ','Ǔ','Ǚ',
-    'à','è','ì','ò','ù','ǜ','À','È','Ì','Ò','Ù','Ǜ',
-    'ü','Ü',
-}
-
 CEDICT_DF = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
 CEDICT_SET = set(CEDICT_DF.iloc[:, 0]).union(set(CEDICT_DF.iloc[:, 1]))
 
@@ -42,7 +34,6 @@ CEDICT_SET = set(CEDICT_DF.iloc[:, 0]).union(set(CEDICT_DF.iloc[:, 1]))
 entire_phrase_is_english = lambda p: len(p) == len(bytes(p, 'utf-8'))
 entire_phrase_is_chinese = lambda p: (3 * len(p)) == len(bytes(p, 'utf-8'))
 flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
-is_fmt_pinyin = lambda py: len(set(py).intersection(TONE_CHAR_SET)) > 0
 
 def break_down_large_token_into_subtoken_list(t):
     """
@@ -64,7 +55,7 @@ def tokenize_str(s):
         Pinyin is space-delimited for a multi-word phrase
     Example:
         Input : "祝你有美好的天！"
-        Output: "祝`zhu4`zhù$你`ni3`nǐ$有`you3`yǒu$美好`mei3 hao3`měi hǎo$的`de5`de$天`tian1`tiān$！`！`！"
+        Output: "祝`zhu4$你`ni3$有`you3$美好`mei3 hao3$的`de5$天`tian1$！`!"
     """
     # Convert to Simplified, then tokenize
     s = trad_converter.convert(s)
@@ -98,37 +89,26 @@ def tokenize_str(s):
         i, j = 0, 0
         while i < len(init_pinyin_list) and j < n_pinyin:
             curr_pinyin = init_pinyin_list[i]
-            # formatted pinyin needs separate handling since it's an alphanumeric  
-            # str with a special character that we _don't_ want to tokenize!
-            if is_fmt_pinyin(curr_pinyin):
-                pinyin_list[j] = curr_pinyin
-                j += 1
-            else:
-                curr_pinyin = [str(t) for t in list(tokenizer(curr_pinyin))]
-                phrase_len = len(curr_pinyin)
-                pinyin_list[j:j+phrase_len] = curr_pinyin
-                j += phrase_len
+            curr_pinyin = [str(t) for t in list(tokenizer(curr_pinyin))]
+            phrase_len = len(curr_pinyin)
+            pinyin_list[j:j+phrase_len] = curr_pinyin
+            j += phrase_len
             i += 1
         pinyin_list = [py for py in pinyin_list if py not in {'', ' '}]
         return pinyin_list
     reversed_raw_pinyin_list = get_corrected_syntax_for_pinyin_list(Style.TONE3)[::-1] # works
-    reversed_fmt_pinyin_list = get_corrected_syntax_for_pinyin_list(None)[::-1] # breaks b/c tokenizer splits special chars
     # Generate delimited string
     n_tokens = len(str_tokens)
     delimited_list = [''] * n_tokens # pre-allocate since known size
     for i in range(n_tokens):
         if entire_phrase_is_english(str_tokens[i]):
             raw_pinyin = reversed_raw_pinyin_list.pop()
-            fmt_pinyin = reversed_fmt_pinyin_list.pop()
         else:
             raw_pyin_list = [''] * len(str_tokens[i])
-            fmt_pyin_list = [''] * len(str_tokens[i])
             for j in range(len(str_tokens[i])):
                 raw_pyin_list[j] = reversed_raw_pinyin_list.pop()
-                fmt_pyin_list[j] = reversed_fmt_pinyin_list.pop()
             raw_pinyin = ' '.join(raw_pyin_list)
-            fmt_pinyin = ' '.join(fmt_pyin_list)
-        delimited_list[i] = f"{str_tokens[i]}`{raw_pinyin}`{fmt_pinyin}"
+        delimited_list[i] = f"{str_tokens[i]}`{raw_pinyin}"
     delimited_str = '$'.join(delimited_list)
     return delimited_str
 
