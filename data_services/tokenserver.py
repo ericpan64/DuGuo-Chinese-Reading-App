@@ -17,7 +17,7 @@ import sys
 nlp = spacy.load("zh_core_web_sm")
 tokenizer = nlp.Defaults.create_tokenizer(nlp)
 
-# Traditional -> Simplified Converter (~67% less lossy than Simp->Trad for CEDICT)
+# Traditional -> Simplified Converter (~67% less lossy than Simp->Trad for CEDICT, though only affects ~1% of entries)
 trad_converter = opencc.OpenCC('t2s.json')
 
 # Socket code adapted from: https://realpython.com/python-sockets
@@ -25,8 +25,11 @@ sel = selectors.DefaultSelector()
 IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
 
-CEDICT_DF = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
-CEDICT_SET = set(CEDICT_DF.iloc[:, 0]).union(set(CEDICT_DF.iloc[:, 1]))
+# Create CEDICT_DF, CEDICT_SET (used for more accurate pinyin lookup)
+CEDICT_DF = pd.read_csv(SORTED_CEDICT_CSV_PATH)
+CEDICT_SET = set(CEDICT_DF.loc[:, 'simp'])
+CEDICT_DF['raw_pinyin_lower'] = CEDICT_DF.loc[:, 'raw_pinyin'].apply(str.lower)
+CEDICT_DF.set_index(['simp', 'raw_pinyin_lower'], inplace=True)
 
 # Chinese chars use 3 bytes, so a phrase with Chinese chars will return false.
 # Ex. len('京报') = 2
@@ -60,8 +63,9 @@ def tokenize_str(s):
     # Convert to Simplified, then tokenize
     s = trad_converter.convert(s)
     tokens = tokenizer(s)
-    n_pinyin  = len(s)
-    # str_tokens = [str(t) for t in tokens]
+    # Get NER component as set (if any)
+    token_entities = nlp(' '.join([str(t) for t in tokens])).ents
+    token_entities = set([str(t) for t in token_entities])
     # Break-down phrases that are not in CEDICT to lesser components
     str_tokens = [''] * max([len(t) for t in tokens]) * len(tokens) # pre-allocate upper-bound, clean-up after
     j = 0
@@ -83,32 +87,54 @@ def tokenize_str(s):
     # Handle special characters to match tokenizer output
     # for special characters within an alphanumeric phrase, tokenizer splits it but pfmt doesn't
     # for spaces, tokenizer ignores but pfmt doesn't
-    def get_corrected_syntax_for_pinyin_list(style):
-        init_pinyin_list = flatten_list(pfmt(s, style=style, neutral_tone_with_five=True))
-        pinyin_list = [''] * n_pinyin # pre-allocate since known size
-        i, j = 0, 0
-        while i < len(init_pinyin_list) and j < n_pinyin:
-            curr_pinyin = init_pinyin_list[i]
-            curr_pinyin = [str(t) for t in list(tokenizer(curr_pinyin))]
-            phrase_len = len(curr_pinyin)
-            pinyin_list[j:j+phrase_len] = curr_pinyin
-            j += phrase_len
-            i += 1
-        pinyin_list = [py for py in pinyin_list if py not in {'', ' '}]
-        return pinyin_list
-    reversed_raw_pinyin_list = get_corrected_syntax_for_pinyin_list(Style.TONE3)[::-1] # works
+    n_pinyin  = len(s)
+    init_pinyin_list = flatten_list(pfmt(s, style=Style.TONE3, neutral_tone_with_five=True))
+    raw_pinyin_list = [''] * n_pinyin # pre-allocate since known size
+    i, j = 0, 0
+    while i < len(init_pinyin_list) and j < n_pinyin:
+        curr_pinyin = init_pinyin_list[i]
+        curr_pinyin = [str(t) for t in list(tokenizer(curr_pinyin))]
+        phrase_len = len(curr_pinyin)
+        raw_pinyin_list[j:j+phrase_len] = curr_pinyin
+        j += phrase_len
+        i += 1
+    raw_pinyin_list = [py for py in raw_pinyin_list if py not in {'', ' '}]
+    reversed_raw_pinyin_list = raw_pinyin_list[::-1]
     # Generate delimited string
     n_tokens = len(str_tokens)
     delimited_list = [''] * n_tokens # pre-allocate since known size
+    # in this case, no conversion -> no pinyin -> not chinese (catches Chinese punctuation)
+    not_chinese_phrase = lambda x: x == reversed_raw_pinyin_list[-1] 
     for i in range(n_tokens):
-        if entire_phrase_is_english(str_tokens[i]):
+        phrase = str_tokens[i]
+        if not_chinese_phrase(phrase):
             raw_pinyin = reversed_raw_pinyin_list.pop()
         else:
-            raw_pyin_list = [''] * len(str_tokens[i])
-            for j in range(len(str_tokens[i])):
-                raw_pyin_list[j] = reversed_raw_pinyin_list.pop()
-            raw_pinyin = ' '.join(raw_pyin_list)
-        delimited_list[i] = f"{str_tokens[i]}`{raw_pinyin}"
+            pypinyin_list = [''] * len(phrase)
+            for j in range(len(phrase)):
+                pypinyin_list[j] = reversed_raw_pinyin_list.pop()
+            # try lookup raw_pinyin in CEDICT_DF as source of truth, if not, default to pypinyin
+            # lookup logic tries: 
+            # 1) unique phrase match
+            # 2) For multiple matches, first raw_pinyin_lower match
+            #    Sort so in NER case, capitalized pinyin comes first.
+            # Otherwise, uncapitalized pinyin comes first.
+            # Default to pypinyin result
+            try:
+                cedict_phrase_df = CEDICT_DF.loc[phrase, :]
+                if cedict_phrase_df.shape[0] == 1:
+                    raw_pinyin = cedict_phrase_df.raw_pinyin.iloc[0]
+                else:
+                    raw_pinyin_lower = ' '.join(pypinyin_list).lower()
+                    cedict_res_df = cedict_phrase_df.loc[raw_pinyin_lower, :]
+                    if phrase in token_entities:
+                        cedict_res_df.sort_values(acending=True, inplace=True)
+                    else:
+                        cedict_res_df.sort_values(acending=False, inplace=True)
+                    raw_pinyin = cedict_res_df.raw_pinyin.iloc[0]
+            except:
+                raw_pinyin = ' '.join(pypinyin_list)
+        delimited_list[i] = f"{phrase}`{raw_pinyin}"
     delimited_str = '$'.join(delimited_list)
     return delimited_str
 
