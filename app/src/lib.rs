@@ -454,6 +454,7 @@ impl UserDoc {
     pub async fn new(db: &Database, username: String, desired_title: String, body: String, url: Option<String>) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
         let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
+        let desired_title = desired_title.replace(" ", "");
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).unwrap()) != None;
@@ -742,7 +743,7 @@ pub mod html_rendering {
         stream.set_read_timeout(Some(Duration::new(5,0))).expect("set_read_timeout call failed");
         stream.set_write_timeout(Some(Duration::new(5,0))).expect("set_write_timeout call failed");
         stream.set_ttl(100).expect("set_ttl call failed");
-        s = s.replace("  ", ""); // remove excess whitespace from tokenization, keep newlines
+        s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
         stream.write(s.as_bytes())?;
         std::thread::sleep(Duration::new(1,0));
         let n_bytes = s.as_bytes().len();
