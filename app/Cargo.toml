@@ -13,15 +13,15 @@ license = "MIT"
 rocket = "0.4.6"
 uuid = { version = "0.8", features = ["v4"] }
 mongodb = { version = "1.1.1", default-features = false, features = ["sync"]}
-tokio = { version = "1.0.2", features = ["full"] }
+tokio = { version = "0.2.24", features = ["full"] }
 blake2 = "0.9.1"
 hex = "0.3.1"
 serde = "1.0.118"
 jsonwebtoken = "7.2.0"
 chrono = "0.4.19"
-reqwest = { version = "0.11", features = ["blocking"] }
+reqwest = { version = "0.10.2", features = ["blocking"] }
 scraper = "0.12.0"
-redis = { version = "0.19.0", features = ["tokio-comp"] }
+redis = { version = "0.17.0", features = ["tokio-comp"] }
 
 # Docs: https://api.rocket.rs/v0.4/rocket_contrib/
 [dependencies.rocket_contrib]
