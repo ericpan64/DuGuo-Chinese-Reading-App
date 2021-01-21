@@ -4,9 +4,11 @@
 /// 
 /// duguo (lib.rs)
 /// ├── connect_to_mongodb: Fn
+/// ├── connect_to_redis: Fn
 /// ├── convert_rawstr_to_string: Fn
 /// |
-/// ├── DatabaseItem: Trait
+/// ├── {CacheItem, DatabaseItem}: Traits
+/// |   └── Impl for all Traits
 /// ├── {CnType, CnPhonetics}: Enums
 /// |   └── Impl for all Enums
 /// ├── {User, SandboxDoc, UserDoc, CnEnDictEntry, UserVocab, UserVocabList, UserFeedback}: Structs
@@ -21,17 +23,16 @@
 /// For security reasons, the production values are kept private.
 mod config;
 use config::*;
-use futures::StreamExt;
-use tokio::runtime::Handle;
 use mongodb::{
     bson::{doc, Bson, document::Document, to_document, from_bson, to_bson},
     error::Error,
-    Client, Database
+    sync::Database
 };
 use rocket::http::RawStr;
 use scraper::{Html, Selector};
 use std::{
     fmt,
+    collections::HashMap,
     io::prelude::*,
     net::{Shutdown, TcpStream},
     time::Duration,
@@ -39,14 +40,25 @@ use std::{
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+use redis::{
+    AsyncCommands,
+    aio::Connection
+};
 
 
 /* Public Functions */
-/// Uses URI to connect to database (locally: Docker Container, in production: mongoDB Atlas)
-pub fn connect_to_mongodb(rt: &Handle) -> Result<Database, Error> {
-    let client = (*rt).block_on(Client::with_uri_str(DB_URI))?;
+/// Connects to mongoDB (locally: Docker Container, in production: mongoDB Atlas). Connection is handled in main.rs
+pub fn connect_to_mongodb() -> Result<Database, Error> {
+    let client = mongodb::sync::Client::with_uri_str(DB_URI)?;
     let db: Database = client.database(DB_NAME);
     return Ok(db);
+}
+
+/// Uses URI to connect to Redis (Docker Container). Connections are handled within lib.rs
+async fn connect_to_redis() -> Result<Connection, Box<dyn std::error::Error>> {
+    let client = redis::Client::open(REDIS_URI)?;
+    let conn = client.get_async_connection().await?;
+    return Ok(conn);
 }
 
 /// Sanitizes user input
@@ -172,6 +184,7 @@ pub struct UserDoc {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct CnEnDictEntry {
+    uid: String,
     trad: String,
     simp: String,
     raw_pinyin: String,
@@ -216,6 +229,19 @@ pub struct UserFeedback {
 
 
 /* Traits */
+pub trait CacheItem {
+    /// For CnEnDictEntry, ordered_items are: vec![simp, raw_pinyin]
+    fn generate_uid(ordered_items: Vec<String>) -> String {
+        let mut res = String::with_capacity(100); // 80 chars is upper-bound from largest CEDICT entry
+        for item in ordered_items {
+            res += &item.replace(" ", "");
+        }
+        return res;
+    }
+}
+
+impl CacheItem for CnEnDictEntry { }
+
 pub trait DatabaseItem {
     // Implemented Defaults
     fn as_document(&self) -> Document where Self: Serialize {
@@ -224,20 +250,20 @@ pub trait DatabaseItem {
     fn as_bson(&self) -> Bson where Self: Serialize {
         return to_bson(self).unwrap();
     }
-    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> where Self: Serialize {
+    fn try_insert(&self, db: &Database) -> Result<String, Error> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
-        match (*rt).block_on(coll.insert_one(new_doc, None)) {
+        match coll.insert_one(new_doc, None) {
             Ok(_) => {}
             Err(e) => { return Err(e); }
         }
         return Ok(self.primary_key().to_string());
     }
-    fn try_update(&self, db: &Database, rt: &Handle, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
+    fn try_update(&self, db: &Database, key: &str, new_value: &str) -> Result<String, Error> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let update_doc = doc! { key: new_value };
         let update_query = doc! { "$set": update_doc };
-        match (*rt).block_on(coll.update_one(self.as_document(), update_query, None)) {
+        match coll.update_one(self.as_document(), update_query, None) {
             Ok(_) => {},
             Err(e) => { return Err(e); }
         }
@@ -251,12 +277,12 @@ pub trait DatabaseItem {
 
 /* Trait Implementation */
 impl DatabaseItem for User {
-    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> {
+    fn try_insert(&self, db: &Database) -> Result<String, Error> {
         let coll = (*db).collection(USER_COLL_NAME);
-        let can_register = (*rt).block_on(User::check_if_username_and_email_are_available(db, &self.username, &self.email));
+        let can_register = User::check_if_username_and_email_are_available(db, &self.username, &self.email);
         if can_register {
             let new_doc = self.as_document();
-            match (*rt).block_on(coll.insert_one(new_doc, None)) {
+            match coll.insert_one(new_doc, None) {
                 Ok(_) => { },
                 Err(e) => { return Err(e); }
             }
@@ -278,17 +304,12 @@ impl DatabaseItem for UserDoc {
     fn primary_key(&self) -> &str { return &self.username; }
 }
 
-impl DatabaseItem for CnEnDictEntry {
-    fn collection_name(&self) -> &str { return CEDICT_COLL_NAME; }
-    fn primary_key(&self) -> &str { return &self.trad; }
-}
-
 impl DatabaseItem for UserVocab {
-    fn try_insert(&self, db: &Database, rt: &Handle) -> Result<String, Error> where Self: Serialize {
+    fn try_insert(&self, db: &Database) -> Result<String, Error> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
-        match (*rt).block_on(coll.insert_one(new_doc, None)) {
-            Ok(_) => { UserVocabList::append_to_user_vocab_list(db, rt, &self.username, &self.phrase, self.cn_type.as_str())?; },
+        match coll.insert_one(new_doc, None) {
+            Ok(_) => { UserVocabList::append_to_user_vocab_list(db, &self.username, &self.phrase, self.cn_type.as_str())?; },
             Err(e) => { return Err(e); }
         }
         return Ok(self.primary_key().to_string());
@@ -323,25 +344,25 @@ impl User {
         return new_user;
     }
 
-    pub async fn check_if_username_exists(db: &Database, username: &str) -> bool {
+    pub fn check_if_username_exists(db: &Database, username: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
-        return (coll.find_one(doc! {"username": username }, None).await.unwrap()) != None;
+        return (coll.find_one(doc! {"username": username }, None).unwrap()) != None;
     }
 
-    pub fn update_user_settings(db: &Database, rt: &Handle, username: &str, cn_type: Option<CnType>, cn_phonetics: Option<CnPhonetics>) -> Result<(), Error> {
-        let user = rt.block_on(User::from_username(db, username)).unwrap();
+    pub fn update_user_settings(db: &Database, username: &str, cn_type: Option<CnType>, cn_phonetics: Option<CnPhonetics>) -> Result<(), Error> {
+        let user = User::from_username(db, username).unwrap();
         if let Some(new_type) = cn_type {
-            user.try_update(db, rt, "cn_type", new_type.as_str())?;
+            user.try_update(db, "cn_type", new_type.as_str())?;
         }
         if let Some(new_phonetics) = cn_phonetics {
-            user.try_update(db, rt, "cn_phonetics", new_phonetics.as_str())?;
+            user.try_update(db, "cn_phonetics", new_phonetics.as_str())?;
         }
         return Ok(());
     }
 
-    pub async fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
+    pub fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
         let coll = (*db).collection(USER_COLL_NAME);
-        let res_tup = match coll.find_one(doc! {"username": username }, None).await.unwrap() {
+        let res_tup = match coll.find_one(doc! {"username": username }, None).unwrap() {
             Some(user_doc) => {
                 let User { cn_type, cn_phonetics, ..} = from_bson(Bson::Document(user_doc)).unwrap();
                 (cn_type, cn_phonetics)
@@ -351,11 +372,11 @@ impl User {
         return res_tup;
     }
 
-    pub async fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
+    pub fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
         let hashed_pw = str_to_hashed_string(pw_to_check);
         let query_doc = doc! { "username": username, "pw_hash": &hashed_pw };
-        let res = match coll.find_one(query_doc, None).await.unwrap() {
+        let res = match coll.find_one(query_doc, None).unwrap() {
             Some(document) => {
                 let saved_hash = document.get("pw_hash").and_then(Bson::as_str).expect("No password was stored");
                 saved_hash == &hashed_pw
@@ -365,9 +386,9 @@ impl User {
         return res;
     }
 
-    async fn from_username(db: &Database, username: &str) -> Option<Self> {
+    fn from_username(db: &Database, username: &str) -> Option<Self> {
         let coll = (*db).collection(USER_COLL_NAME);
-        let query_res = coll.find_one(doc! {"username": username}, None).await.unwrap();
+        let query_res = coll.find_one(doc! {"username": username}, None).unwrap();
         let res: Option<Self> = match query_res {
             Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
             None => None,
@@ -375,20 +396,20 @@ impl User {
         return res;
     }
 
-    async fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
+    fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
-        let username_query = coll.find_one(doc! {"username": username }, None).await.unwrap();
-        let email_query = coll.find_one(doc! {"email": email}, None).await.unwrap();
+        let username_query = coll.find_one(doc! {"username": username }, None).unwrap();
+        let email_query = coll.find_one(doc! {"email": email}, None).unwrap();
         return (username_query == None) && (email_query == None);
     }
 }
 
 impl SandboxDoc {
-    pub async fn new(db: &Database, body: String, cn_type: String, cn_phonetics: String, url: Option<String>) -> Self {
+    pub async fn new(body: String, cn_type: String, cn_phonetics: String, url: Option<String>) -> Self {
         let doc_id = Uuid::new_v4().to_string();
         let cn_type = CnType::from_str(&cn_type);
         let cn_phonetics = CnPhonetics::from_str(&cn_phonetics);
-        let body_html = html_rendering::convert_string_to_tokenized_html(db, &body, &cn_type, &cn_phonetics).await;
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let from_url = match url {
             Some(url) => url,
             None => String::new()
@@ -398,10 +419,10 @@ impl SandboxDoc {
         return new_doc;
     }
 
-    pub async fn from_url(db: &Database, url: String, cn_type: String, cn_phonetics: String) -> Self {
+    pub async fn from_url(url: String, cn_type: String, cn_phonetics: String) -> Self {
         // make request
-        let resp = reqwest::blocking::get(&url).unwrap()
-            .text().unwrap();
+        let resp = reqwest::get(&url).await.unwrap()
+            .text().await.unwrap();
         let html = Html::parse_document(&resp);
         // get body from all headers, paragraphs in-order
         let body_selector = Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
@@ -409,15 +430,15 @@ impl SandboxDoc {
         for item in  html.select(&body_selector) {
             body_text += &item.text().collect::<String>();
         }
-        return SandboxDoc::new(db, body_text, cn_type, cn_phonetics, Some(url)).await;
+        return SandboxDoc::new(body_text, cn_type, cn_phonetics, Some(url)).await;
     }
 
-    pub async fn get_doc_html_and_phonetics_from_id(db: &Database, doc_id: String) -> Option<(String, String)> {
+    pub fn get_doc_html_and_phonetics_from_id(db: &Database, doc_id: String) -> Option<(String, String)> {
         let coll = (*db).collection(SANDBOX_COLL_NAME);
         let query_doc = doc! { "doc_id": doc_id };
         let mut doc_html = String::new();
         let mut cn_phonetics = String::new();
-        let res = match coll.find_one(query_doc, None).await.unwrap() {
+        let res = match coll.find_one(query_doc, None).unwrap() {
             Some(doc) => {
                 doc_html += doc.get("body_html").and_then(Bson::as_str).expect("No body_html was stored");
                 cn_phonetics += doc.get("cn_phonetics").and_then(Bson::as_str).expect("No phonetic info was stored");
@@ -431,11 +452,12 @@ impl SandboxDoc {
 
 impl UserDoc {
     pub async fn new(db: &Database, username: String, desired_title: String, body: String, url: Option<String>) -> Self {
-        let (cn_type, cn_phonetics) = User::get_user_settings(db, &username).await;
-        let body_html = html_rendering::convert_string_to_tokenized_html(db, &body, &cn_type, &cn_phonetics).await;
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
+        let desired_title = desired_title.replace(" ", "");
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
-        let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).await.unwrap()) != None;
+        let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).unwrap()) != None;
         let title = match title_exists {
             true => {
                 // Try new titles until unique one found
@@ -445,7 +467,7 @@ impl UserDoc {
                     count += 1;
                     let appended = format!("-{}", count);
                     new_title = desired_title.clone() + appended.as_str(); // need .clone() here because of loop
-                    title_exists = (coll.find_one(doc! {"username": &username, "title": &new_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).await.unwrap()) != None;
+                    title_exists = (coll.find_one(doc! {"username": &username, "title": &new_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).unwrap()) != None;
                 }
                 new_title
             },
@@ -462,8 +484,8 @@ impl UserDoc {
 
     pub async fn from_url(db: &Database, username: String, url: String) -> Self {
         // make request
-        let resp = reqwest::blocking::get(&url).unwrap()
-            .text().unwrap();
+        let resp = reqwest::get(&url).await.unwrap()
+            .text().await.unwrap();
         let html = Html::parse_document(&resp);
         // get title
         let title_selector = Selector::parse("title").unwrap();
@@ -479,21 +501,21 @@ impl UserDoc {
         return UserDoc::new(db, username, title_text, body_text, Some(url)).await;
     }
 
-    pub async fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
-        let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username).await;
+    pub fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
+        let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
-        let doc_body = match coll.find_one(query_doc, None).await.unwrap() {
+        let doc_body = match coll.find_one(query_doc, None).unwrap() {
             Some(doc) => Some(doc.get("body_html").and_then(Bson::as_str).unwrap().to_string()),
             None => None
         };
         return doc_body;
     }
 
-    pub async fn try_delete(db: &Database, username: &str, title: &str) -> bool {
+    pub fn try_delete(db: &Database, username: &str, title: &str) -> bool {
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title }; 
-        let res = match coll.delete_one(query_doc, None).await {
+        let res = match coll.delete_one(query_doc, None) {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
         };
@@ -502,47 +524,52 @@ impl UserDoc {
 }
 
 impl CnEnDictEntry {
-    pub async fn new(db: &Database, phrase_str: &str) -> Self {
-        // Try simplified, then traditional
-        let res = match CnEnDictEntry::lookup_phrase(db, "simp", phrase_str).await {
-            Some(obj) => obj,
-            None => {
-                match CnEnDictEntry::lookup_phrase(db, "trad", phrase_str).await {
-                    Some(obj) => obj,
-                    None => CnEnDictEntry::generate_lookup_failed_entry(phrase_str)
+    pub async fn from_uid(conn: &mut Connection, uid: String) -> Self {
+        let query_map = (*conn).hgetall::<&str, HashMap<String, String>>(&uid).await.unwrap();
+        let res = match query_map.len() {
+            0 => CnEnDictEntry::generate_lookup_failed_entry(&uid),
+            _ => CnEnDictEntry {
+                    uid,
+                    trad : query_map.get("trad").unwrap().to_owned(),
+                    simp: query_map.get("simp").unwrap().to_owned(),
+                    raw_pinyin: query_map.get("raw_pinyin").unwrap().to_owned(),
+                    formatted_pinyin: query_map.get("formatted_pinyin").unwrap().to_owned(),
+                    trad_html: query_map.get("trad_html").unwrap().to_owned(),
+                    simp_html: query_map.get("simp_html").unwrap().to_owned(),
+                    def: query_map.get("def").unwrap().to_owned(),
+                    zhuyin: query_map.get("zhuyin").unwrap().to_owned(),
+                    trad_zhuyin_html: query_map.get("trad_zhuyin_html").unwrap().to_owned(),
+                    simp_zhuyin_html: query_map.get("simp_zhuyin_html").unwrap().to_owned(),
                 }
-            }
         };
         return res;
     }
 
-    pub async fn lookup_phrase(db: &Database, key: &str, value: &str) -> Option<Self> {
-        let coll = (*db).collection(CEDICT_COLL_NAME);
-        let query_doc = doc! { key: value };
-        let res: Option<Self> = match coll.find_one(query_doc, None).await.unwrap() {
-            Some(doc) => Some(from_bson(Bson::Document(doc)).unwrap()),
-            None => None,
-        };
-        return res;
+    pub async fn from_tokenizer_components(conn: &mut Connection, simp: &str, raw_pinyin: &str) -> Self {
+        let uid = CnEnDictEntry::generate_uid(vec![simp.to_string(), raw_pinyin.to_string()]);
+        return CnEnDictEntry::from_uid(conn, uid).await;
+    }
+
+    pub fn lookup_failed(&self) -> bool {
+        return self.trad_html == "";
     }
 
     fn get_vocab_data(&self, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
-        // Order: (phrase, def, phrase_phonetics, phrase_html)
-        let def = &self.def;
+        // Order: (phrase, defn, phrase_phonetics, phrase_html)
+        let defn = &self.def;
         let (phrase, phrase_phonetics, phrase_html) = match (cn_type, cn_phonetics) {
             (CnType::Traditional, CnPhonetics::Pinyin) => (&self.trad, &self.formatted_pinyin, &self.trad_html),
             (CnType::Traditional, CnPhonetics::Zhuyin) => (&self.trad, &self.zhuyin, &self.trad_zhuyin_html),
             (CnType::Simplified, CnPhonetics::Pinyin) => (&self.simp, &self.formatted_pinyin, &self.simp_html),
             (CnType::Simplified, CnPhonetics::Zhuyin) => (&self.simp, &self.zhuyin, &self.simp_zhuyin_html)
         };
-        return (phrase.to_string(), def.to_string(), phrase_phonetics.to_string(), phrase_html.to_string());
+        return (phrase.to_string(), defn.to_string(), phrase_phonetics.to_string(), phrase_html.to_string());
     }
 
-    fn generate_lookup_failed_entry(phrase: &str) -> Self {
+    fn generate_lookup_failed_entry(uid: &str) -> Self {
         const LOOKUP_ERROR_MSG: &str = "N/A - Not found in database";
         let res = CnEnDictEntry {
-            trad: String::from(phrase),
-            simp: String::from(phrase),
+            uid: String::from(uid),
             def: String::from(LOOKUP_ERROR_MSG),
             ..Default::default()
         }; 
@@ -551,22 +578,11 @@ impl CnEnDictEntry {
 }
 
 impl UserVocab {
-    pub async fn new(db: &Database, username: String, saved_phrase: String, from_doc_title: String) -> Self {
+    pub async fn new(db: &Database, username: String, saved_uid: String, from_doc_title: String) -> Self {
         // For lookup, try user-specified first
-        let (cn_type, cn_phonetics) = User::get_user_settings(db, &username).await;
-        let (first, second) = match cn_type {
-            CnType::Simplified => ("simp", "trad"),
-            CnType::Traditional => ("trad", "simp")
-        };
-        let entry: CnEnDictEntry = match CnEnDictEntry::lookup_phrase(db, first, &saved_phrase).await {
-            Some(sp) => sp,
-            None => {
-                match CnEnDictEntry::lookup_phrase(db, second, &saved_phrase).await {
-                    Some(tp) => tp,
-                    None => CnEnDictEntry::generate_lookup_failed_entry(&saved_phrase)
-                }
-            }
-        };
+        let mut conn = connect_to_redis().await.unwrap();
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
+        let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
         // extract relevant info from phrase
         let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
@@ -578,14 +594,14 @@ impl UserVocab {
         return new_vocab;
     }
 
-    pub fn try_delete(db: &Database, rt: &Handle, username: &str, phrase: &str, cn_type: &CnType) -> bool {
+    pub fn try_delete(db: &Database, username: &str, phrase: &str, cn_type: &CnType) -> bool {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let query_doc = doc! { "username": username, "phrase": phrase, "cn_type": cn_type.as_str() };
-        let mut res = match (*rt).block_on(coll.delete_one(query_doc, None)) {
+        let mut res = match coll.delete_one(query_doc, None) {
             Ok(delete_res) => delete_res.deleted_count == 1,
             Err(_) => false,
         };
-        match UserVocabList::remove_from_user_vocab_list(db, rt, username, phrase, cn_type) {
+        match UserVocabList::remove_from_user_vocab_list(db, username, phrase, cn_type) {
             Ok(_) => { },
             Err(_) => { res = false; }
         }
@@ -594,11 +610,11 @@ impl UserVocab {
 }
 
 impl UserVocabList {
-    pub async fn get_user_vocab_list_string(db: &Database, username: &str) -> Option<String> {
-        let (cn_type, _) = User::get_user_settings(db, username).await;
+    pub fn get_user_vocab_list_string(db: &Database, username: &str) -> Option<String> {
+        let (cn_type, _) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
-        let res = match coll.find_one(query_doc, None).await {
+        let res = match coll.find_one(query_doc, None) {
             Ok(query_res) => {
                 match query_res {
                     Some(doc) => Some(doc.get("unique_phrase_list").and_then(Bson::as_str).unwrap().to_string()),
@@ -613,10 +629,10 @@ impl UserVocabList {
         return res;
     }
 
-    fn append_to_user_vocab_list(db: &Database, rt: &Handle, username: &str, new_phrase: &str, cn_type_str: &str) -> Result<(), Error> {
+    fn append_to_user_vocab_list(db: &Database, username: &str, new_phrase: &str, cn_type_str: &str) -> Result<(), Error> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type_str };
-        match (*rt).block_on(coll.find_one(query_doc, None)) {
+        match coll.find_one(query_doc, None) {
             Ok(query_res) => {
                 match query_res {
                     Some(doc) => {
@@ -632,7 +648,7 @@ impl UserVocabList {
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db, rt, "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
                     }
                     None => {
                         // Create new instance with unique chars
@@ -648,7 +664,7 @@ impl UserVocabList {
                         let username = username.to_string();
                         let cn_type = CnType::from_str(cn_type_str);
                         let new_doc = UserVocabList { username, unique_phrase_list, cn_type };
-                        new_doc.try_insert(db, rt)?;
+                        new_doc.try_insert(db)?;
                     }
                 }
             },
@@ -657,10 +673,10 @@ impl UserVocabList {
         return Ok(());
     }
     
-    fn remove_from_user_vocab_list(db: &Database, rt: &Handle, username: &str, phrase_to_remove: &str, cn_type: &CnType) -> Result<(), Error> {
+    fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType) -> Result<(), Error> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };        
-        match (*rt).block_on(coll.find_one(query_doc, None)) {
+        match coll.find_one(query_doc, None) {
             Ok(query_res) => {
                 match query_res {
                     Some(doc) => {
@@ -677,7 +693,7 @@ impl UserVocabList {
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db, rt, "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
                     },
                     None => {}
                 }
@@ -722,19 +738,17 @@ pub mod html_rendering {
     /// Connect to tokenizer service and tokenizes the string. The delimiters are $ and ` since neither character appears in CEDICT.
     /// The format of the string is: "phrase1`raw_pinyin`formatted_pinyin$phrase2`raw_pinyin2`formatted_pinyin2$ ..."
     /// Sleeps 1sec after write and 1sec after read due to a strange issue where data inconsistently stopped writing (probably async weirdness)
-    fn tokenize_string(s: String) -> std::io::Result<String> {
+    fn tokenize_string(mut s: String) -> std::io::Result<String> {
+        s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
         let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
-        stream.set_read_timeout(Some(Duration::new(5,0))).expect("set_read_timeout call failed");
-        stream.set_write_timeout(Some(Duration::new(5,0))).expect("set_write_timeout call failed");
-        stream.set_ttl(100).expect("set_ttl call failed");
-        stream.write(s.as_bytes())?;
-        std::thread::sleep(Duration::new(1,0));
         let n_bytes = s.as_bytes().len();
-        let mut tokenized_bytes = vec![0; n_bytes * 8]; // max size includes original n_bytes + at most 3*n_bytes delimiters + 4*n_bytes for pinyin. Very conservative
-        stream.read(&mut tokenized_bytes)?;
-        std::thread::sleep(Duration::new(1,0));
-        stream.shutdown(Shutdown::Both).expect("shutdown call failed");
-        tokenized_bytes.retain(|x| *x != 0); // removes _all_ '0' entries
+        stream.write_all(s.as_bytes())?;
+        let mut header_bytes = [0; 64];
+        stream.read_exact(&mut header_bytes)?;
+        let n_bytes: usize = String::from_utf8(header_bytes.to_vec()).unwrap()
+        	.trim().parse::<usize>().unwrap();
+        let mut tokenized_bytes = vec![0; n_bytes];
+        stream.read_exact(&mut tokenized_bytes)?;
         let res = String::from_utf8(tokenized_bytes).unwrap();
         return Ok(res);
     }
@@ -742,21 +756,20 @@ pub mod html_rendering {
     /// Renders the HTML using the given CnType and CnPhonetics.
     /// Note: the tokenizer only returns pinyin, however that's used to lookup the CEDICT entry.
     /// From the CEDICT entry, the specified CnType, CnPhonetics are rendered.
-    pub async fn convert_string_to_tokenized_html(db: &Database, s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
+    pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
         const PHRASE_DELIM: char = '$';
         const PINYIN_DELIM: char = '`';
+        let mut conn = connect_to_redis().await.unwrap();
         let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
         let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
-        let coll = (*db).collection(CEDICT_COLL_NAME);
-        // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per chars
+        // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
         let mut res = String::with_capacity(n_phrases * 2500);
         for token in tokenized_string.split(PHRASE_DELIM) {
             let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
-            let phrase = token_vec[0];
+            let phrase = token_vec[0]; // Simplified if Chinese
             let raw_pinyin = token_vec[1];
-            let formatted_pinyin = token_vec[2];
             // Skip lookup for phrases with no Chinese chars
-            if is_english_phrase(&phrase) || has_chinese_punctuation(&phrase) {
+            if is_english_phrase(phrase) || has_chinese_punctuation(phrase) {
                 // handle newlines, else render word aligned with other text
                 if phrase.contains('\n') {
                     res += &phrase.replace('\n', "<br>");
@@ -767,51 +780,37 @@ pub mod html_rendering {
                     new_phrase += "</td></tr></table></span>";
                     res += &new_phrase;
                 }
-                continue;
-            }
-            // For each phrase, lookup as CnEnDictPhrase (2 queries: 1 as Traditional, 1 as Simplified)
-            // if none match, then generate the phrase witout the pinyin
-            let mut trad_query = coll.find_one(doc! { "trad": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
-            let mut simp_query = coll.find_one(doc! { "simp": &phrase, "raw_pinyin": raw_pinyin }, None).await.unwrap();
-            if trad_query == None && simp_query == None {
-                trad_query = coll.find_one(doc! { "trad": &phrase, "formatted_pinyin": formatted_pinyin }, None).await.unwrap();
-                simp_query = coll.find_one(doc! { "simp": &phrase, "formatted_pinyin": formatted_pinyin }, None).await.unwrap();
-            }
-            if trad_query == None && simp_query == None {
-                // Append "not found" html
-                let phrase_html = generate_html_for_not_found_phrase(phrase);
-                res += phrase_html.as_str();
             } else {
-                // Append corresponding stored html
-                let cedict_doc = match trad_query {
-                    Some(doc) => doc,
-                    None => simp_query.unwrap(),
-                };
-                let entry: CnEnDictEntry = from_bson(Bson::Document(cedict_doc)).unwrap();
-                match (cn_type, cn_phonetics) {
-                    (CnType::Traditional, CnPhonetics::Pinyin) => res += entry.trad_html.as_str(),
-                    (CnType::Traditional, CnPhonetics::Zhuyin) => res += entry.trad_zhuyin_html.as_str(),
-                    (CnType::Simplified, CnPhonetics::Pinyin) => res += entry.simp_html.as_str(),
-                    (CnType::Simplified, CnPhonetics::Zhuyin) => res += entry.simp_zhuyin_html.as_str(),
+                // For each phrase, lookup as CnEnDictEntry
+                let entry = CnEnDictEntry::from_tokenizer_components(&mut conn, phrase, raw_pinyin).await;
+                if entry.lookup_failed() {
+                    res += generate_html_for_not_found_phrase(phrase).as_str();
+                } else {
+                    match (cn_type, cn_phonetics) {
+                        (CnType::Traditional, CnPhonetics::Pinyin) => res += entry.trad_html.as_str(),
+                        (CnType::Traditional, CnPhonetics::Zhuyin) => res += entry.trad_zhuyin_html.as_str(),
+                        (CnType::Simplified, CnPhonetics::Pinyin) => res += entry.simp_html.as_str(),
+                        (CnType::Simplified, CnPhonetics::Zhuyin) => res += entry.simp_zhuyin_html.as_str(),
+                    }
                 }
             }
         }
         return res;
     }
     
-    pub async fn render_document_table(db: &Database, username: &str) -> String {
+    pub fn render_document_table(db: &Database, username: &str) -> String {
         // get all documents for user
         const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
         let coll = (*db).collection(USER_DOC_COLL_NAME);
-        let (cn_type, cn_phonetics) = User::get_user_settings(db, username).await;
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
         res += "<tr><th>Title</th><th>Preview (plaintext)</th><th>Created On (UTC)</th><th>Delete</th></tr>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
-        match coll.find(query_doc, None).await {
-            Ok(mut cursor) => {
+        match coll.find(query_doc, None) {
+            Ok(cursor) => {
                 // add each document as a <tr> item
-                while let Some(item) = cursor.next().await {
+                for item in cursor {
                     // unwrap BSON document
                     let user_doc = item.unwrap();
                     let UserDoc { body, title, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
@@ -842,18 +841,18 @@ pub mod html_rendering {
         return res;
     }
     
-    pub async fn render_vocab_table(db: &Database, username: &str) -> String {
+    pub fn render_vocab_table(db: &Database, username: &str) -> String {
         const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
-        let (cn_type, cn_phonetics) = User::get_user_settings(db, username).await;
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let mut res = String::new();
         res += "<table class=\"table table-striped table-hover\">\n";
         res += "<tr><th>Term</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
-        match coll.find(query_doc, None).await {
-            Ok(mut cursor) => {
+        match coll.find(query_doc, None) {
+            Ok(cursor) => {
                 // add each document as a <tr> item
-                while let Some(item) = cursor.next().await {
+                for item in cursor {
                     // unwrap BSON document
                     let user_doc = item.unwrap();
                     let UserVocab { from_doc_title, phrase, phrase_html, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap();
@@ -907,9 +906,9 @@ pub mod cookie_handling {
         return cookie;
     }
 
-    pub async fn add_user_cookie_to_context(cookies: &Cookies<'_>, db: &Database, context: &mut HashMap<&str, String>) -> bool {
+    pub fn add_user_cookie_to_context(cookies: &Cookies<'_>, db: &Database, context: &mut HashMap<&str, String>) -> bool {
         let cookie_lookup = (*cookies).get(JWT_NAME);
-        let username_from_cookie = get_username_from_cookie(db, cookie_lookup).await;
+        let username_from_cookie = get_username_from_cookie(db, cookie_lookup);
         let res = match username_from_cookie {
             Some(username) => { 
                 (*context).insert("username", username);
@@ -920,11 +919,11 @@ pub mod cookie_handling {
         return res;
     }
 
-    pub async fn get_username_from_cookie(db: &Database, cookie_lookup: Option<&Cookie<'static>>) -> Option<String> {
+    pub fn get_username_from_cookie(db: &Database, cookie_lookup: Option<&Cookie<'static>>) -> Option<String> {
         let mut res = None;
         if let Some(ref login_cookie) = cookie_lookup {
             let jwt_to_check = login_cookie.value();
-            res = validate_jwt_and_get_username(db, jwt_to_check).await;
+            res = validate_jwt_and_get_username(db, jwt_to_check);
         }
         return res;
     }

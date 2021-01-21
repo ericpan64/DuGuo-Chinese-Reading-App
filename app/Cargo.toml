@@ -1,24 +1,27 @@
 [package]
 name = "duguo"
+description = "A Rocket web-app designed to facilitate learning how to read Chinese."
+repository = "https://github.com/ericpan64/DuGuo-Chinese-Reading-App"
+homepage = "https://duguo-app.com"
+readme = "./README.md"
 version = "0.1.0"
 authors = ["epan"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
 
 [dependencies]
 rocket = "0.4.6"
 uuid = { version = "0.8", features = ["v4"] }
-mongodb = "1.1.1"
-tokio = { version = "0.2", features = ["full"] }
-futures = "0.3.8"
+mongodb = { version = "1.1.1", default-features = false, features = ["sync"]}
+tokio = { version = "0.2.24", features = ["full"] }
 blake2 = "0.9.1"
 hex = "0.3.1"
 serde = "1.0.118"
 jsonwebtoken = "7.2.0"
 chrono = "0.4.19"
-reqwest = { version = "0.11", features = ["blocking"] }
+reqwest = { version = "0.10.2", features = ["blocking"] }
 scraper = "0.12.0"
+redis = { version = "0.17.0", features = ["tokio-comp"] }
 
 # Docs: https://api.rocket.rs/v0.4/rocket_contrib/
 [dependencies.rocket_contrib]

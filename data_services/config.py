@@ -15,8 +15,9 @@ USER_COLL_NAME = 'users'
 USER_DOC_COLL_NAME = 'docs'
 USER_VOCAB_COLL_NAME = 'vocab'
 USER_VOCAB_LIST_COLL_NAME = 'vocab-list'
-CEDICT_COLL_NAME = 'cedict'
 DB_URI = 'mongodb://root:example@mongodb:27017/'
+REDIS_HOST = 'redis-cache' # from docker-compose
+REDIS_PORT = 6379
 
 # tokenserver.py
 TOKENIZER_HOST = '0.0.0.0' # Opt for numeric address when possible

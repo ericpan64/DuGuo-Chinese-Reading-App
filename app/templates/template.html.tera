@@ -48,8 +48,10 @@
     })
     // Update to Loading Button onsubmit
     let switchToLoadingButton = (id) => {
-        document.getElementById(id).innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        let button = document.getElementById(id)
+        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
             <span class="sr-only">Loading...</span>`;
+        button.setAttribute("disabled", "");
     }
     </script>
     <script src="/static/handleHash.js"></script>

@@ -1,21 +1,19 @@
-# DuGuo (beta)
-
+# DuGuo (v0.1.0)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Overview
 
 DuGuo is a web application that allows users to read Chinese text in an interactive learning environment including pinyin support, speech-to-text, and a lookup dictionary. Building from existing solutions, DuGuo aims to provide the best UX for contextual learning while remaining open-source. This app is designed in particular for L2 (second-language) learners, though hopefully it is useful for all levels of Chinese learning! 
 
 ### Deployment
 
-The app is currently available at [duguo-app.com](https://duguo-app.com). The production deployment is hosted on AWS.
-
-This repository contains all code and configuration to run an instance locally using docker-compose (`docker-compose up`).
+The app is currently available at [duguo-app.com](https://duguo-app.com). The production deployment is hosted on AWS. This repository contains all code and configuration to run an instance locally using docker-compose (from the root directory, `docker-compose up`).
 
 ### Tech Stack
 
 The app is made of 3 components:
-1. A web server written in Rust using [Rocket](https://rocket.rs/). 
-2. An NLP tokenization service written in Python using [spaCy's Chinese module](https://spacy.io/models/zh) (which builds on top of [jieba](https://github.com/fxsjy/jieba)). 
-3. A mongoDB database (noSQL).
+1. A web server written in Rust using [Rocket](https://rocket.rs/) and other assorted libraries (see the [Cargo.toml](app/Cargo.toml) file). 
+2. An NLP tokenization service written in Python using [spaCy's Chinese module](https://spacy.io/models/zh) (which builds on top of [jieba](https://github.com/fxsjy/jieba)). [OpenCC](https://github.com/BYVoid/OpenCC) and [pypinyin](https://github.com/mozillazg/python-pinyin) are used during processing. 
+3. Data persistance via a database ([mongoDB](https://www.mongodb.com/)) and a cache ([Redis](https://redis.io/)).
 
 Tokenized words are looked-up in the [CC-CEDICT](https://cc-cedict.org/wiki/) which is generously available for use under a Creative Commons license.
 
@@ -45,7 +43,7 @@ Barring the ability to live in a foreign country, DuGuo hopes to offer the next-
 
 There are several existing tools that provide similar functionality, including (but not limited to): [Zhongwen Chrome Extension](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde?hl=en), [Purple Culture Pinyin Converter](https://www.purpleculture.net/chinese-pinyin-converter/), [mdbg.net](https://www.mdbg.net/chinese/dictionary), [pin1yin1](https://www.pin1yin1.com/), etc.
 
-The main differentiator I hope to provide with this project is improved UX (pinyin toggling, contextual saving) and the ability to persist documents to a database (allows building a long-term knowledge base). Ultimately this is provided as an additional tool to help users learn Chinese, so definitely use the combination of tools that best supplements your learning experience!
+The main differentiator I hope to provide with this project is improved UX (pinyin toggling, contextual saving) and the ability to persist documents to a database (allows building a long-term knowledge base). Ultimately this is provided as an additional tool to help users learn Chinese, so definitely use the combination of tools that best supplements your learning experience.
 
 ## Acknowledgements
 

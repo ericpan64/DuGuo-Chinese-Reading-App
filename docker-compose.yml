@@ -5,6 +5,8 @@ version: "3.3"
 volumes:
   mongo-data:
     driver: local
+  redis-data:
+    driver: local
 services:
   mongodb:
     image: mongo
@@ -17,6 +19,14 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=example
     volumes:
       - mongo-data:/data/db
+  redis:
+    image: redis
+    container_name: redis-cache
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
   tokenizer-server:
     build:
       context: ./data_services
@@ -27,6 +37,9 @@ services:
       - 8881:8881
     depends_on:
       - mongodb
+      - redis
+    # volumes:
+    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/data_services:/token-server
   rocket-web-server:
     build:
       context: ./app
@@ -37,5 +50,4 @@ services:
     ports:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
     # volumes:
-    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app/src:/src/
-    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app/templates:/templates/
+    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app:/app

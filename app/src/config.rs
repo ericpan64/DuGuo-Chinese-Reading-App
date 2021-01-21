@@ -6,19 +6,19 @@ use chrono::{Duration, Utc, DateTime};
 use serde::{Serialize, Deserialize};
 use mongodb::{
     bson::{doc,to_document},
-    Database,
+    sync::Database,
 };
 
 /* Static Vars */
 pub static DB_URI: &str = "mongodb://root:example@mongodb:27017/";
 pub static DB_NAME: &str = "duguo";
+pub static REDIS_URI: &str = "redis://redis-cache:6379/";
 pub static USER_COLL_NAME: &str = "users";
 pub static SANDBOX_COLL_NAME: &str = "sandbox";
 pub static USER_DOC_COLL_NAME: &str = "docs";
 pub static USER_VOCAB_COLL_NAME: &str = "vocab";
 pub static USER_VOCAB_LIST_COLL_NAME: &str = "vocab-list";
 pub static USER_FEEDBACK_COLL_NAME: &str = "feedback";
-pub static CEDICT_COLL_NAME: &str = "cedict";
 pub static TOKENIZER_PORT: u16 = 8881;
 pub static TOKENIZER_HOSTNAME: &str = "tokenizer-server"; // tokenizer-server=Container name from docker-compose.yml
 
@@ -66,7 +66,7 @@ pub fn generate_jwt(username: String, password: String) -> Result<String, jsonwe
     return encode(&jwt_header, &token, &jwt_encoding_key);
 }
 
-pub async fn validate_jwt_and_get_username(db: &Database, token: &str) -> Option<String> {
+pub fn validate_jwt_and_get_username(db: &Database, token: &str) -> Option<String> {
     let jwt_decoding_key: DecodingKey = DecodingKey::from_secret(SECRET_FOR_JWT);
     let jwt_validation_algorithm: Validation = Validation::new(Algorithm::HS256); // matches jwt_header
 
@@ -77,7 +77,7 @@ pub async fn validate_jwt_and_get_username(db: &Database, token: &str) -> Option
             let exp = payload.exp;
             let is_active = check_if_jwt_is_active(exp);
             let username = match is_active {
-                true => get_username_from_valid_user_credentials(db, cred).await,
+                true => get_username_from_valid_user_credentials(db, cred),
                 false => None
             };
             username
@@ -96,10 +96,10 @@ fn check_if_jwt_is_active(expiration_timestamp: i64) -> bool {
     return current_timestamp <= expiration_timestamp;
 }
 
-async fn get_username_from_valid_user_credentials(db: &Database, cred: UserCredentials) -> Option<String> {
+fn get_username_from_valid_user_credentials(db: &Database, cred: UserCredentials) -> Option<String> {
     let coll = (*db).collection(USER_COLL_NAME);
     let cred_as_document = to_document(&cred).unwrap();
-    let user_search = coll.find_one(cred_as_document, None).await.unwrap();
+    let user_search = coll.find_one(cred_as_document, None).unwrap();
     let res = match user_search {
         Some(_) => Some(cred.username),
         None => None
