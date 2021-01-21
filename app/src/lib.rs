@@ -739,19 +739,16 @@ pub mod html_rendering {
     /// The format of the string is: "phrase1`raw_pinyin`formatted_pinyin$phrase2`raw_pinyin2`formatted_pinyin2$ ..."
     /// Sleeps 1sec after write and 1sec after read due to a strange issue where data inconsistently stopped writing (probably async weirdness)
     fn tokenize_string(mut s: String) -> std::io::Result<String> {
-        let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
-        stream.set_read_timeout(Some(Duration::new(5,0))).expect("set_read_timeout call failed");
-        stream.set_write_timeout(Some(Duration::new(5,0))).expect("set_write_timeout call failed");
-        stream.set_ttl(100).expect("set_ttl call failed");
         s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
-        stream.write(s.as_bytes())?;
-        std::thread::sleep(Duration::new(1,0));
+        let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
         let n_bytes = s.as_bytes().len();
-        let mut tokenized_bytes = vec![0; n_bytes * 8]; // max size includes original n_bytes + at most 3*n_bytes delimiters + 4*n_bytes for pinyin. Very conservative
-        stream.read(&mut tokenized_bytes)?;
-        std::thread::sleep(Duration::new(1,0));
-        stream.shutdown(Shutdown::Both).expect("shutdown call failed");
-        tokenized_bytes.retain(|x| *x != 0); // removes _all_ '0' entries
+        stream.write_all(s.as_bytes())?;
+        let mut header_bytes = [0; 64];
+        stream.read_exact(&mut header_bytes)?;
+        let n_bytes: usize = String::from_utf8(header_bytes.to_vec()).unwrap()
+        	.trim().parse::<usize>().unwrap();
+        let mut tokenized_bytes = vec![0; n_bytes];
+        stream.read_exact(&mut tokenized_bytes)?;
         let res = String::from_utf8(tokenized_bytes).unwrap();
         return Ok(res);
     }

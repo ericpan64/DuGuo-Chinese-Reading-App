@@ -11,7 +11,6 @@ from pypinyin import pinyin as pfmt
 from pypinyin import Style
 import opencc
 from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF, SORTED_CEDICT_CSV_PATH
-import sys
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
@@ -138,50 +137,50 @@ def tokenize_str(s):
     delimited_str = '$'.join(delimited_list)
     return delimited_str
 
-def accept_wrapper(sock):
-    conn, addr = sock.accept()
-    print('accepted connection from: ', addr)
-    conn.setblocking(False)
-    data = types.SimpleNamespace(addr=addr, inb=b'', outb=b'')
-    events = selectors.EVENT_READ | selectors.EVENT_WRITE
-    sel.register(conn, events, data=data)
-
-def service_connection(key, mask):
-    sock = key.fileobj
-    data = key.data
-    if mask & selectors.EVENT_READ:
-        try:
-            recv_data = sock.recv(MAX_BUF)  # Should be ready to read
-            if recv_data:
-                # run NLP parser, then send results back
-                recv_data = tokenize_str(str(recv_data ,'utf-8'))
-                data.outb += bytes(recv_data, 'utf-8')
-            else:
-                print('closing connection to', data.addr)
-                sel.unregister(sock)
-                sock.close()
-        except SocketError as e:
-            if e.errno != errno.ECONNRESET:
-                raise e
-            print(f'connection to {data.addr} was reset by sender')
-            pass
-    if mask & selectors.EVENT_WRITE:
-        if data.outb:
-            # print('sending', repr(data.outb), 'to', data.addr)
-            sent = sock.send(data.outb)  # Should be ready to write
-            print(f"number of bytes sent from tokenizer: {sent}", file=sys.stderr)
-            time.sleep(1.0)
-            data.outb = data.outb[sent:]
-
 if __name__ == '__main__':
     # Multi-threaded connections
     print("Starting socket server...")
-    lsock  = socket.socket(IPV4, TCP)
+    lsock = socket.socket(IPV4, TCP)
     lsock.bind((TOKENIZER_HOST, TOKENIZER_PORT))
     lsock.listen()
-    print('listening on', (TOKENIZER_HOST, TOKENIZER_PORT))
+    print(f'listening on ({TOKENIZER_HOST}:{TOKENIZER_PORT})')
     lsock.setblocking(False)
     sel.register(lsock, selectors.EVENT_READ, data=None)
+
+    def accept_wrapper(sock):
+        conn, addr = sock.accept()
+        print(f'accepted connection from: {addr}')
+        conn.setblocking(False)
+        data = types.SimpleNamespace(addr=addr, inb=b'', outb=b'')
+        events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        sel.register(conn, events, data=data)
+
+    def service_connection(key, mask):
+        sock = key.fileobj
+        data = key.data
+        if mask & selectors.EVENT_READ:
+            try:
+                recv_data = sock.recv(MAX_BUF)  # Ready to read
+                if recv_data:
+                    # run NLP parser, then send results back
+                    recv_data = tokenize_str(str(recv_data ,'utf-8'))
+                    data.outb += bytes(recv_data, 'utf-8')
+                else:
+                    print(f'closing connection to: {data.addr}')
+                    sel.unregister(sock)
+                    sock.close()
+            except SocketError as e:
+                if e.errno != errno.ECONNRESET:
+                    raise e
+                print(f'connection to {data.addr} was reset by sender')
+        if mask & selectors.EVENT_WRITE:
+            if data.outb:
+                header = bytes(str(len(data.outb)), 'utf-8')
+                header += b' ' * (64 - len(header)) # 64-byte header
+                sock.sendall(header)
+                sock.sendall(data.outb)  # Ready to write
+                data.outb = []
+
 
     while True:
         events = sel.select(timeout=None)
