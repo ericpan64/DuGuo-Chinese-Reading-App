@@ -212,7 +212,11 @@ def load_cedict(conn):
     return
 
 if __name__ == '__main__':
-    init_mongodb()
+    try:
+        init_mongodb()
+        print('Generated indices in mongoDB')
+    except:
+        print('Skipping mongoDB index generation...')
     conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
     print("Waiting for Redis load...")
     redis_loaded = False
