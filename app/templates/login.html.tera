@@ -31,7 +31,7 @@
     <br/>
     <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
     <br/><br/>
-    <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \</p>
+    <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \ *</p>
 </div>
 <script>
     // Update active navbar
