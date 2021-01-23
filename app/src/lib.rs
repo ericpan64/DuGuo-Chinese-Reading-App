@@ -34,8 +34,7 @@ use std::{
     fmt,
     collections::HashMap,
     io::prelude::*,
-    net::{Shutdown, TcpStream},
-    time::Duration,
+    net::TcpStream,
 };
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
@@ -63,15 +62,9 @@ async fn connect_to_redis() -> Result<Connection, Box<dyn std::error::Error>> {
 
 /// Sanitizes user input
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
-    let mut res = match s.url_decode() {
-        Ok(val) => val,
-        Err(e) => {
-            println!("UTF-8 Error encountered, returning empty String. Err: {:?}", e);
-            String::new()
-        }
-    };
-    // Note: can't sanitize '/' since that breaks default character encoding
-    res = res.replace(&['<', '>', '(', ')', '!', '\"', '\'', '\\', ';', '{', '}', ':'][..], "");
+    let mut res = s.percent_decode_lossy().to_string(); // � for invalid UTF-8
+    // Note: can't sanitize '/' since that breaks urls
+    res = res.replace(&['<', '>', '(', ')', '!', '\"', '\'', '\\', ';', '{', '}', ':', '*'][..], "");
     return res;
 }
 
@@ -427,7 +420,7 @@ impl SandboxDoc {
         // get body from all headers, paragraphs in-order
         let body_selector = Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
         let mut body_text = String::with_capacity(resp.len());
-        for item in  html.select(&body_selector) {
+        for item in html.select(&body_selector) {
             body_text += &item.text().collect::<String>();
         }
         return SandboxDoc::new(body_text, cn_type, cn_phonetics, Some(url)).await;
@@ -741,7 +734,6 @@ pub mod html_rendering {
     fn tokenize_string(mut s: String) -> std::io::Result<String> {
         s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
         let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
-        let n_bytes = s.as_bytes().len();
         stream.write_all(s.as_bytes())?;
         let mut header_bytes = [0; 64];
         stream.read_exact(&mut header_bytes)?;
@@ -804,40 +796,30 @@ pub mod html_rendering {
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let mut res = String::new();
-        res += "<table class=\"table table-striped table-hover\">\n";
-        res += "<tr><th>Title</th><th>Preview (plaintext)</th><th>Created On (UTC)</th><th>Delete</th></tr>\n";
+        res += "<table id=\"doc-table\" class=\"table table-hover\">\n";
+        res += "<thead class=\"table-light\">\n<tr><th>Title</th><th>Source</th><th>Created On (UTC)</th><th>Delete</th></tr>\n</thead>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
         match coll.find(query_doc, None) {
             Ok(cursor) => {
                 // add each document as a <tr> item
+                res += "<tbody>\n";
                 for item in cursor {
                     // unwrap BSON document
                     let user_doc = item.unwrap();
-                    let UserDoc { body, title, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
+                    let UserDoc { title, created_on, from_url, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
                     let delete_button = format!("<a href=\"/api/delete-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
                     let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
-                    // from body, get first n characters as content preview
-                    let n = 10;
-                    let mut b = [0; 3];
-                    let body_chars = body.chars();
-                    let mut preview_count = 0;
-                    let mut content_preview = String::with_capacity((n+1)*3 as usize); // FYI: each Chinese char is 3 bytes (1 byte = 1 usize)
-                    for c in body_chars.clone() {
-                        if preview_count >= n {
-                            break;
-                        }
-                        content_preview += c.encode_utf8(&mut b);
-                        preview_count += 1;
-                    }
-                    if body_chars.count() > preview_count {
-                        content_preview += "...";
-                    }
-                    res += format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, content_preview, &created_on[0..10], delete_button).as_str();
+                    let source = match from_url.as_str() {
+                        "" => String::from("n/a"),
+                        _ => format!("<a href=\"{}\">Link</a>", from_url)
+                    };
+                    res += format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, source, &created_on[0..10], delete_button).as_str();
                 }
+                res += "</tbody>\n";
             },
             Err(e) => { eprintln!("Error when searching for documents for user {}: {:?}", username, e); }
         }
-        res += "</table>";
+        res += "<caption hidden>List of your saved vocabulary.</caption>\n</table>";
         return res;
     }
     
@@ -846,11 +828,12 @@ pub mod html_rendering {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let mut res = String::new();
-        res += "<table class=\"table table-striped table-hover\">\n";
-        res += "<tr><th>Term</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
+        res += "<table id=\"vocab-table\" class=\"table table-hover\">\n";
+        res += "<thead class=\"table-light\">\n<tr><th>Phrase</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n</thead>\n";
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
         match coll.find(query_doc, None) {
             Ok(cursor) => {
+                res += "<tbody>\n";
                 // add each document as a <tr> item
                 for item in cursor {
                     // unwrap BSON document
@@ -860,10 +843,11 @@ pub mod html_rendering {
                     let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, &created_on[0..10], &delete_button);
                     res += &row;
                 }
+                res += "</tbody>\n";
             },
             Err(e) => { eprintln!("Error when searching for vocab for user {}: {:?}", username, e); }
         }
-        res += "</table>";
+        res += "<caption hidden>List of your saved documents.</caption>\n</table>";
         return res;
     }
     
