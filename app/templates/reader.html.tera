@@ -8,7 +8,7 @@
         <h3>Instructions</h3>
         <ul>
             <li><strong>Click</strong> on a phrase to view more information, speech-to-text, and save it to your dictionary.</li>
-            <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase.</li>
+            <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase, or <strong>Shift + Tab</strong> to move to the previous phrase.</li>
             <li>Use the buttons below to toggle phonetics settings.</li>
         </ul>
         <div id="buttons" class="container">
