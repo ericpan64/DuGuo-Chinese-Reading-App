@@ -56,7 +56,7 @@ let parseHashChange = () => {
         let hash_string = location.hash.substring(1);
         hash_string = decodeURIComponent(hash_string);
         // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
-        history.pushState("", document.title, window.location.pathname + window.location.search);
+        history.replaceState("", document.title, window.location.pathname + window.location.search);
         // Text-to-Speech if starts with ~
         // User Config if starts with $
         // Otherwise, Saving Vocab
