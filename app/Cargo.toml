@@ -22,6 +22,7 @@ chrono = "0.4.19"
 reqwest = { version = "0.10.2", features = ["blocking"] }
 scraper = "0.12.0"
 redis = { version = "0.17.0", features = ["tokio-comp"] }
+regex = "1"
 
 # Docs: https://api.rocket.rs/v0.4/rocket_contrib/
 [dependencies.rocket_contrib]

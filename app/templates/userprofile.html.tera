@@ -49,7 +49,8 @@
             <hr>
             <h5>Copy & Paste</h5>
             <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
-                <input type="text" name="title" placeholder="Document Title" required>
+                <input type="text" name="title" placeholder="Document Title (no spaces)" required><br>
+                <input type="text" name="source" placeholder="Document Source (optional)">
                 <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
                 <textarea class="form-control" name="body" form="user-doc-form" rows="2" cols="35" required></textarea>
                 <br>

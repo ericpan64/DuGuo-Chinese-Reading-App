@@ -28,7 +28,7 @@ pub struct SandboxDoc {
     body: String,
     body_html: String,
     // If none, String::new()
-    from_url: String,
+    source: String,
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
     created_on: String
@@ -40,17 +40,13 @@ impl DatabaseItem for SandboxDoc {
 }
 
 impl SandboxDoc {
-    pub async fn new(body: String, cn_type: String, cn_phonetics: String, url: Option<String>) -> Self {
+    pub async fn new(body: String, cn_type: String, cn_phonetics: String, source: String) -> Self {
         let doc_id = Uuid::new_v4().to_string();
         let cn_type = CnType::from_str(&cn_type);
         let cn_phonetics = CnPhonetics::from_str(&cn_phonetics);
         let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
-        let from_url = match url {
-            Some(url) => url,
-            None => String::new()
-        };
         let created_on = Utc::now().to_string();
-        let new_doc = SandboxDoc { doc_id, body, body_html, from_url, cn_type, cn_phonetics, created_on };
+        let new_doc = SandboxDoc { doc_id, body, body_html, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
 
@@ -65,7 +61,7 @@ impl SandboxDoc {
         for item in html.select(&body_selector) {
             body_text += &item.text().collect::<String>();
         }
-        return SandboxDoc::new(body_text, cn_type, cn_phonetics, Some(url)).await;
+        return SandboxDoc::new(body_text, cn_type, cn_phonetics, url).await;
     }
 
     pub fn get_doc_html_and_phonetics_from_id(db: &Database, doc_id: String) -> Option<(String, String)> {

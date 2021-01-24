@@ -136,12 +136,6 @@ pub struct UserRegisterForm<'f> {
 
 
 #[derive(FromForm)]
-pub struct UserDocumentForm<'f> {
-    title: &'f RawStr,
-    body: &'f RawStr,
-}
-
-#[derive(FromForm)]
 pub struct UserUrlForm<'f> {
     url: &'f RawStr,
 }
@@ -185,8 +179,6 @@ pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form
     return res_status;
 }
 
-
-
 #[post("/api/url-upload", data = "<user_url>")]
 pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
     let UserUrlForm { url } = user_url.into_inner();
@@ -211,16 +203,27 @@ pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     return res_redirect;
 }
 
+#[derive(FromForm)]
+pub struct UserDocumentForm<'f> {
+    title: &'f RawStr,
+    source: &'f RawStr,
+    body: &'f RawStr,
+}
+
 #[post("/api/upload", data="<user_doc>")]
 pub fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
-    let UserDocumentForm { title, body } = user_doc.into_inner();
+    let UserDocumentForm { title, source, body } = user_doc.into_inner();
     let title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
-
+    let source = convert_rawstr_to_string(source);
+    // read http header if present
+    let source = source.replace("http//", "http://");
+    let source = source.replace("https//", "https://");
+    
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = (rt).block_on(UserDoc::new(&db, username, title, body, None));
+            let new_doc = (rt).block_on(UserDoc::new(&db, username, title, body, source));
             match new_doc.try_insert(&db) {
                 Ok(username) => Redirect::to(uri!(user_profile: username)),
                 Err(e) => {

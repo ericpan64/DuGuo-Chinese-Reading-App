@@ -98,7 +98,7 @@ async fn connect_to_redis() -> Result<Connection, Box<dyn Error>> {
 
 /// Sanitizes user input (note: Chinese punctuation is unaffected by this)
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
-    let mut res = s.percent_decode_lossy().to_string(); // � for invalid UTF-8
+    let mut res = s.url_decode_lossy().to_string(); // � for invalid UTF-8
     // Note: can't sanitize '/' since that breaks urls
     res = res.replace(&['<', '>', '(', ')', '!', '\"', '\'', '\\', ';', '{', '}', ':', '*'][..], "");
     return res;

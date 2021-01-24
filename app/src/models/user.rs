@@ -133,7 +133,7 @@ pub struct UserDoc {
     body: String,
     body_html: String,
     // If none, String::new()
-    pub from_url: String, 
+    pub source: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
     pub created_on: String
@@ -146,7 +146,7 @@ impl DatabaseItem for UserDoc {
 }
 
 impl UserDoc {
-    pub async fn new(db: &Database, username: String, desired_title: String, body: String, url: Option<String>) -> Self {
+    pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
         let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let desired_title = desired_title.replace(" ", "");
@@ -168,12 +168,8 @@ impl UserDoc {
             },
             false => desired_title
         };
-        let from_url = match url {
-            Some(url) => url,
-            None => String::new()
-        };
         let created_on = Utc::now().to_string();
-        let new_doc = UserDoc { username, title, body, body_html, from_url, cn_type, cn_phonetics, created_on };
+        let new_doc = UserDoc { username, title, body, body_html, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
 
@@ -193,7 +189,7 @@ impl UserDoc {
         for item in  html.select(&body_selector) {
             body_text += &item.text().collect::<String>();
         }
-        return UserDoc::new(db, username, title_text, body_text, Some(url)).await;
+        return UserDoc::new(db, username, title_text, body_text, url).await;
     }
 
     pub fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {

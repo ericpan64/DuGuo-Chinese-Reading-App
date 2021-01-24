@@ -90,7 +90,7 @@ pub fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<Sa
     let text_as_string = convert_rawstr_to_string(text);
     let cn_type = convert_rawstr_to_string(cn_type);
     let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
-    let new_doc = (rt).block_on(SandboxDoc::new(text_as_string, cn_type, cn_phonetics, None));
+    let new_doc = (rt).block_on(SandboxDoc::new(text_as_string, cn_type, cn_phonetics, String::new()));
     let res_redirect = match new_doc.try_insert(&db) {
         Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),
         Err(_) => Redirect::to(uri!(index))

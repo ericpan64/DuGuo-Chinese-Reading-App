@@ -20,6 +20,7 @@ use mongodb::{
     bson::{doc, Bson, from_bson},
     sync::Database
 };
+use regex::Regex;
 use std::{
     io::prelude::*,
     net::TcpStream
@@ -83,15 +84,22 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
         Ok(cursor) => {
             // add each document as a <tr> item
             res += "<tbody>\n";
+            let url_re = Regex::new(r"^(http{1}s?://)?(([a-zA-z0-9])+\.)+([a-zA-z0-9]*)(/{1}.*)?$").unwrap();
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserDoc { title, created_on, from_url, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
+                let UserDoc { title, created_on, source, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
                 let delete_button = format!("<a href=\"/api/delete-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
                 let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
-                let source = match from_url.as_str() {
-                    "" => String::from("n/a"),
-                    _ => format!("<a href=\"{}\">Link</a>", from_url)
+                // only format as link if it's a URL
+                let source = match url_re.is_match(&source) {
+                    true => format!("<a href=\"{}\" target=\"_blank\">Link</a>", source),
+                    false => {
+                        match source.as_str() {
+                            "" => String::from("n/a"),
+                            _ => source
+                        }
+                    }
                 };
                 res += format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", title, source, &created_on[0..10], delete_button).as_str();
             }
