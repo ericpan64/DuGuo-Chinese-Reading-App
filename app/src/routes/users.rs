@@ -270,7 +270,7 @@ pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<Us
     let is_valid_password = User::check_password(&db, &username, &password);
     let res_status = match is_valid_password {
         true => {
-            let new_cookie = generate_http_cookie(username, password);
+            let new_cookie = generate_http_cookie(&db, username, password);
             cookies.add(new_cookie);
             Status::Accepted
         },
@@ -289,11 +289,10 @@ pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form
     let password = convert_rawstr_to_string(password);
     let email = convert_rawstr_to_string(email);
 
-    let new_user = User::new(username.clone(), password.clone(), email); // clone() makes sense here
-    // TODO: figure-out way to handle registration error cases
+    let new_user = User::new(username.clone(), password.clone(), email);
     let res_status = match new_user.try_insert(&db) {
         Ok(_) => {
-            let new_cookie = generate_http_cookie(username, password);
+            let new_cookie = generate_http_cookie(&db, username, password);
             cookies.add(new_cookie);
             Status::Accepted
         },

@@ -12,16 +12,23 @@
 ///     └── str_to_hashed_string
 */
 
-use crate::config::{JWT_LIFETIME, JWT_NAME, JWT_SECRET, USER_COLL_NAME};
+use blake2::{Blake2b, Digest};
+use crate::{
+    config::{JWT_LIFETIME, JWT_NAME, JWT_SECRET, USER_COLL_NAME},
+    models::user::User
+};
 use chrono::{Duration, Utc, DateTime};
-use jsonwebtoken::{encode, Header, EncodingKey, decode, DecodingKey, Validation, Algorithm};
+use jsonwebtoken::{Header, EncodingKey, DecodingKey, Validation, Algorithm};
 use mongodb::{
     bson::{doc, to_document},
     sync::Database
 };
 use rocket::http::{Cookie, Cookies, SameSite};
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    error::Error
+};
 
 /* Structs */
 #[derive(Serialize, Deserialize, Debug)]
@@ -38,8 +45,8 @@ struct UserToken {
 }
 
 /* Public Functions */
-pub fn generate_http_cookie(username: String, password: String) -> Cookie<'static> {
-    let jwt = match generate_jwt(username, password) {
+pub fn generate_http_cookie(db: &Database, username: String, password: String) -> Cookie<'static> {
+    let jwt = match generate_jwt(db, username, password) {
         Ok(token) => token,
         Err(e) => {
             println!("Error when generating jwt: {:?}", e);
@@ -75,17 +82,22 @@ pub fn get_username_from_cookie(db: &Database, cookie_lookup: Option<&Cookie<'st
     return res;
 }
 
-pub fn str_to_hashed_string(str_to_hash: &str) -> String {
-    // TODO: change this to a salt + hash approach
-    return str_to_hash.to_string();
+pub fn str_to_hashed_string(str_to_hash: &str, salt: &str) -> String {
+    let mut hasher = Blake2b::new();
+    hasher.update(str_to_hash.as_bytes());
+    hasher.update(b"$");
+    hasher.update(salt);
+    let res = hasher.finalize().to_vec();
+    return hex::encode(res);
 }
 
 /* Private Functions */
-fn generate_jwt(username: String, password: String) -> Result<String, jsonwebtoken::errors::Error> {
+fn generate_jwt(db: &Database, username: String, password: String) -> Result<String, Box<dyn Error>> {
     let jwt_header: Header = Header::default();
     let jwt_encoding_key: EncodingKey = EncodingKey::from_secret(JWT_SECRET);
     
-    let pw_hash = str_to_hashed_string(password.as_str());
+    let pw_salt = User::get_user_salt(db, &username)?;
+    let pw_hash = str_to_hashed_string(&password, &pw_salt);
     let cred = UserCredentials {
         username,
         pw_hash,
@@ -97,14 +109,15 @@ fn generate_jwt(username: String, password: String) -> Result<String, jsonwebtok
         iat: current_datetime.timestamp(),
         exp: expire_datetime.timestamp(),
     };
-    return encode(&jwt_header, &token, &jwt_encoding_key);
+    let jwt = jsonwebtoken::encode(&jwt_header, &token, &jwt_encoding_key)?;
+    return Ok(jwt);
 }
 
 fn validate_jwt_and_get_username(db: &Database, token: &str) -> Option<String> {
     let jwt_decoding_key: DecodingKey = DecodingKey::from_secret(JWT_SECRET);
     let jwt_validation_algorithm: Validation = Validation::new(Algorithm::HS256); // matches jwt_header
 
-    let res = match decode::<UserToken>(token, &jwt_decoding_key, &jwt_validation_algorithm) {
+    let res = match jsonwebtoken::decode::<UserToken>(token, &jwt_decoding_key, &jwt_validation_algorithm) {
         Ok(data) => {
             let payload: UserToken = data.claims;
             let cred = payload.cred;

@@ -21,6 +21,7 @@ use mongodb::{
     bson::{doc, Bson, from_bson},
     sync::Database
 };
+use rand::{self, Rng};
 use reqwest;
 use scraper;
 use serde::{Serialize, Deserialize};
@@ -30,6 +31,7 @@ use std::error::Error;
 pub struct User {
     username: String,
     pw_hash: String,
+    pw_salt: String,
     email: String,
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -55,10 +57,11 @@ impl DatabaseItem for User {
 
 impl User {
     pub fn new(username: String, password: String, email: String) -> Self {
-        let pw_hash = str_to_hashed_string(&password);
+        let pw_salt = User::generate_pw_salt();
+        let pw_hash = str_to_hashed_string(&password, &pw_salt);
         let (cn_type, cn_phonetics) = User::default_settings();
         let created_on = Utc::now().to_string();
-        let new_user = User { username, pw_hash, email, cn_type, cn_phonetics, created_on };
+        let new_user = User { username, pw_hash, pw_salt, email, cn_type, cn_phonetics, created_on };
         return new_user;
     }
 
@@ -90,18 +93,36 @@ impl User {
         return res_tup;
     }
 
-    pub fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
+    pub fn get_user_salt(db: &Database, username: &str) -> Result<String, Box<dyn Error>> {
         let coll = (*db).collection(USER_COLL_NAME);
-        let hashed_pw = str_to_hashed_string(pw_to_check);
-        let query_doc = doc! { "username": username, "pw_hash": &hashed_pw };
-        let res = match coll.find_one(query_doc, None).unwrap() {
-            Some(document) => {
-                let saved_hash = document.get("pw_hash").and_then(Bson::as_str).expect("No password was stored");
-                saved_hash == &hashed_pw
+        let found_doc = coll.find_one(doc! { "username": username }, None)?.unwrap();
+        return Ok(found_doc.get("pw_salt").and_then(Bson::as_str).unwrap().to_string());
+    }
+
+    pub fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
+        let res = match User::from_username(db, username) {
+            Some(user) => {
+                let hashed_input = str_to_hashed_string(pw_to_check, &user.pw_salt);
+                user.pw_hash == hashed_input
             },
             None => false
         };
         return res;
+    }
+
+    fn generate_pw_salt() -> String {
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                                abcdefghijklmnopqrstuvwxyz\
+                                0123456789)(*&^%$#@!~";
+        const SALT_LEN: usize = 64;
+        let mut rng = rand::thread_rng();
+        let pw_salt: String = (0..SALT_LEN)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
+            })
+            .collect();
+        return pw_salt;
     }
 
     fn default_settings() -> (CnType, CnPhonetics) {
