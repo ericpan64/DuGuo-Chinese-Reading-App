@@ -16,6 +16,8 @@
 ///     └── /api/url-upload
 ///     └── /api/vocab
 ///     └── /api/update-settings
+///     └── /api/documents-to-csv TODO
+///     └── /api/vocab-to-csv TODO
 */
 
 use crate::{
@@ -121,10 +123,32 @@ pub fn logout_user(mut cookies: Cookies) -> Redirect {
     return Redirect::to("/");
 }
 
+/* POST */
 #[derive(FromForm)]
 pub struct UserLoginForm<'f> {
     username: &'f RawStr,
     password: &'f RawStr,
+}
+
+#[post("/api/login", data = "<user_input>")]
+pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Status {
+    let UserLoginForm { username, password } = user_input.into_inner();
+    let username = convert_rawstr_to_string(username);
+    let password = convert_rawstr_to_string(password);
+
+    let is_valid_password = User::check_password(&db, &username, &password);
+    let res_status = match is_valid_password {
+        true => {
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
+        },
+        false => {
+            // (TODO: record login attempt in database, limit 8 per day)
+            Status::Unauthorized
+        }
+    };
+    return res_status;
 }
 
 #[derive(FromForm)]
@@ -134,73 +158,23 @@ pub struct UserRegisterForm<'f> {
     password: &'f RawStr,
 }
 
+#[post("/api/register", data = "<user_input>")]
+pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Status {
+    let UserRegisterForm { username, email, password } = user_input.into_inner();
+    let username = convert_rawstr_to_string(username);
+    let password = convert_rawstr_to_string(password);
+    let email = convert_rawstr_to_string(email);
 
-#[derive(FromForm)]
-pub struct UserUrlForm<'f> {
-    url: &'f RawStr,
-}
-
-
-#[derive(FromForm)]
-pub struct UserVocabForm<'f> {
-    saved_phrase: &'f RawStr,
-    from_doc_title: &'f RawStr,
-}
-
-#[derive(FromForm)]
-pub struct UserSettingForm<'f> {
-    setting: &'f RawStr,
-}
-
-#[post("/api/update-settings", data = "<user_setting>")]
-pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form<UserSettingForm<'_>>) -> Status {
-    let UserSettingForm { setting } = user_setting.into_inner();
-    let setting = convert_rawstr_to_string(setting);
-    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
-    let res_status = match username_from_cookie {
-        Some(username) => {
-            let cn_type = match setting.as_str() {
-                "trad" => Some(CnType::Traditional),
-                "simp" => Some(CnType::Simplified),
-                _ => None,
-            };
-            let cn_phonetics = match setting.as_str() {
-                "pinyin" => Some(CnPhonetics::Pinyin),
-                "zhuyin" => Some(CnPhonetics::Zhuyin),
-                _ => None,
-            };
-            match User::update_user_settings(&db, &username, cn_type, cn_phonetics) {
-                Ok(_) => Status::Accepted,
-                Err(_) => Status::BadRequest
-            }
+    let new_user = User::new(username.clone(), password.clone(), email);
+    let res_status = match new_user.try_insert(&db) {
+        Ok(_) => {
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
         },
-        None => Status::Unauthorized
+        Err(_) => { Status::UnprocessableEntity }
     };
     return res_status;
-}
-
-#[post("/api/url-upload", data = "<user_url>")]
-pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
-    let UserUrlForm { url } = user_url.into_inner();
-    let url = convert_rawstr_to_string(url); // Note: ':' is removed
-    // read http header if present
-    let url = url.replace("http//", "http://");
-    let url = url.replace("https//", "https://");
-    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
-    let res_redirect = match username_from_cookie {
-        Some(username) => { 
-            let new_doc = (rt).block_on(UserDoc::from_url(&db, username, url));
-            match new_doc.try_insert(&db) {
-                Ok(username) => Redirect::to(uri!(user_profile: username)),
-                Err(e) => { 
-                    eprintln!("Exception when inserting doc from url: {:?}", e);
-                    Redirect::to("/") 
-                } 
-            }
-        },
-        None => Redirect::to("/")
-    };
-    return res_redirect;
 }
 
 #[derive(FromForm)]
@@ -237,6 +211,41 @@ pub fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     return res_redirect;
 }
 
+#[derive(FromForm)]
+pub struct UserUrlForm<'f> {
+    url: &'f RawStr,
+}
+
+#[post("/api/url-upload", data = "<user_url>")]
+pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
+    let UserUrlForm { url } = user_url.into_inner();
+    let url = convert_rawstr_to_string(url); // Note: ':' is removed
+    // read http header if present
+    let url = url.replace("http//", "http://");
+    let url = url.replace("https//", "https://");
+    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
+    let res_redirect = match username_from_cookie {
+        Some(username) => { 
+            let new_doc = (rt).block_on(UserDoc::from_url(&db, username, url));
+            match new_doc.try_insert(&db) {
+                Ok(username) => Redirect::to(uri!(user_profile: username)),
+                Err(e) => { 
+                    eprintln!("Exception when inserting doc from url: {:?}", e);
+                    Redirect::to("/") 
+                } 
+            }
+        },
+        None => Redirect::to("/")
+    };
+    return res_redirect;
+}
+
+#[derive(FromForm)]
+pub struct UserVocabForm<'f> {
+    saved_phrase: &'f RawStr,
+    from_doc_title: &'f RawStr,
+}
+
 #[post("/api/vocab", data="<user_vocab>")]
 pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { saved_phrase, from_doc_title } = user_vocab.into_inner();
@@ -260,43 +269,34 @@ pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle
     return res_status;
 }
 
-
-#[post("/api/login", data = "<user_input>")]
-pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Status {
-    let UserLoginForm { username, password } = user_input.into_inner();
-    let username = convert_rawstr_to_string(username);
-    let password = convert_rawstr_to_string(password);
-
-    let is_valid_password = User::check_password(&db, &username, &password);
-    let res_status = match is_valid_password {
-        true => {
-            let new_cookie = generate_http_cookie(&db, username, password);
-            cookies.add(new_cookie);
-            Status::Accepted
-        },
-        false => {
-            // (TODO: record login attempt in database, limit 8 per day)
-            Status::Unauthorized
-        }
-    };
-    return res_status;
+#[derive(FromForm)]
+pub struct UserSettingForm<'f> {
+    setting: &'f RawStr,
 }
 
-#[post("/api/register", data = "<user_input>")]
-pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Status {
-    let UserRegisterForm { username, email, password } = user_input.into_inner();
-    let username = convert_rawstr_to_string(username);
-    let password = convert_rawstr_to_string(password);
-    let email = convert_rawstr_to_string(email);
-
-    let new_user = User::new(username.clone(), password.clone(), email);
-    let res_status = match new_user.try_insert(&db) {
-        Ok(_) => {
-            let new_cookie = generate_http_cookie(&db, username, password);
-            cookies.add(new_cookie);
-            Status::Accepted
+#[post("/api/update-settings", data = "<user_setting>")]
+pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form<UserSettingForm<'_>>) -> Status {
+    let UserSettingForm { setting } = user_setting.into_inner();
+    let setting = convert_rawstr_to_string(setting);
+    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
+    let res_status = match username_from_cookie {
+        Some(username) => {
+            let cn_type = match setting.as_str() {
+                "trad" => Some(CnType::Traditional),
+                "simp" => Some(CnType::Simplified),
+                _ => None,
+            };
+            let cn_phonetics = match setting.as_str() {
+                "pinyin" => Some(CnPhonetics::Pinyin),
+                "zhuyin" => Some(CnPhonetics::Zhuyin),
+                _ => None,
+            };
+            match User::update_user_settings(&db, &username, cn_type, cn_phonetics) {
+                Ok(_) => Status::Accepted,
+                Err(_) => Status::BadRequest
+            }
         },
-        Err(_) => { Status::UnprocessableEntity }
+        None => Status::Unauthorized
     };
     return res_status;
 }
