@@ -29,4 +29,4 @@ rand = "0.8.0"
 [dependencies.rocket_contrib]
 version = "0.4.6"
 default-features = false
-features = ["tera_templates", "serve"]
+features = ["tera_templates", "serve", "json"]

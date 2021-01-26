@@ -18,14 +18,17 @@ use crate::{
     models::zh::{CnType, CnPhonetics, CnEnDictEntry}
 };
 use mongodb::{
-    bson::{doc, Bson, from_bson},
+    bson::{doc, document::Document, Bson, from_bson},
     sync::Database
 };
 use rand::{self, Rng};
 use reqwest;
 use scraper;
 use serde::{Serialize, Deserialize};
-use std::error::Error;
+use std::{
+    collections::HashMap,
+    error::Error
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -151,7 +154,7 @@ impl User {
 pub struct UserDoc {
     username: String,
     pub title: String,
-    body: String,
+    pub body: String,
     body_html: String,
     // If none, String::new()
     pub source: String, 
@@ -233,10 +236,39 @@ impl UserDoc {
         };
         return res;
     }
+
+    /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>
+    /// where each inner Vec<String> represents the list of values for all documents
+    /// matching the input query. A Vec upper-bound can be specified.
+    pub fn get_doc_fields_as_vectors(db: &Database, query_doc: Document, fields: Vec<&str>, capacity: Option<usize>) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
+        let mut res_hmap: HashMap<String, Vec<String>> = HashMap::new();
+        for key in &fields {
+            match capacity {
+                Some(capacity) => { res_hmap.insert(String::from(*key), Vec::<String>::with_capacity(capacity)); },
+                None => { res_hmap.insert(String::from(*key), Vec::<String>::new()); }
+            }
+        }
+        let coll = (*db).collection(USER_DOC_COLL_NAME);
+        match coll.find(query_doc, None) {
+            Ok(cursor) => {
+                for item in cursor {
+                    let doc = item?;
+                    for key in &fields {
+                        res_hmap.get_mut(*key)
+                            .unwrap()
+                            .push(String::from(doc.get_str(key)?));
+                    }
+                }
+            },
+            Err(e) => { return Err(Box::new(e)) }
+        }
+        return Ok(res_hmap);
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocab {
+    pub uid: String,
     username: String,
     pub from_doc_title: String,
     cn_type: CnType,
@@ -269,12 +301,13 @@ impl UserVocab {
         // For lookup, try user-specified first
         let mut conn = connect_to_redis().await.unwrap();
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
+        let uid = saved_uid.clone();
         let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
         // extract relevant info from phrase
         let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
-            username, from_doc_title, def,
+            uid, username, from_doc_title, def,
             phrase, phrase_phonetics, phrase_html,
             cn_type, cn_phonetics, created_on
         };
@@ -293,6 +326,34 @@ impl UserVocab {
             Err(_) => { res = false; }
         }
         return res;
+    }
+
+    /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>
+    /// where each inner Vec<String> represents the list of values for all documents
+    /// matching the input query. A Vec upper-bound can be specified.
+    pub fn get_doc_fields_as_vectors(db: &Database, query_doc: Document, fields: Vec<&str>, capacity: Option<usize>) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
+        let mut res_hmap: HashMap<String, Vec<String>> = HashMap::new();
+        for key in &fields {
+            match capacity {
+                Some(capacity) => { res_hmap.insert(String::from(*key), Vec::<String>::with_capacity(capacity)); },
+                None => { res_hmap.insert(String::from(*key), Vec::<String>::new()); }
+            }
+        }
+        let coll = (*db).collection(USER_VOCAB_COLL_NAME);
+        match coll.find(query_doc, None) {
+            Ok(cursor) => {
+                for item in cursor {
+                    let doc = item?;
+                    for key in &fields {
+                        res_hmap.get_mut(*key)
+                            .unwrap()
+                            .push(String::from(doc.get_str(key)?));
+                    }
+                }
+            },
+            Err(e) => { return Err(Box::new(e)) }
+        }
+        return Ok(res_hmap);
     }
 }
 

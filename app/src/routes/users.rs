@@ -8,6 +8,8 @@
 /// |   └── /api/delete-doc/<doc_title>
 /// |   └── /api/delete-vocab/<phrase>
 /// |   └── /api/logout
+/// |   └── /api/docs-to-csv TODO
+/// |   └── /api/vocab-to-csv TODO
 /// |
 /// └── POST
 ///     └── /api/login
@@ -16,8 +18,6 @@
 ///     └── /api/url-upload
 ///     └── /api/vocab
 ///     └── /api/update-settings
-///     └── /api/documents-to-csv TODO
-///     └── /api/vocab-to-csv TODO
 */
 
 use crate::{
@@ -25,20 +25,27 @@ use crate::{
     DatabaseItem,
     auth::{generate_http_cookie, get_username_from_cookie},
     config::JWT_NAME,
-    html::{render_document_table, render_vocab_table},
+    html as html_rendering,
     models::{
         user::{User, UserDoc, UserVocab, UserVocabList},
         zh::{CnType, CnPhonetics}
     }
 };
-use mongodb::sync::Database;
+use mongodb::{
+    bson::doc,
+    sync::Database
+};
 use rocket::{
     http::{RawStr, Cookie, Cookies, Status},
     request::Form,
     response::Redirect,
     State,
 };
-use rocket_contrib::templates::Template;
+use rocket_contrib::{
+    json::Json,
+    templates::Template
+};
+use serde::Serialize;
 use std::collections::HashMap;
 use tokio::runtime::Handle;
 
@@ -52,8 +59,8 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
         Some(s) => { 
             if &s == &username {
                 let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-                let doc_html = render_document_table(&db, &username);
-                let vocab_html = render_vocab_table(&db, &username);
+                let doc_html = html_rendering::render_document_table(&db, &username);
+                let vocab_html = html_rendering::render_vocab_table(&db, &username);
             
                 context.insert("doc_table", doc_html);
                 context.insert("vocab_table", vocab_html);
@@ -121,6 +128,68 @@ pub fn logout_user(mut cookies: Cookies) -> Redirect {
     removal_cookie.set_path("/");
     cookies.remove(removal_cookie);
     return Redirect::to("/");
+}
+
+#[derive(Serialize)]
+pub struct UserDocCsvList {
+    title: Vec<String>,
+    body: Vec<String>,
+    source: Vec<String>,
+    created_on: Vec<String>
+}
+
+#[get("/api/docs-to-csv")]
+pub fn documents_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserDocCsvList> {
+    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
+        Some(username) => {
+            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
+        },
+        None => doc! { "username": "" }
+    };
+    // upper-bound at 2500 docs (approx match with <=5MB csv limit), update as needed
+    const CAPACITY: usize = 2500;
+    let fields: Vec<&str> = vec!["title", "body", "source", "created_on"];
+    let field_vals = UserDoc::get_doc_fields_as_vectors(&db, query_doc, fields.clone(), Some(CAPACITY)).unwrap();
+    let csv_list = UserDocCsvList {
+        title: field_vals.get(fields[0]).unwrap().to_vec(),
+        body: field_vals.get(fields[1]).unwrap().to_vec(),
+        source: field_vals.get(fields[2]).unwrap().to_vec(),
+        created_on: field_vals.get(fields[3]).unwrap().to_vec()
+    };
+    return Json(csv_list);
+}
+
+#[derive(Serialize)]
+pub struct UserVocabCsvList {
+    phrase: Vec<String>,
+    phrase_phonetics: Vec<String>,
+    def: Vec<String>,
+    from_doc_title: Vec<String>,
+    created_on: Vec<String>
+}
+
+#[get("/api/vocab-to-csv")]
+pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVocabCsvList> {
+    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
+        Some(username) => {
+            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
+        },
+        None => doc! { "username": "" }
+    };
+    // upper-bound at 100000 vocab (approx match with <=5MB csv limit), update as needed
+    const CAPACITY: usize = 100000;
+    let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "created_on"];
+    let field_vals = UserVocab::get_doc_fields_as_vectors(&db, query_doc, fields.clone(), Some(CAPACITY)).unwrap();
+    let csv_list = UserVocabCsvList {
+        phrase: field_vals.get(fields[0]).unwrap().to_vec(),
+        phrase_phonetics: field_vals.get(fields[1]).unwrap().to_vec(),
+        def: field_vals.get(fields[2]).unwrap().to_vec(),
+        from_doc_title: field_vals.get(fields[3]).unwrap().to_vec(),
+        created_on: field_vals.get(fields[4]).unwrap().to_vec()
+    };
+    return Json(csv_list);
 }
 
 /* POST */

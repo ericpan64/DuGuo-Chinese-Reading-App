@@ -57,6 +57,11 @@ pub trait DatabaseItem {
     fn as_bson(&self) -> Bson where Self: Serialize {
         return bson::to_bson(self).unwrap();
     }
+    fn try_get_field_as_string(&self, db: &Database, lookup_key: &str, lookup_value: &str, get_key: &str) -> Result<String, Box<dyn Error>> where Self: Serialize {
+        let coll = (*db).collection(self.collection_name());
+        let found_doc = coll.find_one(doc! { lookup_key: lookup_value }, None)?.unwrap();
+        return Ok(found_doc.get(get_key).and_then(Bson::as_str).unwrap().to_string());
+    }
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
@@ -132,6 +137,8 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             routes::users::delete_user_doc,
             routes::users::delete_user_vocab,
             routes::users::update_settings,
+            routes::users::documents_to_csv_json,
+            routes::users::vocab_to_csv_json,
             routes::users::logout_user])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/static")))
         .launch();
