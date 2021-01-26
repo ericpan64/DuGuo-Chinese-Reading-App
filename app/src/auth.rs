@@ -49,7 +49,7 @@ pub fn generate_http_cookie(db: &Database, username: String, password: String) -
     let jwt = match generate_jwt(db, username, password) {
         Ok(token) => token,
         Err(e) => {
-            println!("Error when generating jwt: {:?}", e);
+            eprintln!("Error when generating jwt: {:?}", e);
             String::new()
         }
     };
@@ -130,7 +130,7 @@ fn validate_jwt_and_get_username(db: &Database, token: &str) -> Option<String> {
             username
         }
         Err(e) => {
-            println!("Error when validating JWT: {:?}", e);
+            eprintln!("Error when validating JWT: {:?}", e);
             None
         }
     };

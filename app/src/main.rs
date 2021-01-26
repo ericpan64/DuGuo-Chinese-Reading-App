@@ -1,6 +1,5 @@
 /*
-/// Launches website! 
-/// 3... 2... 1...
+/// Launches website!
 */
 
 use duguo; // lib.rs
