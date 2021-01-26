@@ -78,7 +78,8 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
     res += "<table id=\"doc-table\" class=\"table table-hover\">\n";
-    res += "<thead class=\"table-light\">\n<tr><th>Title</th><th>Source</th><th>Created On (UTC)</th><th>Delete</th></tr>\n</thead>\n";
+    res += "<thead class=\"table-light\">\n<tr><th>Title</th><th>Source</th><th>Created On (UTC)</th><th>Delete</th></tr>\n";
+    res += "</thead>\n";
     let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
     match coll.find(query_doc, None) {
         Ok(cursor) => {
@@ -117,7 +118,8 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
     res += "<table id=\"vocab-table\" class=\"table table-hover\">\n";
-    res += "<thead class=\"table-light\">\n<tr><th>Phrase</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n</thead>\n";
+    res += "<thead class=\"table-light\">\n<tr><th>Phrase</th><th>Saved From (plaintext)</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
+    res += "</thead>\n";
     let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
     match coll.find(query_doc, None) {
         Ok(cursor) => {
@@ -126,8 +128,9 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserVocab { from_doc_title, phrase, phrase_html, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap();
+                let UserVocab { uid, from_doc_title, phrase, phrase_html, created_on, .. } = from_bson(Bson::Document(user_doc)).unwrap();
                 let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
+                let phrase_html = remove_download_link_from_phrase_html(phrase_html, &uid);
                 let row = format!("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, &created_on[0..10], &delete_button);
                 res += &row;
             }
@@ -136,6 +139,15 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
         Err(e) => { eprintln!("Error when searching for vocab for user {}: {:?}", username, e); }
     }
     res += "<caption hidden>List of your saved documents.</caption>\n</table>";
+    return res;
+}
+
+/// Assumes that the download link in phrase_html is the following format:
+///  <a role=&quot;button&quot; href=&quot;#{uid}&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>
+/// Note: there is a single space in front of the link (which also gets removed).
+pub fn remove_download_link_from_phrase_html(phrase_html: String, uid: &str) -> String {
+    let download_link = format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>", uid);
+    let res = phrase_html.replace(&download_link, "");
     return res;
 }
 

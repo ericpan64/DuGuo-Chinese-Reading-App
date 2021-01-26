@@ -6,26 +6,6 @@ let sayPhrase = (phrase) => {
     return window.speechSynthesis.speak(utterance);
 }
 /// Handle Hash Changes
-let postNewVocab = (hash_string) => {
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/vocab");
-    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    let params = `saved_phrase=${hash_string}&from_doc_title=${document.title}`;
-    xhr.onload = () => {
-        if (xhr.status == 202) {
-            alert(`Successfully added ${hash_string} to your dictionary!`);
-            try { user_saved_phrase_list = user_saved_phrase_list.concat(hash_string.split('')); } 
-            finally { switchOffWordVisibility(hash_string); }
-            
-        } else {
-            alert(`Error when adding ${hash_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should provide some feedback :-)`);
-        }
-    }
-    xhr.onerror = () => {
-        alert(`Error when adding ${hash_string} to dictionary. Try again and/or open a Github issue`);
-    }
-    xhr.send(params);
-}
 let postUserSetting = (hash_string) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/update-settings");
@@ -51,6 +31,35 @@ let postUserSetting = (hash_string) => {
     }
     xhr.send(params);
 }
+let postNewVocab = (hash_string) => {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/vocab");
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    let params = `saved_phrase=${hash_string}&from_doc_title=${document.title}`;
+    xhr.onload = () => {
+        if (xhr.status == 202) {
+            alert(`Successfully added ${hash_string} to your dictionary!`);
+            try { user_saved_phrase_list = user_saved_phrase_list.concat(hash_string.split('')); } 
+            finally { switchOffWordVisibility(hash_string); }
+            
+        } else {
+            alert(`Error when adding ${hash_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should provide some feedback :-)`);
+        }
+    }
+    xhr.onerror = () => {
+        alert(`Error when adding ${hash_string} to dictionary. Try again and/or open a Github issue`);
+    }
+    xhr.send(params);
+}
+let removeDownloadLink = (uid) => {
+    download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
+    let spans = document.getElementsByClassName(uid);
+    const title_attr = "data-bs-original-title";
+    for (let i=0; i < spans.length; i++) {
+        let new_title = spans[i].getAttribute(title_attr).replace(download_link, "");
+        spans[i].setAttribute(title_attr, new_title);
+    }
+}
 let parseHashChange = () => {
     if (location.hash) {
         let hash_string = location.hash.substring(1);
@@ -68,6 +77,7 @@ let parseHashChange = () => {
             postUserSetting(hash_string);
         } else {
             postNewVocab(hash_string);
+            removeDownloadLink(hash_string);
         }
     }
 }
