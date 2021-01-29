@@ -114,7 +114,7 @@ def render_phrase_table_html(phrase, uid, raw_pinyin, formatted_pinyin, defn, zh
         n_words = len(word_list)
         res = ''
         phonetics = raw_pinyin if use_pinyin else zhuyin
-        span_start = f'<span class={uid} tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
+        span_start = f'<span class="{uid}" tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" \
             title="{phrase} [{phonetics}] \
             <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a> \
             <a role=&quot;button&quot; href=&quot;#{uid}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
@@ -232,7 +232,7 @@ if __name__ == '__main__':
     redis_loaded = False
     while not redis_loaded:
         try:
-            # conn.flushdb() # local testing
+            conn.flushdb() # local testing
             size = conn.dbsize()
             redis_loaded = True
         except:
