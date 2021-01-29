@@ -71,7 +71,7 @@ let parseHashChange = () => {
         // Otherwise, Saving Vocab
         if (hash_string.charAt(0) == '~') {
             hash_string = hash_string.substring(1);
-            sayPhrase(hash_string); // defined in "template.html.tera"
+            sayPhrase(hash_string);
         } else if (hash_string.charAt(0) == '$') {
             hash_string = hash_string.substring(1);
             postUserSetting(hash_string);

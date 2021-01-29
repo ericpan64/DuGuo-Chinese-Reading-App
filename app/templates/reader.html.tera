@@ -12,22 +12,28 @@
                     <ul>
                         <li><strong>Click</strong> on a phrase to view more information, speech-to-text, and save it to your dictionary. <strong>Click</strong> again to close a phrase.</li>
                         <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase, or <strong>Shift + Tab</strong> to move to the previous phrase.</li>
-                        <li>Use the buttons to toggle phonetics settings.</li>
-                        <li>Use the <strong>Space</strong> button to Start/Stop the Text-to-Speech reading.</li>
+                        <li>Use the <strong>r</strong> key to Start/Stop the Text-to-Speech reading.</li>
                         <li>Press <strong>any key</strong> to close all active pop-ups.</li>
+                        <li>Use the buttons to toggle phonetics settings.</li>
                     </ul>
                 </div>
             </div>
             <br><br>
-            {% if cn_phonetics == "Zhuyin" %}
-            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Zhuyin</button>
-            <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics(all_zhuyin_list)">Hide All Zhuyin</button>
-            <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics(all_zhuyin_list)">Reset All Zhuyin</button>
-            {% else %}
-            <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Pinyin</button>
-            <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics(all_pinyin_list)">Hide All Pinyin</button>
-            <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics(all_pinyin_list)">Reset All Pinyin</button>
-            {% endif %}
+            <div class="btn-group" role="group" aria-label="Settings for phonetics visibility.">
+                {% if cn_phonetics == "Zhuyin" %}
+                <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Zhuyin</button>
+                <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics(all_zhuyin_list)">Hide All Zhuyin</button>
+                <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics(all_zhuyin_list)">Reset All Zhuyin</button>
+                {% else %}
+                <button id="hide-saved" class="btn btn-primary border border-light" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Pinyin</button>
+                <button id="hide-all" class="btn btn-primary border border-light" onclick="hideAllPhonetics(all_pinyin_list)">Hide All Pinyin</button>
+                <button id="reset-all" class="btn btn-primary border border-light" onclick="resetAllPhonetics(all_pinyin_list)">Reset All Pinyin</button>
+                {% endif %}
+            </div>
+            <div class="btn-group" role="group" aria-label="Settings for document reader.">
+                <button id="read-start-stop" class="btn btn-primary border border-light" onclick="trigger_reader()">Read Document Aloud</button>
+                <button id="read-reset" class="btn btn-primary border border-light" onclick="reset_reader()">Reset Reader Position</button>
+            </div>
         </div>
         <br>
         {{ paragraph_html | safe }}
@@ -48,5 +54,6 @@
     let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
     {% endif %}
 </script>
+<script src="/static/handleKeyEvents.js"></script>
 <script src="/static/handlePhonetics.js"></script>
 {% endblock content %}
