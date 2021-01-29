@@ -32,7 +32,7 @@
     document.title = "Sandbox";
     {% else %}
     let current_url = window.location.href.split("/");
-    document.title = current_url[current_url.length - 1];
+    document.title = decodeURIComponent(current_url[current_url.length - 1]);
     {% endif %}
     /// Button Functionality
     {% if user_vocab_list_string is undefined %}
