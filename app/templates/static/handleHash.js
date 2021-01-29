@@ -1,4 +1,9 @@
 // Text-to-Speech
+// Wait for speechSynthesis load if available. from: https://stackoverflow.com/a/62032443/13073731
+if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    speechSynthesis.getVoices();
+}
 let sayPhrase = (phrase) => {
     let utterance = new SpeechSynthesisUtterance(phrase);
     utterance.lang = 'zh-CN';
