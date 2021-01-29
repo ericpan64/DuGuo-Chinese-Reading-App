@@ -44,16 +44,17 @@ let download_vocab_table_as_csv = (anchor_id) => {
     xhr.open("GET", "/api/vocab-to-csv");
     xhr.onreadystatechange = () => {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            let csv_header = 'phrase,phonetics,definition,from_doc_title,saved_on\n';
+            let csv_header = 'phrase,phonetics,definition,radical_map,from_doc_title,saved_on\n';
             let csv_body = '';
             let json = JSON.parse(xhr.response);
             for (i = 0; i < json.phrase.length; i++) {
                 let phrase = escape_formatting(json.phrase[i]);
                 let phonetics = escape_formatting(json.phrase_phonetics[i]);
                 let def = escape_formatting(json.def[i]);
+                let radical_map = escape_formatting(json.radical_map[i]);
                 let from_doc = escape_formatting(json.from_doc_title[i]);
                 let created_on = escape_formatting(json.created_on[i]);
-                csv_body += `${phrase},${phonetics},${def},${from_doc},${created_on}\n`;
+                csv_body += `${phrase},${phonetics},${def},${radical_map},${from_doc},${created_on}\n`;
             }
             let csv = csv_header + csv_body;
             perform_download(csv, anchor_id, 'duguo-vocab.csv');

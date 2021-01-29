@@ -101,7 +101,8 @@ pub struct CnEnDictEntry {
     def: String,
     zhuyin: String,
     pub trad_zhuyin_html: String,
-    pub simp_zhuyin_html: String
+    pub simp_zhuyin_html: String,
+    pub radical_map: String
 }
 
 /// For CnEnDictEntry, the current uid is generated using: vec![simp, raw_pinyin]
@@ -124,6 +125,7 @@ impl CnEnDictEntry {
                     zhuyin: query_map.get("zhuyin").unwrap().to_owned(),
                     trad_zhuyin_html: query_map.get("trad_zhuyin_html").unwrap().to_owned(),
                     simp_zhuyin_html: query_map.get("simp_zhuyin_html").unwrap().to_owned(),
+                    radical_map: query_map.get("radical_map").unwrap().to_owned(),
                 }
         };
         return res;

@@ -8,8 +8,8 @@
 /// |   └── /api/delete-doc/<doc_title>
 /// |   └── /api/delete-vocab/<phrase>
 /// |   └── /api/logout
-/// |   └── /api/docs-to-csv TODO
-/// |   └── /api/vocab-to-csv TODO
+/// |   └── /api/docs-to-csv
+/// |   └── /api/vocab-to-csv
 /// |
 /// └── POST
 ///     └── /api/login
@@ -166,6 +166,7 @@ pub struct UserVocabCsvList {
     phrase_phonetics: Vec<String>,
     def: Vec<String>,
     from_doc_title: Vec<String>,
+    radical_map: Vec<String>,
     created_on: Vec<String>
 }
 
@@ -180,14 +181,15 @@ pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVoca
     };
     // upper-bound at 100000 vocab (approx match with <=5MB csv limit), update as needed
     const CAPACITY: usize = 100000;
-    let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "created_on"];
+    let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "radical_map", "created_on"];
     let field_vals = UserVocab::get_doc_fields_as_vectors(&db, query_doc, fields.clone(), Some(CAPACITY)).unwrap();
     let csv_list = UserVocabCsvList {
         phrase: field_vals.get(fields[0]).unwrap().to_vec(),
         phrase_phonetics: field_vals.get(fields[1]).unwrap().to_vec(),
         def: field_vals.get(fields[2]).unwrap().to_vec(),
         from_doc_title: field_vals.get(fields[3]).unwrap().to_vec(),
-        created_on: field_vals.get(fields[4]).unwrap().to_vec()
+        radical_map: field_vals.get(fields[4]).unwrap().to_vec(),
+        created_on: field_vals.get(fields[5]).unwrap().to_vec()
     };
     return Json(csv_list);
 }

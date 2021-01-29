@@ -278,7 +278,8 @@ pub struct UserVocab {
     /// If pinyin, formatted_pinyin
     phrase_phonetics: String, 
     pub phrase_html: String,
-    pub created_on: String
+    pub created_on: String,
+    pub radical_map: String
 }
 
 impl DatabaseItem for UserVocab {
@@ -304,12 +305,13 @@ impl UserVocab {
         let uid = saved_uid.clone();
         let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
+        let radical_map = (&entry.radical_map).to_string();
         // extract relevant info from phrase
         let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
             uid, username, from_doc_title, def,
             phrase, phrase_phonetics, phrase_html,
-            cn_type, cn_phonetics, created_on
+            cn_type, cn_phonetics, created_on, radical_map
         };
         return new_vocab;
     }

@@ -3,7 +3,8 @@ from pypinyin import pinyin as pfmt
 from pypinyin import Style
 import pandas as pd
 import redis
-from config import *
+from config import DB_NAME, DB_URI, USER_COLL_NAME, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, USER_VOCAB_LIST_COLL_NAME
+from config import REDIS_HOST, REDIS_PORT, SORTED_CEDICT_CSV_PATH, RADICALS_OUTPUT_PATH
 
 def init_mongodb():
     """
@@ -143,11 +144,13 @@ def load_cedict(conn):
     """
     Performs the CEDICT load into the specified collection
     """
-    print(f'Loading CEDICT from {SORTED_CEDICT_CSV_PATH} - this takes a few seconds...')
-    cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
+    print(f'Loading CEDICT to Redis from {SORTED_CEDICT_CSV_PATH} - this takes a few seconds...')
+    print(f'Using radical information from {RADICALS_OUTPUT_PATH}')
+    cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0) # line_in_original
+    radical_df = pd.read_csv(RADICALS_OUTPUT_PATH, index_col=1) # char
     entry_list = []
     prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
-    prev_defn = '$'
+    prev_defn = '$' # Track when one definition is superset of other, init to dummy value
     flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
     uid_set = set()
     for _, row in cedict_df.iterrows():
@@ -182,6 +185,12 @@ def load_cedict(conn):
         trad_html, trad_zhuyin_html = render_phrase_table_html(trad, uid, raw_pinyin, formatted_pinyin, defn, zhuyin)
         simp_html, simp_zhuyin_html = render_phrase_table_html(simp, uid, raw_pinyin, formatted_pinyin, defn, zhuyin)
 
+        # get radical information
+        lookup_radical = lambda char: "NA" if char not in radical_df.index else radical_df.loc[char].radical_char
+        radical_map = { c: lookup_radical(c) for c in simp }
+        radical_map = str(radical_map).replace("'", '')
+        radical_map = radical_map.replace(',', ',\n') # make newlines for readability
+
         # append entry
         entry_list.append({
             'uid': uid,
@@ -194,7 +203,8 @@ def load_cedict(conn):
             'simp_html': simp_html,
             'zhuyin': zhuyin,
             'trad_zhuyin_html': trad_zhuyin_html,
-            'simp_zhuyin_html': simp_zhuyin_html
+            'simp_zhuyin_html': simp_zhuyin_html,
+            'radical_map': radical_map
         })
 
         # update prev items
@@ -222,6 +232,7 @@ if __name__ == '__main__':
     redis_loaded = False
     while not redis_loaded:
         try:
+            # conn.flushdb() # local testing
             size = conn.dbsize()
             redis_loaded = True
         except:
