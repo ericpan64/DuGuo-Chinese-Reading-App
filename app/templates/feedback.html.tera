@@ -9,7 +9,7 @@
 <textarea name="feedback" form="upload" rows="10" cols="100" required>Add your feedback here!</textarea>
 <form action="/api/feedback" id="upload" onsubmit="addDateTime()" method="POST">
     <input type="text" name="contact" placeholder="Contact (optional)">
-    <br/><br/>
+    <br><br>
     <button class="btn btn-outline-primary" type="submit">Submit</button>
 </form>
 <script>
