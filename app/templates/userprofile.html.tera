@@ -1,6 +1,14 @@
 {% extends "template" %}
 {% block title %}Profile{% endblock title %}
-{% block head %} {{ super() }} {% endblock head %}
+{% block head %} 
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.css"/>
+    <style>
+        table {
+            text-align: center;
+        }
+    </style>
+{% endblock head %}
 {% block content %}
 
 {% if username is undefined %}
@@ -12,7 +20,8 @@
     {% if logged_in_username is undefined %}
         <p> Log-in to view documents + vocab! </p>
     {% elif logged_in_username == username %}
-        <h4>Settings</h4>
+        <hr>
+        <h5>Settings</h5>
             <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
             {% if cn_phonetics == "Zhuyin" %}
             Use Zhuyin
@@ -35,44 +44,47 @@
             <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
             <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
             </ul>
+        <br><br><br>
+            <h4>Upload Document</h4>
+            <hr>
+            <h5>Copy & Paste</h5>
+            <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
+                <input type="text" name="title" placeholder="Document Title" required><br>
+                <input type="text" name="source" placeholder="Document Source (optional)">
+                <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
+                <textarea class="form-control" name="body" form="user-doc-form" rows="2" cols="35" required></textarea>
+                <br>
+            </form>
+            <h5>Auto-Parse from URL</h5>
+            <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                <input type="text" name="url" placeholder="Document URL" required>
+                <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload URL</button>
+            </form>
         <br><br>
         <div class="row">
             <div class="col-md">
                 {# Document Table #}
                 <h4>View Documents</h4>
-                <div style="overflow-y: auto">
+                <hr>
                 {{ doc_table | safe }}
-                </div>
-                 <h4>Upload Document</h4>
-                    <br>
-                        <h5>Auto-Parse from URL</h5>
-                        <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
-                            <input type="text" name="url" placeholder="Document URL" required>
-                            <br><br>
-                            <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
-                        </form>
-                        <br>
-                        <h5>Copy & Paste</h5>
-                        <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
-                            <input type="text" name="title" placeholder="Document Title" required>
-                            <br><br>
-                            <textarea class="form-control" name="body" form="user-doc-form" rows="5" cols="35" required></textarea>
-                            <br>
-                            <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
-                        </form>
+                <p><strong>*Note*</strong>: deleting a Document also deletes Saved Vocab linked to that Document. You've been warned!</p>
+                <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
             </div>
             <div class="col-md">
                 <h4>View Saved Vocab</h4>
+                <hr>
                 {# Vocab Table #}
-                <div style="overflow-y: auto">
                 {{ vocab_table | safe }}
-                </div>
+                <button class="btn btn-outline-primary" onclick="download_vocab_table_as_csv('hidden-download-a')">Export Vocab as .csv</button>
             </div>
         </div>
+        <a id="hidden-download-a" hidden></a>
     {% else %}
         <p> Currently viewing other user. </p>
     {% endif%}
 {% endif %}
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
+<script src="/static/handleTables.js"></script>
 <script>
     // Update active navbar
     document.getElementById("nav2").classList.add("active");

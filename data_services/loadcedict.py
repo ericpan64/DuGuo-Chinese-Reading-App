@@ -2,7 +2,9 @@ from pymongo import MongoClient
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
 import pandas as pd
-from config import *
+import redis
+from config import DB_NAME, DB_URI, USER_COLL_NAME, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, USER_VOCAB_LIST_COLL_NAME
+from config import REDIS_HOST, REDIS_PORT, SORTED_CEDICT_CSV_PATH, RADICALS_OUTPUT_PATH
 
 def init_mongodb():
     """
@@ -11,17 +13,11 @@ def init_mongodb():
     client = MongoClient(DB_URI)
     db = client[DB_NAME]
     colls = {
-        'cedict': db[CEDICT_COLL_NAME],
         'user': db[USER_COLL_NAME],
         'user_docs': db[USER_DOC_COLL_NAME],
         'user_vocab': db[USER_VOCAB_COLL_NAME],
         'user_vocab_list': db[USER_VOCAB_LIST_COLL_NAME]
     }
-    # CEDICT Indices
-    colls['cedict'].create_index([ ("simp", 1) ])
-    colls['cedict'].create_index([ ("trad", 1) ])
-    colls['cedict'].create_index([ ("simp", 1), ("raw_pinyin", -1) ], unique=True)
-    colls['cedict'].create_index([ ("trad", 1), ("raw_pinyin", -1) ])
     # User Indices
     colls['user'].create_index([ ("username", 1)], unique=True)
     colls['user'].create_index([ ("email", 1)], unique=True)
@@ -38,7 +34,7 @@ def init_mongodb():
     # User Vocab List Index
     colls['user_vocab_list'].create_index([ ("username", 1) ])
     colls['user_vocab_list'].create_index([ ("username", 1), ("cn_type", 1) ], unique=True)
-    return colls['cedict']
+    return
 
 def convert_digits_to_chars(s):
     """
@@ -84,7 +80,7 @@ def format_defn_html(defn_in):
                 res += f'{j+1}. {d}'
     return res
 
-def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin):
+def render_phrase_table_html(phrase, uid, raw_pinyin, formatted_pinyin, defn, zhuyin):
     """ 
     Takes CEDICT entry information and generates corresponding HTML
     """
@@ -118,10 +114,10 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
         n_words = len(word_list)
         res = ''
         phonetics = raw_pinyin if use_pinyin else zhuyin
-        span_start = f'<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="{format_defn_html(defn)}" \
+        span_start = f'<span class="{uid}" tabindex="0" data-bs-toggle="popover" data-bs-content="{format_defn_html(defn)}" \
             title="{phrase} [{phonetics}] \
             <a role=&quot;button&quot; href=&quot;#~{phrase}&quot;><img src=&quot;{sound_icon_loc}&quot;></img></a> \
-            <a role=&quot;button&quot; href=&quot;#{phrase}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
+            <a role=&quot;button&quot; href=&quot;#{uid}&quot;><img src=&quot;{download_icon_loc}&quot;></img></a>" \
             data-bs-html="true">' # ... dear neptune...
         res += span_start.replace('            ', '')
         res += '<table style="display: inline-table; text-align: center;">'
@@ -144,20 +140,19 @@ def render_phrase_table_html(phrase, raw_pinyin, formatted_pinyin, defn, zhuyin)
     res_zhuyin = perform_render(use_pinyin=False)
     return (res_pinyin, res_zhuyin)
 
-def load_cedict(coll):
+def load_cedict(conn):
     """
     Performs the CEDICT load into the specified collection
     """
-    if coll.estimated_document_count() > 100000:
-        print('CEDICT is already loaded -- skipping operation...')
-        return
-
-    SORTED_CEDICT_CSV_PATH = 'static/sorted_cedict_ts.csv'
-    print(f'Loading CEDICT from {SORTED_CEDICT_CSV_PATH} - this takes a few seconds...')
-    cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0)
+    print(f'Loading CEDICT to Redis from {SORTED_CEDICT_CSV_PATH} - this takes a few seconds...')
+    print(f'Using radical information from {RADICALS_OUTPUT_PATH}')
+    cedict_df = pd.read_csv(SORTED_CEDICT_CSV_PATH, index_col=0) # line_in_original
+    radical_df = pd.read_csv(RADICALS_OUTPUT_PATH, index_col=1) # char
     entry_list = []
     prev_trad, prev_simp, prev_raw_pinyin = None, None, None # Track lines with identical pinyin + phrase
-    prev_defn = '$'
+    prev_defn = '$' # Track when one definition is superset of other, init to dummy value
+    flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
+    uid_set = set()
     for _, row in cedict_df.iterrows():
         trad, simp, raw_pinyin, defn = row
 
@@ -170,7 +165,6 @@ def load_cedict(coll):
             continue
 
         # get formatted pinyin
-        flatten_list = lambda l: [i for j in l for i in j] # [[a], [b], [c]] => [a, b, c]
         formatted_simp = convert_digits_to_chars(simp)
         formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
 
@@ -187,11 +181,19 @@ def load_cedict(coll):
             defn = last_entry['def'] + '$' + defn
 
         # render html
-        trad_html, trad_zhuyin_html = render_phrase_table_html(trad, raw_pinyin, formatted_pinyin, defn, zhuyin)
-        simp_html, simp_zhuyin_html = render_phrase_table_html(simp, raw_pinyin, formatted_pinyin, defn, zhuyin)
+        uid = simp.replace(' ', '') + raw_pinyin.replace(' ', '')
+        trad_html, trad_zhuyin_html = render_phrase_table_html(trad, uid, raw_pinyin, formatted_pinyin, defn, zhuyin)
+        simp_html, simp_zhuyin_html = render_phrase_table_html(simp, uid, raw_pinyin, formatted_pinyin, defn, zhuyin)
+
+        # get radical information
+        lookup_radical = lambda char: "NA" if char not in radical_df.index else radical_df.loc[char].radical_char
+        radical_map = { c: lookup_radical(c) for c in simp }
+        radical_map = str(radical_map).replace("'", '')
+        radical_map = radical_map.replace(',', ',\n') # make newlines for readability
 
         # append entry
         entry_list.append({
+            'uid': uid,
             'trad': trad,
             'simp': simp,
             'raw_pinyin': raw_pinyin,
@@ -201,17 +203,41 @@ def load_cedict(coll):
             'simp_html': simp_html,
             'zhuyin': zhuyin,
             'trad_zhuyin_html': trad_zhuyin_html,
-            'simp_zhuyin_html': simp_zhuyin_html
+            'simp_zhuyin_html': simp_zhuyin_html,
+            'radical_map': radical_map
         })
-    
+
         # update prev items
         prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
         prev_defn = defn
 
-    print('Loaded. Sending to db...')
-    coll.insert_many(entry_list)
+    # add to Redis
+    print("Loading CEDICT to Redis, this takes a few minutes...")
+    for entry in entry_list:
+        uid = entry['uid']
+        assert(uid not in uid_set)
+        uid_set.add(uid)
+        for k in entry:
+            assert(conn.hset(uid, k, entry[k]) == 1)
     return
 
 if __name__ == '__main__':
-    cedict_coll = init_mongodb()
-    load_cedict(cedict_coll)
+    try:
+        init_mongodb()
+        print('Generated indices in mongoDB')
+    except:
+        print('Skipping mongoDB index generation...')
+    conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    print("Waiting for Redis load...")
+    redis_loaded = False
+    while not redis_loaded:
+        try:
+            conn.flushdb() # local testing
+            size = conn.dbsize()
+            redis_loaded = True
+        except:
+            pass
+    if size > 110000:
+        print('Redis has >110k documents - thus assuming CEDICT is loaded, skipping operation...')
+    else:
+        load_cedict(conn)

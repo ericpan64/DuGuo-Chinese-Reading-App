@@ -7,31 +7,31 @@
     <h3>Currently logged-in as: {{username}}</h3>
     {% endif %}
     <h1 class="h1">Login</h1>
-    <br/>
+    <br>
     <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
-        <br/>
+        <br>
         <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
-        <br/>
-        <button class="btn btn-primary" type="submit">Log In</button>
-        <br/>
+        <br>
+        <button class="btn btn-outline-primary" type="submit">Log In</button>
+        <br>
     </form>
-    <br/>
+    <br>
     <h1 class="h1">Register</h1>
-    <br/>
+    <br>
     <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
         <input class="form-control" type="text" name="username" placeholder="Username" required>
-        <br/>
+        <br>
         <input class="form-control" type="email" name="email" placeholder="Email" required>
-        <br/>
+        <br>
         <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
-        <br/>
-        <button class="btn btn-primary" type="submit">Register</button>
+        <br>
+        <button class="btn btn-outline-primary" type="submit">Register</button>
     </form>
-    <br/>
+    <br>
     <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
-    <br/><br/>
-    <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \</p>
+    <br><br>
+    <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \ *</p>
 </div>
 <script>
     // Update active navbar

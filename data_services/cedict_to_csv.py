@@ -1,25 +1,6 @@
 
 """
-Pseudocode:
-- Open CEDICT file
-- Grab the following data:
-    trad: up to first space
-    simp: up to second space
-    raw_pinyin: between the []
-    defn: the /-split definition surrounded by double-quotes
-- Write to static/cedict.csv
-
-Test:
-- Import csv with pandas
-- Sort by raw_pinyin, then simp, then trad
-- Export as_csv to static/cedict_sorted.csv
-
-Manually verify:
-- Order makes sense (want to create unique index on raw_pinyin + simp)
-
-Afterwards:
-- Modify CEDICT loading code to use sorted csv
-
+Generates CEDICT .csv for Redis load
 """
 import pandas as pd
 from os import remove
@@ -51,12 +32,22 @@ def generate_delimited_cedict(input_path, output_path):
                 saved_line = f"{trad}${simp}${raw_pinyin}${defn}\n"
                 fout.write(saved_line)
 
+def fix_cedict_edge_cases(df):
+    """ 
+    Fix significant CEDICT edge cases that don't match with tokenizer. 
+    Expand and document as-appropriate 
+    """
+    # Line  : 2451,不是,不是,bu4 shi4,/no/is not/not/ 
+    # Change: bu4 shi4 => bu2 shi4
+    df.loc[2451, 'raw_pinyin'] = 'bu2 shi4'
+    
 def sort_delimited_cedict(input_path, output_path):
     """ Generates sorted .csv file """
     df = pd.read_csv(input_path, delimiter='$')
     df.index = range(N_COMMENTS + 1, df.index.size + N_COMMENTS + 1)
     df.index.name = 'line_in_original'
     df = df.sort_values(['simp', 'raw_pinyin', 'trad'], ascending=True)
+    fix_cedict_edge_cases(df)
     df.to_csv(output_path)
 
 if __name__ == '__main__':
