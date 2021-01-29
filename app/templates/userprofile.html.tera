@@ -62,12 +62,14 @@
             </form>
 
         <br><br>
+        
         <div class="row">
             <div class="col-md">
                 {# Document Table #}
                 <h4>View Documents</h4>
                 <hr>
                 {{ doc_table | safe }}
+                <p><strong>*Note*</strong>: deleting a Document also deletes Saved Vocab linked to that Document. You've been warned!</p>
                 <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
             </div>
             <div class="col-md">

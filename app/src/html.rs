@@ -118,7 +118,7 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
     res += "<table id=\"vocab-table\" class=\"table table-hover\">\n";
-    res += "<thead class=\"table-light\">\n<tr><th>Phrase</th><th>Saved From (plaintext)</th><th>Radical Map</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
+    res += "<thead class=\"table-light\">\n<tr><th>Phrase</th><th>Saved From</th><th>Radical Map</th><th>Saved On (UTC)</th><th>Delete</th></tr>\n";
     res += "</thead>\n";
     let query_doc = doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
     match coll.find(query_doc, None) {
@@ -129,6 +129,7 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
                 let UserVocab { uid, from_doc_title, phrase, phrase_html, created_on, radical_map, .. } = from_bson(Bson::Document(user_doc)).unwrap();
+                let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
                 let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
                 let phrase_html = remove_download_link_from_phrase_html(phrase_html, &uid);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);

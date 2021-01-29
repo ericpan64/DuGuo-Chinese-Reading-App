@@ -217,7 +217,7 @@ impl UserDoc {
     }
 
     pub fn get_body_html_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
-        let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() };
         let doc_body = match coll.find_one(query_doc, None).unwrap() {
@@ -228,10 +228,16 @@ impl UserDoc {
     }
 
     pub fn try_delete(db: &Database, username: &str, title: &str) -> bool {
+        let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
-        let query_doc = doc! { "username": username, "title": title }; 
+        let query_doc = doc! { "username": username, "title": title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }; 
         let res = match coll.delete_one(query_doc, None) {
-            Ok(delete_res) => delete_res.deleted_count == 1,
+            Ok(_) => {
+                match UserVocab::try_delete_all_from_title(db, username, title, &cn_type) {
+                    Ok(b) => b,
+                    Err(_) => false
+                }
+            },
             Err(_) => false,
         };
         return res;
@@ -328,6 +334,26 @@ impl UserVocab {
             Err(_) => { res = false; }
         }
         return res;
+    }
+
+    pub fn try_delete_all_from_title(db: &Database, username: &str, from_doc_title: &str, cn_type: &CnType) -> Result<bool, Box<dyn Error>> {
+        let coll = (*db).collection(USER_VOCAB_COLL_NAME);
+        let query_doc = doc! { "username": username, "from_doc_title": from_doc_title };
+        let mut res = true;
+        match coll.find(query_doc, None) {
+            Ok(cursor) => {
+                for item in cursor {
+                    let doc = item?;
+                    let phrase = doc.get_str("phrase")?;
+                    if UserVocab::try_delete(db, username, phrase, cn_type) == false {
+                        res = false;
+                        eprintln!("Error: could not delete phrase: {}", phrase);
+                    }
+                }
+            },
+            Err(e) => { return Err(Box::new(e)) }
+        }
+        return Ok(res);
     }
 
     /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>
