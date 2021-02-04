@@ -44,7 +44,9 @@
             <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
             <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
             </ul>
-        <br><br><br>
+            <br><br>
+            <p>FYI: Saved Documents + Vocab are linked to the Chinese type+phonetic combination. So updating these settings will cause the page to refresh.</p>
+        <br>
             <h4>Upload Document</h4>
             <hr>
             <h5>Copy & Paste</h5>
@@ -67,7 +69,7 @@
                 <h4>View Documents</h4>
                 <hr>
                 {{ doc_table | safe }}
-                <p><strong>*Note*</strong>: deleting a Document also deletes Saved Vocab linked to that Document. You've been warned!</p>
+                <p><strong>*Note*</strong>: Documents are linked to Saved Vocab, so deleting a Document also deletes Vocab saved from that Document. You've been warned!</p>
                 <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
             </div>
             <div class="col-md">
