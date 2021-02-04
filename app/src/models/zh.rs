@@ -141,9 +141,13 @@ impl CnEnDictEntry {
     }
 
     fn generate_lookup_failed_entry(uid: &str) -> Self {
-        const LOOKUP_ERROR_MSG: &str = "N/A - Not found in database";
+        const LOOKUP_ERROR_MSG: &str = "NA - Not found in database";
+        const LOOKUP_ERROR_STR: &str = "NA";
         let res = CnEnDictEntry {
             uid: String::from(uid),
+            trad: String::from(LOOKUP_ERROR_STR),
+            simp: String::from(LOOKUP_ERROR_STR),
+            radical_map: String::from(LOOKUP_ERROR_STR),
             defn: String::from(LOOKUP_ERROR_MSG),
             ..Default::default()
         }; 
