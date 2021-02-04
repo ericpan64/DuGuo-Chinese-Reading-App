@@ -9,6 +9,7 @@
 */
 
 use crate::{
+    CacheItem,
     connect_to_redis,
     config::{TOKENIZER_HOSTNAME, TOKENIZER_PORT, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME},
     models::{
@@ -26,6 +27,89 @@ use std::{
     net::TcpStream
 };
 
+/// Formats the definition in the phrase HTML. Used in render_phrase_html.
+fn format_defn_html(entry: &CnEnDictEntry) -> String {
+    const DEFN_DELIM: char = '/'; // Used to separate the description for a single concept definition
+    const MULTI_DEFN_DELIM: char = '$'; // Used when a single phrase represents multiple different concepts
+    let mut res = String::with_capacity(2500);
+    let all_defns: Vec<&str> = entry.defn.split(MULTI_DEFN_DELIM).collect();
+    for (i, defn) in all_defns.iter().enumerate() {
+        let defn = &defn[1..defn.len()-1];
+        let defn = defn.replace("\"", "\'");
+        for (j, li) in defn.split(DEFN_DELIM).enumerate() {
+            res += format!("{}. {}", j+1, li).as_str();
+            if j != defn.len() - 1 {
+                res += "<br>";
+            } else if i != all_defns.len() - 1 {
+                res += "<hr>"
+            }
+        }
+    }
+    return res;
+}
+
+/// Organizes data from CnEnDictEntry, then renders the appropriate html.
+pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics, include_sound_link: bool, include_download_link: bool) -> String {
+    let (phrase, char_list): (&str, Vec<char>) = match cn_type {
+        CnType::Traditional => (&entry.trad, entry.trad.chars().collect()),
+        CnType::Simplified => (&entry.simp, entry.simp.chars().collect())
+    };
+    // Rendering Helper Fn (keep as closure)
+    let perform_phrase_render = |phrase: &str, phonetic_str: &str, char_list: Vec<char>, phonetic_list: Vec<&str>| -> String {
+        const SOUND_ICON: &str = "https://icons.getbootstrap.com/icons/volume-up-fill.svg";
+        const DOWNLOAD_ICON: &str = "https://icons.getbootstrap.com/icons/download.svg";
+        let mut res = String::with_capacity(2500);
+        // Start <span> (popup config)
+        res += format!("<span class=\"{}\" tabindex=\"1\"", entry.uid).as_str();
+        res += format!(" data-bs-toggle=\"popover\" data-bs-content=\"{}\"", format_defn_html(entry)).as_str();
+        res += format!(" title=\"{} [{}]", phrase, phonetic_str).as_str();
+        if include_sound_link {
+            res += format!(" <a role=&quot;button&quot; href=&quot;#~{}&quot;>", phrase).as_str();
+            res += format!("<img src=&quot;{}&quot;></img>", SOUND_ICON).as_str();
+            res += "</a>";
+        }
+        if include_download_link {
+            res += format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;>", entry.uid).as_str();
+            res += format!("<img src=&quot;{}&quot;></img>", DOWNLOAD_ICON).as_str();
+            res += "</a>";
+        }
+        res += "\"";
+        res += " data-bs-html=\"true\">";
+        // Start <table> entry (phrase with phonetics)
+        // add phonetic row
+        res += "<table>";
+        res += "<tr>";
+        for i in 0..char_list.len() {
+            res += format!("<td class=\"phonetic\" name=\"{}\">", char_list[i]).as_str();
+            res += phonetic_list[i];
+            res += "</td>";
+        }
+        res += "</tr>";
+        // add phrase row
+        res += "<tr>";
+        for i in 0..char_list.len() {
+            res += "<td class=\"char\">";
+            res += &char_list[i].to_string();
+            res += "</td>";
+        }
+        res += "</tr>";
+        res += "</table>";
+        res += "</span>";
+        return res;
+    };
+    let res = match cn_phonetics {
+        CnPhonetics::Pinyin => {
+            let pinyin_list: Vec<&str> = entry.formatted_pinyin.split(' ').collect();
+            perform_phrase_render(phrase, &entry.raw_pinyin, char_list, pinyin_list)
+        },
+        CnPhonetics::Zhuyin => {
+            let zhuyin_list: Vec<&str> = entry.zhuyin.split(' ').collect();
+            perform_phrase_render(phrase, &entry.zhuyin, char_list, zhuyin_list)
+        }
+    };
+    return res;
+}
+
 /// Renders the HTML using the given CnType and CnPhonetics.
 /// Note: the tokenizer only returns pinyin, however that's used to lookup the CEDICT entry.
 /// From the CEDICT entry, the specified CnType, CnPhonetics are rendered.
@@ -39,8 +123,9 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     let mut res = String::with_capacity(n_phrases * 2500);
     for token in tokenized_string.split(PHRASE_DELIM) {
         let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
-        let phrase = token_vec[0]; // Simplified if Chinese
+        let phrase = token_vec[0]; // If Chinese, then Simplified
         let raw_pinyin = token_vec[1];
+        let uid = CnEnDictEntry::generate_uid(vec![phrase,raw_pinyin]);
         // Skip lookup for phrases with no Chinese chars
         if is_english_phrase(phrase) || has_chinese_punctuation(phrase) {
             // handle newlines, else render word aligned with other text
@@ -48,23 +133,21 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
                 res += &phrase.replace('\n', "<br>");
             } else {
                 let mut new_phrase = String::with_capacity(250);
-                new_phrase += "<span><table style=\"display: inline-table; text-align: center;\"><tr><td></td></tr><tr><td>";
+                new_phrase += "<span><table><tr><td></td></tr><tr><td>";
                 new_phrase += &phrase.replace('\n', "<br>");
                 new_phrase += "</td></tr></table></span>";
                 res += &new_phrase;
             }
         } else {
             // For each phrase, lookup as CnEnDictEntry
-            let entry = CnEnDictEntry::from_tokenizer_components(&mut conn, phrase, raw_pinyin).await;
+            let entry = CnEnDictEntry::from_uid(&mut conn, uid).await;
             if entry.lookup_failed() {
                 res += generate_html_for_not_found_phrase(phrase).as_str();
             } else {
-                match (cn_type, cn_phonetics) {
-                    (CnType::Traditional, CnPhonetics::Pinyin) => res += entry.trad_html.as_str(),
-                    (CnType::Traditional, CnPhonetics::Zhuyin) => res += entry.trad_zhuyin_html.as_str(),
-                    (CnType::Simplified, CnPhonetics::Pinyin) => res += entry.simp_html.as_str(),
-                    (CnType::Simplified, CnPhonetics::Zhuyin) => res += entry.simp_zhuyin_html.as_str(),
-                }
+                // TODO: add check for phrase inclusion, download link
+                let include_sound_link = true;
+                let include_download_link = true;
+                res += render_phrase_html(&entry, cn_type, cn_phonetics, include_sound_link, include_download_link).as_str();
             }
         }
     }
@@ -131,7 +214,6 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
                 let UserVocab { uid, from_doc_title, phrase, phrase_html, created_on, radical_map, .. } = from_bson(Bson::Document(user_doc)).unwrap();
                 let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
                 let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
-                let phrase_html = remove_download_link_from_phrase_html(phrase_html, &uid);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);
                 res += &row;
             }
@@ -140,15 +222,6 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
         Err(e) => { eprintln!("Error when searching for vocab for user {}: {:?}", username, e); }
     }
     res += "<caption hidden>List of your saved documents.</caption>\n</table>";
-    return res;
-}
-
-/// Assumes that the download link in phrase_html is the following format:
-///  <a role=&quot;button&quot; href=&quot;#{uid}&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>
-/// Note: there is a single space in front of the link (which also gets removed).
-pub fn remove_download_link_from_phrase_html(phrase_html: String, uid: &str) -> String {
-    let download_link = format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>", uid);
-    let res = phrase_html.replace(&download_link, "");
     return res;
 }
 

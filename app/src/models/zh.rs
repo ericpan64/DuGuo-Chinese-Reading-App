@@ -7,7 +7,7 @@
 /// └── CnEnDictEntry: Struct
 */
 
-use crate::CacheItem;
+use crate::{CacheItem, html};
 use serde::{Serialize, Deserialize};
 use std::{
     collections::HashMap,
@@ -91,17 +91,13 @@ impl fmt::Display for CnPhonetics {
 /* Structs */
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct CnEnDictEntry {
-    uid: String,
-    trad: String,
-    simp: String,
-    raw_pinyin: String,
-    formatted_pinyin: String,
-    pub trad_html: String,
-    pub simp_html: String,
-    def: String,
-    zhuyin: String,
-    pub trad_zhuyin_html: String,
-    pub simp_zhuyin_html: String,
+    pub uid: String,
+    pub trad: String,
+    pub simp: String,
+    pub raw_pinyin: String,
+    pub formatted_pinyin: String,
+    pub defn: String,
+    pub zhuyin: String,
     pub radical_map: String
 }
 
@@ -119,44 +115,36 @@ impl CnEnDictEntry {
                     simp: query_map.get("simp").unwrap().to_owned(),
                     raw_pinyin: query_map.get("raw_pinyin").unwrap().to_owned(),
                     formatted_pinyin: query_map.get("formatted_pinyin").unwrap().to_owned(),
-                    trad_html: query_map.get("trad_html").unwrap().to_owned(),
-                    simp_html: query_map.get("simp_html").unwrap().to_owned(),
-                    def: query_map.get("def").unwrap().to_owned(),
+                    defn: query_map.get("defn").unwrap().to_owned(),
                     zhuyin: query_map.get("zhuyin").unwrap().to_owned(),
-                    trad_zhuyin_html: query_map.get("trad_zhuyin_html").unwrap().to_owned(),
-                    simp_zhuyin_html: query_map.get("simp_zhuyin_html").unwrap().to_owned(),
                     radical_map: query_map.get("radical_map").unwrap().to_owned(),
                 }
         };
         return res;
     }
 
-    pub async fn from_tokenizer_components(conn: &mut Connection, simp: &str, raw_pinyin: &str) -> Self {
-        let uid = CnEnDictEntry::generate_uid(vec![simp.to_string(), raw_pinyin.to_string()]);
-        return CnEnDictEntry::from_uid(conn, uid).await;
-    }
-
     pub fn lookup_failed(&self) -> bool {
-        return self.trad_html == "";
+        return self.formatted_pinyin == "";
     }
 
     pub fn get_vocab_data(&self, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
         // Order: (phrase, defn, phrase_phonetics, phrase_html)
-        let defn = &self.def;
-        let (phrase, phrase_phonetics, phrase_html) = match (cn_type, cn_phonetics) {
-            (CnType::Traditional, CnPhonetics::Pinyin) => (&self.trad, &self.formatted_pinyin, &self.trad_html),
-            (CnType::Traditional, CnPhonetics::Zhuyin) => (&self.trad, &self.zhuyin, &self.trad_zhuyin_html),
-            (CnType::Simplified, CnPhonetics::Pinyin) => (&self.simp, &self.formatted_pinyin, &self.simp_html),
-            (CnType::Simplified, CnPhonetics::Zhuyin) => (&self.simp, &self.zhuyin, &self.simp_zhuyin_html)
+        let defn = &self.defn;
+        let phrase_html = html::render_phrase_html(&self, cn_type, cn_phonetics, true, false);
+        let (phrase, phrase_phonetics) = match (cn_type, cn_phonetics) {
+            (CnType::Traditional, CnPhonetics::Pinyin) => (&self.trad, &self.formatted_pinyin),
+            (CnType::Traditional, CnPhonetics::Zhuyin) => (&self.trad, &self.zhuyin),
+            (CnType::Simplified, CnPhonetics::Pinyin) => (&self.simp, &self.formatted_pinyin),
+            (CnType::Simplified, CnPhonetics::Zhuyin) => (&self.simp, &self.zhuyin)
         };
-        return (phrase.to_string(), defn.to_string(), phrase_phonetics.to_string(), phrase_html.to_string());
+        return (phrase.to_string(), defn.to_string(), phrase_phonetics.to_string(), phrase_html);
     }
 
     fn generate_lookup_failed_entry(uid: &str) -> Self {
         const LOOKUP_ERROR_MSG: &str = "N/A - Not found in database";
         let res = CnEnDictEntry {
             uid: String::from(uid),
-            def: String::from(LOOKUP_ERROR_MSG),
+            defn: String::from(LOOKUP_ERROR_MSG),
             ..Default::default()
         }; 
         return res;

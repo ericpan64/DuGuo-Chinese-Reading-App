@@ -41,7 +41,7 @@ pub trait CacheItem {
     /// This removes all spaces, then concatenates the elements in ordered_items.
     /// This uid is used for lookup in the cache.
     /// A uid schema must be manually verified to produce no cache collisions.
-    fn generate_uid(ordered_items: Vec<String>) -> String {
+    fn generate_uid(ordered_items: Vec<&str>) -> String {
         let mut res = String::with_capacity(100); // 80 chars is upper-bound from largest CEDICT entry
         for item in ordered_items {
             res += &item.replace(" ", "");

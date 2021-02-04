@@ -7,18 +7,17 @@ let switchOffWordVisibility = (phrase) => {
     }
 }
 // Only one of these lists should be populated at a given instance
-let all_pinyin_list = document.getElementsByClassName("pinyin");
-let all_zhuyin_list = document.getElementsByClassName("zhuyin");
+let all_phonetics_list = document.getElementsByClassName("phonetic");
 let hideSavedPhonetics = (phrase_list) => {
     phrase_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));
 }
-let hideAllPhonetics = (phonetics_list) => { 
-    for (let i = 0; i < phonetics_list.length; i++) {
-        switchToHidden(phonetics_list[i]);
+let hideAllPhonetics = () => { 
+    for (let i = 0; i < all_phonetics_list.length; i++) {
+        switchToHidden(all_phonetics_list[i]);
     }   
 }
-let resetAllPhonetics = (phonetics_list) => {
-    for (let i = 0; i < phonetics_list.length; i++) {
-        switchToVisible(phonetics_list[i]);
+let resetAllPhonetics = () => {
+    for (let i = 0; i < all_phonetics_list.length; i++) {
+        switchToVisible(all_phonetics_list[i]);
     }   
 }
