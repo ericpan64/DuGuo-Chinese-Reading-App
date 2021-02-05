@@ -24,6 +24,7 @@ use mongodb::{
 use regex::Regex;
 use std::{
     io::prelude::*,
+    collections::HashSet,
     net::TcpStream
 };
 
@@ -113,7 +114,7 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
 /// Renders the HTML using the given CnType and CnPhonetics.
 /// Note: the tokenizer only returns pinyin, however that's used to lookup the CEDICT entry.
 /// From the CEDICT entry, the specified CnType, CnPhonetics are rendered.
-pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
+pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics, user_saved_phrases: Option<HashSet<String>>) -> String {
     const PHRASE_DELIM: char = '$';
     const PINYIN_DELIM: char = '`';
     let mut conn = connect_to_redis().await.unwrap();
@@ -121,6 +122,10 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
     // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
     let mut res = String::with_capacity(n_phrases * 2500);
+    let user_saved_phrases: HashSet<String> = match user_saved_phrases {
+        Some(set) => set,
+        None => HashSet::new()
+    };
     for token in tokenized_string.split(PHRASE_DELIM) {
         let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
         let phrase = token_vec[0]; // If Chinese, then Simplified
@@ -144,9 +149,12 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
             if entry.lookup_failed() {
                 res += generate_html_for_not_found_phrase(phrase).as_str();
             } else {
-                // TODO: add check for phrase inclusion, download link
                 let include_sound_link = true;
-                let include_download_link = true;
+                let phrase = match cn_type {
+                    CnType::Traditional => &entry.trad,
+                    CnType::Simplified => &entry.simp
+                };
+                let include_download_link = !(user_saved_phrases.contains(phrase));
                 res += render_phrase_html(&entry, cn_type, cn_phonetics, include_sound_link, include_download_link).as_str();
             }
         }
