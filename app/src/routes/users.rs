@@ -91,7 +91,6 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
                 let title = convert_rawstr_to_string(doc_title);
                 let doc_body = UserDoc::get_body_from_user_doc(&db, &username, &title).unwrap_or_default();
                 let vocab_set = UserVocabList::get_phrase_list_as_hashset(&db, &username, &cn_type);
-                eprintln!("{:?}", vocab_set);
                 let doc_html_res = rt.block_on(html_rendering::convert_string_to_tokenized_html(&doc_body, &cn_type, &cn_phonetics, Some(vocab_set)));
                 let user_char_list_string = UserVocabList::get_user_char_list_string(&db, &username).unwrap_or_default();
                 context.insert("paragraph_html", doc_html_res);
