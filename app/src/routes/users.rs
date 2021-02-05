@@ -1,5 +1,6 @@
 /*
-/// Route handling for authenticated users
+/// Route handling for authenticated users.
+/// Expected form inputs are stored as Structs and defined above the corresponding route.
 /// 
 /// users.rs
 /// ├── GET
@@ -315,14 +316,14 @@ pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>,
 
 #[derive(FromForm)]
 pub struct UserVocabForm<'f> {
-    saved_phrase: &'f RawStr,
+    phrase_uid: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
 
 #[post("/api/vocab", data="<user_vocab>")]
 pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
-    let UserVocabForm { saved_phrase, from_doc_title } = user_vocab.into_inner();
-    let phrase = convert_rawstr_to_string(saved_phrase);
+    let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
+    let phrase = convert_rawstr_to_string(phrase_uid);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
 
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));

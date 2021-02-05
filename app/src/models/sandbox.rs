@@ -1,5 +1,5 @@
 /*
-/// Data Structures not associated with a User account
+/// For Data Structures not associated with a User account.
 /// 
 /// sandbox.rs
 /// ├── SandboxDoc: Strict
@@ -27,7 +27,6 @@ pub struct SandboxDoc {
     doc_id: String,
     body: String,
     body_html: String,
-    // If none, String::new()
     source: String,
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -40,6 +39,7 @@ impl DatabaseItem for SandboxDoc {
 }
 
 impl SandboxDoc {
+    /// Generates a new SandboxDoc. A uuid is generated and assigned.
     pub async fn new(body: String, cn_type: String, cn_phonetics: String, source: String) -> Self {
         let doc_id = Uuid::new_v4().to_string();
         let cn_type = CnType::from_str(&cn_type);
@@ -50,12 +50,12 @@ impl SandboxDoc {
         return new_doc;
     }
 
+    /// Generates a new SandboxDoc using HTML-parsed text from the specified URL.
     pub async fn from_url(url: String, cn_type: String, cn_phonetics: String) -> Self {
-        // make request
         let resp = reqwest::get(&url).await.unwrap()
             .text().await.unwrap();
         let html = scraper::Html::parse_document(&resp);
-        // get body from all headers, paragraphs in-order
+        // Grabs body headers+paragraphs in-order
         let body_selector = scraper::Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
         let mut body_text = String::with_capacity(resp.len());
         for item in html.select(&body_selector) {
@@ -64,6 +64,8 @@ impl SandboxDoc {
         return SandboxDoc::new(body_text, cn_type, cn_phonetics, url).await;
     }
 
+    /// Called in primary.rs to get appropriate SandboxDoc info for viewing.
+    /// TODO: rename this, and see if it can be made generic via DatabaseItem defn
     pub fn get_doc_html_and_phonetics_from_id(db: &Database, doc_id: String) -> Option<(String, String)> {
         let coll = (*db).collection(SANDBOX_COLL_NAME);
         let query_doc = doc! { "doc_id": doc_id };
@@ -95,6 +97,8 @@ impl DatabaseItem for UserFeedback {
 }
 
 impl UserFeedback {
+    /// Creates a UserFeedback object. This is generally anonymous.
+    /// TODO: rename this to AppFeedback
     pub fn new(feedback: String, contact: String) -> Self {
         let created_on = Utc::now().to_string();
         let new_feedback = UserFeedback { feedback, contact, created_on };

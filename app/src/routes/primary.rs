@@ -1,5 +1,6 @@
 /*
-/// General route handling
+/// General route handling. 
+/// Expected form inputs are stored as Structs and defined above the corresponding route.
 /// 
 /// primary.rs
 /// ├── GET

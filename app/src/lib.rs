@@ -37,7 +37,10 @@ use redis::aio::Connection;
 use tokio::runtime::Runtime;
 
 /* Traits */
+/// An object that can be found in Redis (using a uid).
+/// TODO: add required implementation for uid_keys (return uid keys as vec, at worst for documentation)
 pub trait CacheItem {
+    /* Default-Enabled */
     /// This removes all spaces, then concatenates the elements in ordered_items.
     /// This uid is used for lookup in the cache.
     /// A uid schema must be manually verified to produce no cache collisions.
@@ -50,18 +53,27 @@ pub trait CacheItem {
     }
 }
 
+/// An object that can be found in MongoDB.
+/// All DatabaseItem object fields are stored into MongoDB as String fields.
 pub trait DatabaseItem {
+    /* Default-Enabled */
+    /// Returns object as bson::document::Document type.
     fn as_document(&self) -> Document where Self: Serialize {
         return bson::to_document(self).unwrap();
     }
+    /// Returns object as bson::Bson type.
     fn as_bson(&self) -> Bson where Self: Serialize {
         return bson::to_bson(self).unwrap();
     }
+    /// Attempts to lookup a object using the key-value pair.
+    /// If a object is found, attempts to get a value from that object.
+    /// TODO: split this out to 2 functions, then refactor code accordingly
     fn try_get_field_as_string(&self, db: &Database, lookup_key: &str, lookup_value: &str, get_key: &str) -> Result<String, Box<dyn Error>> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let found_doc = coll.find_one(doc! { lookup_key: lookup_value }, None)?.unwrap();
         return Ok(found_doc.get(get_key).and_then(Bson::as_str).unwrap().to_string());
     }
+    /// Attempts to insert the object into MongoDB.
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let new_doc = self.as_document();
@@ -71,6 +83,7 @@ pub trait DatabaseItem {
         }
         return Ok(self.primary_key().to_string());
     }
+    /// If the current object exists in MongoDB, attempts to update the corresponding key field with a new value.
     fn try_update(&self, db: &Database, key: &str, new_value: &str) -> Result<String, Box<dyn Error>> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());
         let update_doc = doc! { key: new_value };
@@ -81,39 +94,44 @@ pub trait DatabaseItem {
         }
         return Ok(self.primary_key().to_string());
     }
-
+    /* Requires Implementation */
+    /// Returns the collection name in MongoDB where the objects should be stored.
+    /// TODO: see if &self can be dropped
     fn collection_name(&self) -> &str;
+    /// Returns a generally-informative key for the document.
+    /// This is not guaranteed to be unique (though generally is).
     fn primary_key(&self) -> &str;
 }
 
 /* Public Functions */
-/// Connects to mongoDB (locally: Docker Container, in production: mongoDB Atlas). Connection is handled in main.rs
+/// Connects to MongoDB (locally: Docker Container, in production: mongoDB Atlas). Connection is handled in main.rs.
 pub fn connect_to_mongodb() -> Result<Database, Box<dyn Error>> {
     let client = mongodb::sync::Client::with_uri_str(DB_URI)?;
     let db: Database = client.database(DB_NAME);
     return Ok(db);
 }
 
-/// Uses URI to connect to Redis (Docker Container). Connections are handled within lib.rs
+/// Uses URI to connect to Redis (Docker Container). Connections are primarily in lib.rs and html.rs.
 async fn connect_to_redis() -> Result<Connection, Box<dyn Error>> {
     let client = redis::Client::open(REDIS_URI)?;
     let conn = client.get_async_connection().await?;
     return Ok(conn);
 }
 
-/// Sanitizes user input (note: Chinese punctuation is unaffected by this)
+/// Sanitizes user input. Chinese punctuation is unaffected by this.
 pub fn convert_rawstr_to_string(s: &RawStr) -> String {
     let mut res = s.url_decode_lossy().to_string(); // � for invalid UTF-8
-    // Note: can't sanitize '/' since that breaks urls
     res = res.replace(&['<', '>', '(', ')', '!', '\"', '\'', '\\', ';', '{', '}', ':', '*'][..], "");
     return res;
 }
 
+/// Starts the Rocket web server and corresponding services. Called in main.rs.
+/// Note: the Tokio version is deliberately set to 0.2.24 to match the MongoDB 1.1.1 driver.
+/// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
 pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
     let db = connect_to_mongodb()?;
     let rt = Runtime::new().unwrap();
     let rt = rt.handle().clone();
-    
     rocket::ignite()
         .attach(Template::fairing())
         .manage(db)
@@ -142,6 +160,5 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             routes::users::logout_user])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/static")))
         .launch();
-
     return Ok(());
 }

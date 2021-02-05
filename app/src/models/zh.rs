@@ -32,8 +32,8 @@ impl CnType {
             CnType::Simplified => "Simplified"
         };
     }
-
     pub fn from_str(s: &str) -> Self {
+        /// TODO: convert to lowercase, simplify matching
         return match s {
             "Traditional" => CnType::Traditional,
             "traditional" => CnType::Traditional,
@@ -53,7 +53,6 @@ impl fmt::Display for CnType {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum CnPhonetics {
     Pinyin,
@@ -67,8 +66,8 @@ impl CnPhonetics {
             CnPhonetics::Zhuyin => "Zhuyin"
         };
     }
-
     pub fn from_str(s: &str) -> Self {
+        /// TODO: convert to lowercase, simplify matching
         return match s {
             "Pinyin" => CnPhonetics::Pinyin,
             "pinyin" => CnPhonetics::Pinyin,
@@ -102,9 +101,12 @@ pub struct CnEnDictEntry {
 }
 
 /// For CnEnDictEntry, the current uid is generated using: vec![simp, raw_pinyin]
+/// TODO: make above information required implementation for CacheItem (return uid keys as vec, at worst for documentation)
 impl CacheItem for CnEnDictEntry { }
 
 impl CnEnDictEntry {
+    /// Looks up a CEDICT entry in Redis using the specified uid.
+    /// Defaults to generate_lookup_failed_entry().
     pub async fn from_uid(conn: &mut Connection, uid: String) -> Self {
         let query_map = (*conn).hgetall::<&str, HashMap<String, String>>(&uid).await.unwrap();
         let res = match query_map.len() {
@@ -122,11 +124,12 @@ impl CnEnDictEntry {
         };
         return res;
     }
-
+    /// Returns true if object is a "failed lookup" entry, false otherwise.
     pub fn lookup_failed(&self) -> bool {
         return self.formatted_pinyin == "";
     }
-
+    /// Extracts relevant UserVocab data from CEDICT entry.
+    /// TODO: move this to UserVocab in user.rs
     pub fn get_vocab_data(&self, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
         // Order: (phrase, defn, phrase_phonetics, phrase_html)
         let defn = &self.defn;
@@ -139,7 +142,9 @@ impl CnEnDictEntry {
         };
         return (phrase.to_string(), defn.to_string(), phrase_phonetics.to_string(), phrase_html);
     }
-
+    /// Generates generic "failed lookup" entry.
+    /// The uid is preserved so the failed case can be identified.
+    /// The LOOKUP_ERROR_STR is used for compatibility with /api/delete-vocab/NA.
     fn generate_lookup_failed_entry(uid: &str) -> Self {
         const LOOKUP_ERROR_MSG: &str = "NA - Not found in database";
         const LOOKUP_ERROR_STR: &str = "NA";

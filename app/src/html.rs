@@ -18,7 +18,7 @@ use crate::{
     }
 };
 use mongodb::{
-    bson::{doc, Bson, from_bson},
+    bson::{self, doc, Bson},
     sync::Database
 };
 use regex::Regex;
@@ -28,34 +28,14 @@ use std::{
     net::TcpStream
 };
 
-/// Formats the definition in the phrase HTML. Used in render_phrase_html.
-fn format_defn_html(entry: &CnEnDictEntry) -> String {
-    const DEFN_DELIM: char = '/'; // Used to separate the description for a single concept definition
-    const MULTI_DEFN_DELIM: char = '$'; // Used when a single phrase represents multiple different concepts
-    let mut res = String::with_capacity(2500);
-    let all_defns: Vec<&str> = entry.defn.split(MULTI_DEFN_DELIM).collect();
-    for (i, defn) in all_defns.iter().enumerate() {
-        let defn = &defn[1..defn.len()-1];
-        let defn = defn.replace("\"", "\'");
-        for (j, li) in defn.split(DEFN_DELIM).enumerate() {
-            res += format!("{}. {}", j+1, li).as_str();
-            if j != defn.len() - 1 {
-                res += "<br>";
-            } else if i != all_defns.len() - 1 {
-                res += "<hr>"
-            }
-        }
-    }
-    return res;
-}
-
-/// Organizes data from CnEnDictEntry, then renders the appropriate html.
+/* Public Functions */
+/// Organizes data from CnEnDictEntry, then renders the appropriate HTML.
 pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics, include_sound_link: bool, include_download_link: bool) -> String {
     let (phrase, char_list): (&str, Vec<char>) = match cn_type {
         CnType::Traditional => (&entry.trad, entry.trad.chars().collect()),
         CnType::Simplified => (&entry.simp, entry.simp.chars().collect())
     };
-    // Rendering Helper Fn (keep as closure)
+    // Rendering Helper Fn (keep as closure to retain context)
     let perform_phrase_render = |phrase: &str, phonetic_str: &str, char_list: Vec<char>, phonetic_list: Vec<&str>| -> String {
         const SOUND_ICON: &str = "https://icons.getbootstrap.com/icons/volume-up-fill.svg";
         const DOWNLOAD_ICON: &str = "https://icons.getbootstrap.com/icons/download.svg";
@@ -112,8 +92,7 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
 }
 
 /// Renders the HTML using the given CnType and CnPhonetics.
-/// Note: the tokenizer only returns pinyin, however that's used to lookup the CEDICT entry.
-/// From the CEDICT entry, the specified CnType, CnPhonetics are rendered.
+/// Refer to tokenizer_string() for formatting details.
 pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics, user_saved_phrases: Option<HashSet<String>>) -> String {
     const PHRASE_DELIM: char = '$';
     const PINYIN_DELIM: char = '`';
@@ -162,6 +141,7 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     return res;
 }
 
+/// Renders the UserDoc table for userprofile.html.tera.
 pub fn render_document_table(db: &Database, username: &str) -> String {
     // get all documents for user
     const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
@@ -180,7 +160,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserDoc { title, created_on, source, .. } = from_bson(Bson::Document(user_doc)).unwrap(); 
+                let UserDoc { title, created_on, source, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap(); 
                 let delete_button = format!("<a href=\"/api/delete-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
                 let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
                 // only format as link if it's a URL
@@ -203,6 +183,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
     return res;
 }
 
+/// Renders the UserVocab table for userprofile.html.tera.
 pub fn render_vocab_table(db: &Database, username: &str) -> String {
     const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
     let coll = (*db).collection(USER_VOCAB_COLL_NAME);
@@ -219,7 +200,7 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserVocab { phrase, from_doc_title, phrase_html, created_on, radical_map, .. } = from_bson(Bson::Document(user_doc)).unwrap();
+                let UserVocab { phrase, from_doc_title, phrase_html, created_on, radical_map, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
                 let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
                 let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);
@@ -233,9 +214,13 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
     return res;
 }
 
+/* Private Functions */
 /// Connect to tokenizer service and tokenizes the string. The delimiters are $ and ` since neither character appears in CEDICT.
-/// The format of the string is: "phrase1`raw_pinyin`formatted_pinyin$phrase2`raw_pinyin2`formatted_pinyin2$ ..."
-/// Sleeps 1sec after write and 1sec after read due to a strange issue where data inconsistently stopped writing (probably async weirdness)
+/// The format of the string is: "phrase1`raw_pinyin$phrase2`raw_pinyin2$ ..."
+/// The string is written to the TCP stream until completion.
+/// From the tokenizer, 2 messages are sent: 
+///     1) A u64 (as bytes) indicating the size of the tokenizer results
+///     2) The tokenizer result string (as bytes)
 fn tokenize_string(mut s: String) -> std::io::Result<String> {
     s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
     let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
@@ -250,13 +235,36 @@ fn tokenize_string(mut s: String) -> std::io::Result<String> {
     return Ok(res);
 }
 
+/// Formats the definition in the phrase HTML. Used in render_phrase_html().
+fn format_defn_html(entry: &CnEnDictEntry) -> String {
+    const DEFN_DELIM: char = '/'; // Used to separate the description for a single concept definition
+    const MULTI_DEFN_DELIM: char = '$'; // Used when a single phrase represents multiple different concepts
+    let mut res = String::with_capacity(2500);
+    let all_defns: Vec<&str> = entry.defn.split(MULTI_DEFN_DELIM).collect();
+    for (i, defn) in all_defns.iter().enumerate() {
+        let defn = &defn[1..defn.len()-1];
+        let defn = defn.replace("\"", "\'");
+        for (j, li) in defn.split(DEFN_DELIM).enumerate() {
+            res += format!("{}. {}", j+1, li).as_str();
+            if j != defn.len() - 1 {
+                res += "<br>";
+            } else if i != all_defns.len() - 1 {
+                res += "<hr>"
+            }
+        }
+    }
+    return res;
+}
+
+/// A weak check to distinguish if a phrase is English.
+/// English chars use 1 byte, Chinese chars use 3 bytes.
 fn is_english_phrase(s: &str) -> bool {
-    // English chars use 1 byte, Chinese chars use 3 bytes
     return s.len() == s.chars().count();
 }
 
+/// A weak check to distinguish phrases with Chinese puntuation.
+/// Chinese punctuation is a Chinese char (3 bytes) that should be skipped in processing.
 fn has_chinese_punctuation(s: &str) -> bool {
-    // Chinese punctuation is a Chinese char, however shouldn't be rendered as such
     const PUNCT: [char; 15] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—', '；'];
     let mut res = false;
     for c in s.chars() {
@@ -268,6 +276,7 @@ fn has_chinese_punctuation(s: &str) -> bool {
     return res;
 }
 
+/// Generates generic HTML with a "Phrase not found in database" popup.
 fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     let mut res = String::with_capacity(2500); // Using ~2500 characters as conservative estimate
     res += "<span tabindex=\"0\" data-bs-toggle=\"popover\" data-bs-trigger=\"focus\" data-bs-content=\"Phrase not found in database.\">";

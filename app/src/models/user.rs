@@ -58,6 +58,7 @@ impl DatabaseItem for User {
 }
 
 impl User {
+    /// Generates a new User. Passwords are salted and hashed for security.
     pub fn new(username: String, password: String, email: String) -> Self {
         let pw_salt = User::generate_pw_salt();
         let pw_hash = str_to_hashed_string(&password, &pw_salt);
@@ -66,12 +67,12 @@ impl User {
         let new_user = User { username, pw_hash, pw_salt, email, cn_type, cn_phonetics, created_on };
         return new_user;
     }
-
+    /// Returns true if username exists, false otherwise.
     pub fn check_if_username_exists(db: &Database, username: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
         return (coll.find_one(doc! {"username": username }, None).unwrap()) != None;
     }
-
+    /// Updates CnType+CnPhonetics settings via username.
     pub fn update_user_settings(db: &Database, username: &str, cn_type: Option<CnType>, cn_phonetics: Option<CnPhonetics>) -> Result<(), Box<dyn Error>> {
         let user = User::from_username(db, username).unwrap();
         if let Some(new_type) = cn_type {
@@ -82,7 +83,7 @@ impl User {
         }
         return Ok(());
     }
-
+    /// Gets CnType+CnPhonetics settings from username.
     pub fn get_user_settings(db: &Database, username: &str) -> (CnType, CnPhonetics) {
         let coll = (*db).collection(USER_COLL_NAME);
         let res_tup = match coll.find_one(doc! {"username": username }, None).unwrap() {
@@ -94,13 +95,14 @@ impl User {
         };
         return res_tup;
     }
-
+    /// Attempts to get a user's random salt.
+    /// TODO: make generic
     pub fn get_user_salt(db: &Database, username: &str) -> Result<String, Box<dyn Error>> {
         let coll = (*db).collection(USER_COLL_NAME);
         let found_doc = coll.find_one(doc! { "username": username }, None)?.unwrap();
         return Ok(found_doc.get("pw_salt").and_then(Bson::as_str).unwrap().to_string());
     }
-
+    /// Returns true if password is correct given username, false otherwise.
     pub fn check_password(db: &Database, username: &str, pw_to_check: &str) -> bool {
         let res = match User::from_username(db, username) {
             Some(user) => {
@@ -111,7 +113,8 @@ impl User {
         };
         return res;
     }
-
+    /// Generates a random salt.
+    /// TODO: consider moving this to auth.rs
     fn generate_pw_salt() -> String {
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                                 abcdefghijklmnopqrstuvwxyz\
@@ -126,11 +129,11 @@ impl User {
             .collect();
         return pw_salt;
     }
-
+    /// Gets the default settings (biased, since this is what I use!)
     fn default_settings() -> (CnType, CnPhonetics) {
         return (CnType::Simplified, CnPhonetics::Pinyin);
     }
-
+    /// Attempts to lookup a User object via the username.
     fn from_username(db: &Database, username: &str) -> Option<Self> {
         let coll = (*db).collection(USER_COLL_NAME);
         let query_res = coll.find_one(doc! {"username": username}, None).unwrap();
@@ -140,7 +143,8 @@ impl User {
         };
         return res;
     }
-
+    /// Returns true if username and email are available, false otherwise.
+    /// TODO: make generic
     fn check_if_username_and_email_are_available(db: &Database, username: &str, email: &str) -> bool {
         let coll = (*db).collection(USER_COLL_NAME);
         let username_query = coll.find_one(doc! {"username": username }, None).unwrap();
@@ -154,7 +158,6 @@ pub struct UserDoc {
     username: String,
     pub title: String,
     pub body: String,
-    // If none, String::new()
     pub source: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -168,6 +171,7 @@ impl DatabaseItem for UserDoc {
 }
 
 impl UserDoc {
+    /// Generates a new UserDoc. For title collisions, a new title is automatically generated (appended by -#).
     pub fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
         let desired_title = desired_title.replace(" ", "");
@@ -193,18 +197,16 @@ impl UserDoc {
         let new_doc = UserDoc { username, title, body, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
-
+    /// Generates a new UserDoc with HTML-parsed title + text from the given URL.
+    /// TODO: standardize URL calls into a lib.rs function.
     pub async fn from_url(db: &Database, username: String, url: String) -> Self {
-        // make request
         let resp = reqwest::get(&url).await.unwrap()
             .text().await.unwrap();
         let html = scraper::Html::parse_document(&resp);
-        // get title
         let title_selector = scraper::Selector::parse("title").unwrap();
         let title_text: String = html.select(&title_selector)
             .next().unwrap()
             .text().collect();
-        // get body from all headers, paragraphs in-order
         let body_selector = scraper::Selector::parse("body h1,h2,h3,h4,h5,h6,p").unwrap();
         let mut body_text = String::with_capacity(resp.len());
         for item in  html.select(&body_selector) {
@@ -212,7 +214,8 @@ impl UserDoc {
         }
         return UserDoc::new(db, username, title_text, body_text, url);
     }
-
+    /// Returns the 
+    /// TODO: make this generic
     pub fn get_body_from_user_doc(db: &Database, username: &str, title: &str) -> Option<String> {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -223,7 +226,8 @@ impl UserDoc {
         };
         return doc_body;
     }
-
+    /// Attempts to delete a matching object in MongoDB.
+    /// TODO: make this generic -- add a "get_unique_keys_as_ordered_vec" function, have input specify values
     pub fn try_delete(db: &Database, username: &str, title: &str) -> bool {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -243,6 +247,7 @@ impl UserDoc {
     /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>
     /// where each inner Vec<String> represents the list of values for all documents
     /// matching the input query. A Vec upper-bound can be specified.
+    /// TODO: this can also be generic!
     pub fn get_doc_fields_as_vectors(db: &Database, query_doc: Document, fields: Vec<&str>, capacity: Option<usize>) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
         let mut res_hmap: HashMap<String, Vec<String>> = HashMap::new();
         for key in &fields {
@@ -278,8 +283,7 @@ pub struct UserVocab {
     cn_phonetics: CnPhonetics,
     pub phrase: String,
     def: String, 
-    /// If pinyin, formatted_pinyin
-    phrase_phonetics: String, 
+    phrase_phonetics: String, /// If pinyin: formatted pinyin
     pub phrase_html: String,
     pub created_on: String,
     pub radical_map: String
@@ -295,12 +299,13 @@ impl DatabaseItem for UserVocab {
         }
         return Ok(self.primary_key().to_string());
     }
-
     fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.phrase_html; }
 }
 
 impl UserVocab {
+    /// Looks-up UserVocab in Redis cache. If CEDICT match is found, then stores appropriate data.
+    /// TODO: see if db call can be consolidated
     pub async fn new(db: &Database, username: String, saved_uid: String, from_doc_title: String) -> Self {
         // For lookup, try user-specified first
         let mut conn = connect_to_redis().await.unwrap();
@@ -309,7 +314,6 @@ impl UserVocab {
         let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
         let radical_map = (&entry.radical_map).to_string();
-        // extract relevant info from phrase
         let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
             uid, username, from_doc_title, def,
@@ -318,7 +322,8 @@ impl UserVocab {
         };
         return new_vocab;
     }
-
+    /// Attempts delete phrase
+    /// TODO: generic!
     pub fn try_delete(db: &Database, username: &str, phrase: &str, cn_type: &CnType) -> bool {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let query_doc = doc! { "username": username, "phrase": phrase, "cn_type": cn_type.as_str() };
@@ -332,7 +337,7 @@ impl UserVocab {
         }
         return res;
     }
-
+    /// Attempts to delete all UserVocab linked to a given UserDoc.
     pub fn try_delete_all_from_title(db: &Database, username: &str, from_doc_title: &str, cn_type: &CnType) -> Result<bool, Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
         let query_doc = doc! { "username": username, "from_doc_title": from_doc_title };
@@ -352,10 +357,11 @@ impl UserVocab {
         }
         return Ok(res);
     }
-
-    /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>
-    /// where each inner Vec<String> represents the list of values for all documents
-    /// matching the input query. A Vec upper-bound can be specified.
+    /// For all documents matching the query_doc, attempts to a Vec<String> of values for each input field.
+    /// For the specified fields in input Vec<&str>, if successful returns map of String->Vec<String>.
+    /// Each inner Vec<String> represents the list of values for all documents matching the input query.
+    /// A Vec upper-bound can be specified.
+    /// TODO: make this generic! And document clearer
     pub fn get_doc_fields_as_vectors(db: &Database, query_doc: Document, fields: Vec<&str>, capacity: Option<usize>) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
         let mut res_hmap: HashMap<String, Vec<String>> = HashMap::new();
         for key in &fields {
@@ -392,11 +398,14 @@ pub struct UserVocabList {
 
 impl DatabaseItem for UserVocabList {
     fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
-    /// NOTE: this is not necessarily unique per user, a unique primary key is username + cn_type
+    /// Note: this is not necessarily unique per user, a unique primary key is username + cn_type
     fn primary_key(&self) -> &str { return &self.username; } 
 }
 
 impl UserVocabList {
+    /// Gets comma-delimited string unique chars from user-saved UserVocab phrases.
+    /// TODO: make this generic
+    /// TODO: see if can save a database call for user settings
     pub fn get_user_char_list_string(db: &Database, username: &str) -> Option<String> {
         let (cn_type, _) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
@@ -415,7 +424,8 @@ impl UserVocabList {
         };
         return res;
     }
-
+    /// 
+    /// TODO: make first half generic
     pub fn get_phrase_list_as_hashset(db: &Database, username: &str, cn_type: &CnType) -> HashSet<String> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
@@ -438,7 +448,8 @@ impl UserVocabList {
         }
         return res;
     }
-
+    /// Updates UserVocabList object for given username with information form new_phrase.
+    /// TODO: cut down unnecessary nesting (on first coll.find_one())
     fn append_to_user_vocab_list(db: &Database, username: &str, new_phrase: &str, cn_type_str: &str) -> Result<(), Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type_str };
@@ -488,10 +499,11 @@ impl UserVocabList {
         }
         return Ok(());
     }
-    
+    /// Removes information in UserVocabList object from username based on phrase_to_remove.
+    /// TODO: cut-down on unnecessary nesting (on first coll.find_one())
     fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType) -> Result<(), Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
-        let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };        
+        let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };  
         match coll.find_one(query_doc, None) {
             Ok(query_res) => {
                 match query_res {
