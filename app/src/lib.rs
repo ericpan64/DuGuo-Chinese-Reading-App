@@ -67,7 +67,7 @@ pub trait DatabaseItem {
     }
     /// Attempts to insert the object into MongoDB.
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
-        let coll = (*db).collection(self.collection_name());
+        let coll = (*db).collection(Self::collection_name());
         let new_doc = self.as_document();
         match coll.insert_one(new_doc, None) {
             Ok(_) => {}
@@ -77,7 +77,7 @@ pub trait DatabaseItem {
     }
     /// If the current object exists in MongoDB, attempts to update the corresponding key field with a new value.
     fn try_update(&self, db: &Database, key: &str, new_value: &str) -> Result<String, Box<dyn Error>> where Self: Serialize {
-        let coll = (*db).collection(self.collection_name());
+        let coll = (*db).collection(Self::collection_name());
         let update_doc = doc! { key: new_value };
         let update_query = doc! { "$set": update_doc };
         match coll.update_one(self.as_document(), update_query, None) {
@@ -86,10 +86,10 @@ pub trait DatabaseItem {
         }
         return Ok(self.primary_key().to_string());
     }
+
     /* Requires Implementation */
     /// Returns the collection name in MongoDB where the objects should be stored.
-    /// TODO: see if &self can be dropped
-    fn collection_name(&self) -> &str;
+    fn collection_name() -> &'static str;
     /// Returns a generally-informative key for the document.
     /// This is not guaranteed to be unique (though generally is).
     fn primary_key(&self) -> &str;

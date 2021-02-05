@@ -54,7 +54,7 @@ impl DatabaseItem for User {
         }
         return Ok(self.primary_key().to_string());
     }
-    fn collection_name(&self) -> &str { return USER_COLL_NAME; }
+    fn collection_name() -> &'static str { return USER_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.username; }
 }
 
@@ -165,7 +165,7 @@ pub struct UserDoc {
 }
 
 impl DatabaseItem for UserDoc {
-    fn collection_name(&self) -> &str { return USER_DOC_COLL_NAME; }
+    fn collection_name() -> &'static str { return USER_DOC_COLL_NAME; }
     /// Note: this is not unique per document, a unique primary_key is username + title.
     fn primary_key(&self) -> &str { return &self.username; }
 }
@@ -291,7 +291,7 @@ pub struct UserVocab {
 
 impl DatabaseItem for UserVocab {
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
-        let coll = (*db).collection(self.collection_name());
+        let coll = (*db).collection(Self::collection_name());
         let new_doc = self.as_document();
         match coll.insert_one(new_doc, None) {
             Ok(_) => { UserVocabList::append_to_user_vocab_list(db, &self.username, &self.phrase, self.cn_type.as_str())?; },
@@ -299,7 +299,7 @@ impl DatabaseItem for UserVocab {
         }
         return Ok(self.primary_key().to_string());
     }
-    fn collection_name(&self) -> &str { return USER_VOCAB_COLL_NAME; }
+    fn collection_name() -> &'static str { return USER_VOCAB_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.phrase_html; }
 }
 
@@ -409,7 +409,7 @@ pub struct UserVocabList {
 }
 
 impl DatabaseItem for UserVocabList {
-    fn collection_name(&self) -> &str { return USER_VOCAB_LIST_COLL_NAME; }
+    fn collection_name() -> &'static str { return USER_VOCAB_LIST_COLL_NAME; }
     /// Note: this is not necessarily unique per user, a unique primary key is username + cn_type
     fn primary_key(&self) -> &str { return &self.username; } 
 }

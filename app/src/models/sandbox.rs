@@ -34,7 +34,7 @@ pub struct SandboxDoc {
 }
 
 impl DatabaseItem for SandboxDoc {
-    fn collection_name(&self) -> &str { return SANDBOX_COLL_NAME; }
+    fn collection_name() -> &'static str { return SANDBOX_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.doc_id; }
 }
 
@@ -91,7 +91,7 @@ pub struct AppFeedback {
 }
 
 impl DatabaseItem for AppFeedback {
-    fn collection_name(&self) -> &str { return USER_FEEDBACK_COLL_NAME; }
+    fn collection_name() -> &'static str { return USER_FEEDBACK_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.created_on; }
 }
 
