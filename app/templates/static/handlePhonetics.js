@@ -1,12 +1,12 @@
-/// Trigger Pinyin Visibility
+/// Trigger Pinyin Visibility (individual elements)
 let switchToHidden = (e) => { e.style.visibility = 'hidden'; }
 let switchToVisible = (e) => { e.style.visibility = 'visible'; }
 let switchOffWordVisibility = (phrase) => {
-    for (word_name of phrase.split('')) { // TODO: verify this change works as expected
+    for (word_name of phrase.split('')) {
         yins = document.getElementsByName(word_name).forEach(switchToHidden);
     }
 }
-// Only one of these lists should be populated at a given instance
+/// Trigger Pinyin Visibility (all elements)
 let all_phonetics_list = document.getElementsByClassName("phonetic");
 let hideSavedPhonetics = (phrase_list) => {
     phrase_list.forEach(x => document.getElementsByName(x).forEach(switchToHidden));

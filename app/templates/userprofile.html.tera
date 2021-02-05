@@ -10,85 +10,84 @@
     </style>
 {% endblock head %}
 {% block content %}
-
-{% if username is undefined %}
-<p>
-    Profile not found
-</p>
-{% else %}
-<h1>{{ username }}</h1>
-    {% if logged_in_username is undefined %}
-        <p> Log-in to view documents + vocab! </p>
-    {% elif logged_in_username == username %}
-        <hr>
-        <h5>Settings</h5>
-            <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-            {% if cn_phonetics == "Zhuyin" %}
-            Use Zhuyin
-            {% else %}
-            Use Pinyin
-            {% endif %}
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-            <li><a class="dropdown-item" href="#$pinyin">Use Pinyin</a></li>
-            <li><a class="dropdown-item" href="#$zhuyin">Use Zhuyin (Bopomofo)</a></li>
-            </ul>
-            <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-            {% if cn_type == "Traditional" %}
-            Use Traditional
-            {% else %}
-            Use Simplified
-            {% endif %}
-            </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-            <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
-            <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
-            </ul>
-            <br><br>
-            <p>FYI: Saved Documents + Vocab are linked to the Chinese type+phonetic combination. So updating these settings will cause the page to refresh.</p>
-        <br>
-            <h4>Upload Document</h4>
-            <hr>
-            <h5>Copy & Paste</h5>
-            <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
-                <input type="text" name="title" placeholder="Document Title" required><br>
-                <input type="text" name="source" placeholder="Document Source (optional)">
-                <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
-                <textarea class="form-control" name="body" form="user-doc-form" rows="2" cols="35" required></textarea>
-                <br>
-            </form>
-            <h5>Auto-Parse from URL</h5>
-            <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
-                <input type="text" name="url" placeholder="Document URL" required>
-                <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload URL</button>
-            </form>
-        <br><br>
-        <div class="row">
-            <div class="col-md">
-                {# Document Table #}
-                <h4>View Documents</h4>
-                <hr>
-                {{ doc_table | safe }}
-                <p><strong>*Note*</strong>: Documents are linked to Saved Vocab, so deleting a Document also deletes Vocab saved from that Document. You've been warned!</p>
-                <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
-            </div>
-            <div class="col-md">
-                <h4>View Saved Vocab</h4>
-                <hr>
-                {# Vocab Table #}
-                {{ vocab_table | safe }}
-                <button class="btn btn-outline-primary" onclick="download_vocab_table_as_csv('hidden-download-a')">Export Vocab as .csv</button>
-            </div>
-        </div>
-        <a id="hidden-download-a" hidden></a>
+    {% if username is undefined %}
+    <p>
+        Profile not found
+    </p>
     {% else %}
-        <p> Currently viewing other user. </p>
-    {% endif%}
-{% endif %}
-<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
-<script src="/static/handleTables.js"></script>
-<script>
-    // Update active navbar
-    document.getElementById("nav2").classList.add("active");
-</script>
+    <h1>{{ username }}</h1>
+        {% if logged_in_username is undefined %}
+            <p> Log-in to view documents + vocab! </p>
+        {% elif logged_in_username == username %}
+            <hr>
+            <h5>Settings</h5>
+                <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if cn_phonetics == "Zhuyin" %}
+                Use Zhuyin
+                {% else %}
+                Use Pinyin
+                {% endif %}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <li><a class="dropdown-item" href="#$pinyin">Use Pinyin</a></li>
+                <li><a class="dropdown-item" href="#$zhuyin">Use Zhuyin (Bopomofo)</a></li>
+                </ul>
+                <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if cn_type == "Traditional" %}
+                Use Traditional
+                {% else %}
+                Use Simplified
+                {% endif %}
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
+                <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
+                </ul>
+                <br><br>
+                <p>FYI: Saved Documents + Vocab are linked to the Chinese type+phonetic combination. So updating these settings will cause the page to refresh.</p>
+            <br>
+                <h4>Upload Document</h4>
+                <hr>
+                <h5>Copy & Paste</h5>
+                <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
+                    <input type="text" name="title" placeholder="Document Title" required><br>
+                    <input type="text" name="source" placeholder="Document Source (optional)">
+                    <button id="doc-upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
+                    <textarea class="form-control" name="body" form="user-doc-form" rows="2" cols="35" required></textarea>
+                    <br>
+                </form>
+                <h5>Auto-Parse from URL</h5>
+                <form class="form" action="/api/url-upload" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                    <input type="text" name="url" placeholder="Document URL" required>
+                    <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload URL</button>
+                </form>
+            <br><br>
+            <div class="row">
+                <div class="col-md">
+                    {# Document Table #}
+                    <h4>View Documents</h4>
+                    <hr>
+                    {{ doc_table | safe }}
+                    <p><strong>*Note*</strong>: Documents are linked to Saved Vocab, so deleting a Document also deletes Vocab saved from that Document. You've been warned!</p>
+                    <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
+                </div>
+                <div class="col-md">
+                    <h4>View Saved Vocab</h4>
+                    <hr>
+                    {# Vocab Table #}
+                    {{ vocab_table | safe }}
+                    <button class="btn btn-outline-primary" onclick="download_vocab_table_as_csv('hidden-download-a')">Export Vocab as .csv</button>
+                </div>
+            </div>
+            <a id="hidden-download-a" hidden></a>
+        {% else %}
+            <p> Currently viewing other user. </p>
+        {% endif%}
+    {% endif %}
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
+    <script src="/static/handleTables.js"></script>
+    <script>
+        // Update active navbar
+        document.getElementById("nav2").classList.add("active");
+    </script>
 {% endblock content %}

@@ -2,40 +2,40 @@
 {% block title %} Login / Register {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
-<div class="container">
-    {% if username is defined %}
-    <h3>Currently logged-in as: {{username}}</h3>
-    {% endif %}
-    <h1 class="h1">Login</h1>
-    <br>
-    <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
-        <input class="form-control" type="text" name="username" placeholder="Username" required>
+    <div class="container">
+        {% if username is defined %}
+        <h3>Currently logged-in as: {{username}}</h3>
+        {% endif %}
+        <h1 class="h1">Login</h1>
         <br>
-        <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
+        <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
+            <input class="form-control" type="text" name="username" placeholder="Username" required>
+            <br>
+            <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
+            <br>
+            <button class="btn btn-outline-primary" type="submit">Log In</button>
+            <br>
+        </form>
         <br>
-        <button class="btn btn-outline-primary" type="submit">Log In</button>
+        <h1 class="h1">Register</h1>
         <br>
-    </form>
-    <br>
-    <h1 class="h1">Register</h1>
-    <br>
-    <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
-        <input class="form-control" type="text" name="username" placeholder="Username" required>
+        <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
+            <input class="form-control" type="text" name="username" placeholder="Username" required>
+            <br>
+            <input class="form-control" type="email" name="email" placeholder="Email" required>
+            <br>
+            <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
+            <br>
+            <button class="btn btn-outline-primary" type="submit">Register</button>
+        </form>
         <br>
-        <input class="form-control" type="email" name="email" placeholder="Email" required>
-        <br>
-        <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
-        <br>
-        <button class="btn btn-outline-primary" type="submit">Register</button>
-    </form>
-    <br>
-    <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
-    <br><br>
-    <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \ *</p>
-</div>
-<script>
-    // Update active navbar
-    document.getElementById("nav3").classList.add("active");
-</script>
-<script src="/static/handleLogins.js"></script>
+        <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
+        <br><br>
+        <p>Note - the following characters are <em>not</em> allowed: < > ! ( ) { } " ' ; : \ *</p>
+    </div>
+    <script>
+        // Update active navbar
+        document.getElementById("nav3").classList.add("active");
+    </script>
+    <script src="/static/handleLogins.js"></script>
 {% endblock content %}

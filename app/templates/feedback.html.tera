@@ -2,8 +2,6 @@
 {% block title %} Feedback {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
-
-
 <p>Let me know your thoughts below! Leave your contact info (optional) if you would like a response and/or are open to further discuss your thoughts.</p>
 <p>To report more systemic bugs, please open a <a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">Github Issue</a>.</p>
 <textarea name="feedback" form="upload" rows="10" cols="100" required>Add your feedback here!</textarea>
@@ -16,5 +14,4 @@
     // Update active navbar
     document.getElementById("nav4").classList.add("active");
 </script>
-
 {% endblock content %}

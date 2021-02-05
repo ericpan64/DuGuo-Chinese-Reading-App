@@ -14,7 +14,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     {% endblock head %}
-    
     <body class="container-fluid">
         <nav class="navbar navbar-expand navbar-dark navbar-static-top bg-primary">
             <div class="container">
@@ -40,19 +39,5 @@
             {% block content %}{% endblock content %}
         </div>
     </body>
-    <script>
-    // Enable pop-ups
-    let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-    let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-        return new bootstrap.Popover(popoverTriggerEl)
-    })
-    // Update to Loading Button onsubmit
-    let switchToLoadingButton = (id) => {
-        let button = document.getElementById(id)
-        button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            <span class="sr-only">Loading...</span>`;
-        button.setAttribute("disabled", "");
-    }
-    </script>
-    <script src="/static/handleHash.js"></script>
+    <script src="/static/template.js"></script>
 </html>

@@ -1,8 +1,9 @@
-// Load DataTables
+/// Load DataTables
 $(document).ready(() => { 
     $('#doc-table').DataTable();
     $('#vocab-table').DataTable();
 });
+/// Remove characters that cause display issues
 let escape_formatting = (s) => {
     s = s.replace(/\r/g, '');
     s = s.replace(/\n/g, '\\n');
@@ -12,12 +13,14 @@ let escape_formatting = (s) => {
         return s;
     }
 }
+/// Performs csv download using the specified <a> tag id
 let perform_download = (csv, anchor_id, filename) => {
     let e = document.getElementById(anchor_id);
     e.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
     e.download = filename;
     e.click();
 }
+/// Formats GET request to /api/docs-to-csv and downloads as .csv
 let download_doc_table_as_csv = (anchor_id) => {
     let xhr = new XMLHttpRequest();
     xhr.open("GET", "/api/docs-to-csv");
@@ -39,6 +42,7 @@ let download_doc_table_as_csv = (anchor_id) => {
     }
     xhr.send();
 }
+/// Formats GET request to /api/vocab-to-csv and downloads as .csv
 let download_vocab_table_as_csv = (anchor_id) => {
     let xhr = new XMLHttpRequest();
     xhr.open("GET", "/api/vocab-to-csv");
