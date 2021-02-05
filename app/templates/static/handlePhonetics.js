@@ -6,6 +6,7 @@ let switchOffWordVisibility = (phrase) => {
         yins = document.getElementsByName(word_name).forEach(switchToHidden);
     }
 }
+
 /// Trigger Pinyin Visibility (all elements)
 let all_phonetics_list = document.getElementsByClassName("phonetic");
 let hideSavedPhonetics = (phrase_list) => {

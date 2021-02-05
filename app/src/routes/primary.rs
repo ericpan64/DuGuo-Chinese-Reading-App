@@ -20,7 +20,7 @@ use crate::{
     convert_rawstr_to_string, 
     DatabaseItem,
     auth::add_user_cookie_to_context,
-    models::sandbox::{SandboxDoc, UserFeedback}
+    models::sandbox::{SandboxDoc, AppFeedback}
 };
 use mongodb::sync::Database;
 use rocket::{
@@ -124,17 +124,17 @@ pub fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form
 }
 
 #[derive(FromForm)]
-pub struct UserFeedbackForm<'f> {
+pub struct AppFeedbackForm<'f> {
     feedback: &'f RawStr,
     contact: &'f RawStr,
 }
 
 #[post("/api/feedback", data = "<user_feedback>")]
-pub fn feedback_form(db: State<Database>, user_feedback: Form<UserFeedbackForm<'_>>) -> Redirect {
-    let UserFeedbackForm { feedback, contact } = user_feedback.into_inner();
+pub fn feedback_form(db: State<Database>, user_feedback: Form<AppFeedbackForm<'_>>) -> Redirect {
+    let AppFeedbackForm { feedback, contact } = user_feedback.into_inner();
     let feedback = convert_rawstr_to_string(feedback);
     let contact = convert_rawstr_to_string(contact);
-    let new_feedback = UserFeedback::new(feedback.clone(), contact.clone());
+    let new_feedback = AppFeedback::new(feedback.clone(), contact.clone());
     match new_feedback.try_insert(&db) {
         Ok(_) => {},
         Err(e) => { println!("Error when submitting feedback {} / contact: {}:\n\t{:?}", &feedback, &contact, e); }

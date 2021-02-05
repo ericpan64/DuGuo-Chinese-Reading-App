@@ -7,7 +7,7 @@
 /// └── CnEnDictEntry: Struct
 */
 
-use crate::{CacheItem, html};
+use crate::CacheItem;
 use serde::{Serialize, Deserialize};
 use std::{
     collections::HashMap,
@@ -33,12 +33,9 @@ impl CnType {
         };
     }
     pub fn from_str(s: &str) -> Option<Self> {
-        /// TODO: convert to lowercase, simplify matching
-        return match s {
-            "Traditional" => Some(CnType::Traditional),
+        return match s.to_ascii_lowercase().as_str() {
             "traditional" => Some(CnType::Traditional),
             "trad" => Some(CnType::Traditional),
-            "Simplified" => Some(CnType::Simplified),
             "simplified" => Some(CnType::Simplified),
             "simp" => Some(CnType::Simplified),
             _ => None
@@ -67,13 +64,9 @@ impl CnPhonetics {
         };
     }
     pub fn from_str(s: &str) -> Option<Self> {
-        /// TODO: convert to lowercase, simplify matching
-        return match s {
-            "Pinyin" => Some(CnPhonetics::Pinyin),
+        return match s.to_ascii_lowercase().as_str() {
             "pinyin" => Some(CnPhonetics::Pinyin),
-            "Zhuyin" => Some(CnPhonetics::Zhuyin),
             "zhuyin" => Some(CnPhonetics::Zhuyin),
-            "Bopomofo" => Some(CnPhonetics::Zhuyin),
             "bopomofo" => Some(CnPhonetics::Zhuyin),
             _ => None
         }
@@ -127,20 +120,6 @@ impl CnEnDictEntry {
     /// Returns true if object is a "failed lookup" entry, false otherwise.
     pub fn lookup_failed(&self) -> bool {
         return self.formatted_pinyin == "";
-    }
-    /// Extracts relevant UserVocab data from CEDICT entry.
-    /// TODO: move this to UserVocab in user.rs
-    pub fn get_vocab_data(&self, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
-        // Order: (phrase, defn, phrase_phonetics, phrase_html)
-        let defn = &self.defn;
-        let phrase_html = html::render_phrase_html(&self, cn_type, cn_phonetics, true, false);
-        let (phrase, phrase_phonetics) = match (cn_type, cn_phonetics) {
-            (CnType::Traditional, CnPhonetics::Pinyin) => (&self.trad, &self.formatted_pinyin),
-            (CnType::Traditional, CnPhonetics::Zhuyin) => (&self.trad, &self.zhuyin),
-            (CnType::Simplified, CnPhonetics::Pinyin) => (&self.simp, &self.formatted_pinyin),
-            (CnType::Simplified, CnPhonetics::Zhuyin) => (&self.simp, &self.zhuyin)
-        };
-        return (phrase.to_string(), defn.to_string(), phrase_phonetics.to_string(), phrase_html);
     }
     /// Generates generic "failed lookup" entry.
     /// The uid is preserved so the failed case can be identified.

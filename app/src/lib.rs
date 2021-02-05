@@ -65,14 +65,6 @@ pub trait DatabaseItem {
     fn as_bson(&self) -> Bson where Self: Serialize {
         return bson::to_bson(self).unwrap();
     }
-    /// Attempts to lookup a object using the key-value pair.
-    /// If a object is found, attempts to get a value from that object.
-    /// TODO: split this out to 2 functions, then refactor code accordingly
-    fn try_get_field_as_string(&self, db: &Database, lookup_key: &str, lookup_value: &str, get_key: &str) -> Result<String, Box<dyn Error>> where Self: Serialize {
-        let coll = (*db).collection(self.collection_name());
-        let found_doc = coll.find_one(doc! { lookup_key: lookup_value }, None)?.unwrap();
-        return Ok(found_doc.get(get_key).and_then(Bson::as_str).unwrap().to_string());
-    }
     /// Attempts to insert the object into MongoDB.
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
         let coll = (*db).collection(self.collection_name());

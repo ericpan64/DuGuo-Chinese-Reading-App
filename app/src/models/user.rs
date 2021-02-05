@@ -14,6 +14,7 @@ use crate::{
     auth::str_to_hashed_string,
     config::{USER_COLL_NAME, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, USER_VOCAB_LIST_COLL_NAME},
     connect_to_redis,
+    html as html_rendering,
     models::zh::{CnType, CnPhonetics, CnEnDictEntry}
 };
 use mongodb::{
@@ -114,7 +115,6 @@ impl User {
         return res;
     }
     /// Generates a random salt.
-    /// TODO: consider moving this to auth.rs
     fn generate_pw_salt() -> String {
         const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                                 abcdefghijklmnopqrstuvwxyz\
@@ -305,7 +305,6 @@ impl DatabaseItem for UserVocab {
 
 impl UserVocab {
     /// Looks-up UserVocab in Redis cache. If CEDICT match is found, then stores appropriate data.
-    /// TODO: see if db call can be consolidated
     pub async fn new(db: &Database, username: String, saved_uid: String, from_doc_title: String) -> Self {
         // For lookup, try user-specified first
         let mut conn = connect_to_redis().await.unwrap();
@@ -314,13 +313,26 @@ impl UserVocab {
         let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
         let radical_map = (&entry.radical_map).to_string();
-        let (phrase, def, phrase_phonetics, phrase_html) = entry.get_vocab_data(&cn_type, &cn_phonetics);
+        let (phrase, def, phrase_phonetics, phrase_html) = UserVocab::extract_vocab_data(entry, &cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
             uid, username, from_doc_title, def,
             phrase, phrase_phonetics, phrase_html,
             cn_type, cn_phonetics, created_on, radical_map
         };
         return new_vocab;
+    }
+    /// Extracts relevant UserVocab data from CnEnDictEntry. Consumes CnEnDictEntry.
+    fn extract_vocab_data(entry: CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
+        // Order: (phrase, defn, phrase_phonetics, phrase_html)
+        let phrase_html = html_rendering::render_phrase_html(&entry, cn_type, cn_phonetics, true, false);
+        let defn = entry.defn;
+        let (phrase, phrase_phonetics) = match (cn_type, cn_phonetics) {
+            (CnType::Traditional, CnPhonetics::Pinyin) => (entry.trad, entry.formatted_pinyin),
+            (CnType::Traditional, CnPhonetics::Zhuyin) => (entry.trad, entry.zhuyin),
+            (CnType::Simplified, CnPhonetics::Pinyin) => (entry.simp, entry.formatted_pinyin),
+            (CnType::Simplified, CnPhonetics::Zhuyin) => (entry.simp, entry.zhuyin)
+        };
+        return (phrase, defn, phrase_phonetics, phrase_html);
     }
     /// Attempts delete phrase
     /// TODO: generic!
@@ -405,9 +417,7 @@ impl DatabaseItem for UserVocabList {
 impl UserVocabList {
     /// Gets comma-delimited string unique chars from user-saved UserVocab phrases.
     /// TODO: make this generic
-    /// TODO: see if can save a database call for user settings
-    pub fn get_user_char_list_string(db: &Database, username: &str) -> Option<String> {
-        let (cn_type, _) = User::get_user_settings(db, username);
+    pub fn get_user_char_list_string(db: &Database, username: &str, cn_type: &CnType) -> Option<String> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
         let res = match coll.find_one(query_doc, None) {
@@ -449,88 +459,78 @@ impl UserVocabList {
         return res;
     }
     /// Updates UserVocabList object for given username with information form new_phrase.
-    /// TODO: cut down unnecessary nesting (on first coll.find_one())
     fn append_to_user_vocab_list(db: &Database, username: &str, new_phrase: &str, cn_type_str: &str) -> Result<(), Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type_str };
-        match coll.find_one(query_doc, None) {
-            Ok(query_res) => {
-                match query_res {
-                    Some(doc) => {
-                        // Update existing list
-                        let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
-                        let mut unique_char_list = prev_doc.unique_char_list.clone();
-                        let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
-                        // Add unique chars
-                        let phrase_string = String::from(new_phrase);
-                        for c in (phrase_string).chars() {
-                            if !unique_char_list.contains(c) {
-                                unique_char_list += &c.to_string();
-                                unique_char_list += ",";
-                            }
-                        }
-                        unique_phrase_list += &phrase_string;
-                        unique_phrase_list += ",";
-                        // Write to db
-                        // TODO: allow try_update to accept multiple fields
-                        prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
-                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
-                    }
-                    None => {
-                        // Create new instance with unique chars
-                        let mut unique_char_list = String::with_capacity(50);
-                        let mut unique_phrase_list = String::from(new_phrase);
-                        for c in (unique_phrase_list).chars() {
-                            if !unique_char_list.contains(c) {
-                                unique_char_list += &c.to_string();
-                                unique_char_list += ",";
-                            }
-                        }
-                        unique_phrase_list += ",";
-                        // Write to db
-                        let username = username.to_string();
-                        let cn_type = CnType::from_str(cn_type_str).unwrap();
-                        let new_doc = UserVocabList { username, unique_char_list, unique_phrase_list, cn_type };
-                        new_doc.try_insert(db)?;
+        let query_res = coll.find_one(query_doc, None)?;
+        match query_res {
+            Some(doc) => {
+                // Update existing list
+                let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
+                let mut unique_char_list = prev_doc.unique_char_list.clone();
+                let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
+                // Add unique chars
+                let phrase_string = String::from(new_phrase);
+                for c in (phrase_string).chars() {
+                    if !unique_char_list.contains(c) {
+                        unique_char_list += &c.to_string();
+                        unique_char_list += ",";
                     }
                 }
-            },
-            Err(e) => { eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e); }
+                unique_phrase_list += &phrase_string;
+                unique_phrase_list += ",";
+                // Write to db
+                // TODO: allow try_update to accept multiple fields
+                prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
+                prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
+            }
+            None => {
+                // Create new instance with unique chars
+                let mut unique_char_list = String::with_capacity(50);
+                let mut unique_phrase_list = String::from(new_phrase);
+                for c in (unique_phrase_list).chars() {
+                    if !unique_char_list.contains(c) {
+                        unique_char_list += &c.to_string();
+                        unique_char_list += ",";
+                    }
+                }
+                unique_phrase_list += ",";
+                // Write to db
+                let username = username.to_string();
+                let cn_type = CnType::from_str(cn_type_str).unwrap();
+                let new_doc = UserVocabList { username, unique_char_list, unique_phrase_list, cn_type };
+                new_doc.try_insert(db)?;
+            }
         }
         return Ok(());
     }
     /// Removes information in UserVocabList object from username based on phrase_to_remove.
-    /// TODO: cut-down on unnecessary nesting (on first coll.find_one())
     fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType) -> Result<(), Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
-        let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };  
-        match coll.find_one(query_doc, None) {
-            Ok(query_res) => {
-                match query_res {
-                    Some(doc) => {
-                        // Update existing list
-                        let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
-                        let mut unique_char_list = prev_doc.unique_char_list.clone();
-                        // Remove unique chars
-                        let phrase_string = String::from(phrase_to_remove);
-                        for c in (phrase_string).chars() {
-                            if unique_char_list.contains(c) {
-                                // remove the string from unique_char_list
-                                let c_with_comma = format!("{},", c);
-                                unique_char_list = unique_char_list.replace(&c_with_comma, "");
-                            }
-                        }
-                        let phrase_with_comma = format!("{},", phrase_string);
-                        let unique_phrase_list = prev_doc.unique_phrase_list.replace(&phrase_with_comma, "");
-                        // Write to db
-                        // TODO: improve try_update
-                        prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
-                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
-                    },
-                    None => {}
+        let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
+        let query_res = coll.find_one(query_doc, None)?;
+        match query_res {
+            Some(doc) => {
+                // Update existing list
+                let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
+                let mut unique_char_list = prev_doc.unique_char_list.clone();
+                // Remove unique chars
+                let phrase_string = String::from(phrase_to_remove);
+                for c in (phrase_string).chars() {
+                    if unique_char_list.contains(c) {
+                        // remove the string from unique_char_list
+                        let c_with_comma = format!("{},", c);
+                        unique_char_list = unique_char_list.replace(&c_with_comma, "");
+                    }
                 }
+                let phrase_with_comma = format!("{},", phrase_string);
+                let unique_phrase_list = prev_doc.unique_phrase_list.replace(&phrase_with_comma, "");
+                // Write to db
+                // TODO: improve try_update
+                prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
+                prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
             },
-            Err(e) => { eprintln!("Error when searching for pinyin list for user {}: {:?}", username, e); }
+            None => {}
         }
         return Ok(());
     }

@@ -1,16 +1,11 @@
 """
-Data sourced from: 
+This script generates a char->radical map as a .csv.
+
+Each character maps to {0, 1} radical(s), so there are no lookup conflicts to handle!
+
+Data is sourced from: 
 1. https://ltl-beijing.com/chinese-radicals/
-    - If character conflict, then 
 2. http://ccdb.hemiola.com/
-
-Goal: web-scrape radical->char map, then invert to char->radical map
-
-Each character maps to either {0, 1} radical(s)
-
-TODO: add http://hanzi.hemiola.com/ as a featured resource
-TODO: verify the radical information is for simplified
-TODO: leave a comment on dude's blog with thanks - http://com.hemiola.com/2011/12/17/chinese-character-web-api/
 """
 import urllib.request
 import pandas as pd

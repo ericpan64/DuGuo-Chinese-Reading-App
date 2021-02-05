@@ -3,7 +3,7 @@
 /// 
 /// sandbox.rs
 /// ├── SandboxDoc: Strict
-/// └── UserFeedback: Struct
+/// └── AppFeedback: Struct
 */
 
 use chrono::Utc;
@@ -84,24 +84,22 @@ impl SandboxDoc {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UserFeedback {
+pub struct AppFeedback {
     feedback: String,
-    /// If none, String::new()
     contact: String, 
     created_on: String
 }
 
-impl DatabaseItem for UserFeedback {
+impl DatabaseItem for AppFeedback {
     fn collection_name(&self) -> &str { return USER_FEEDBACK_COLL_NAME; }
     fn primary_key(&self) -> &str { return &self.created_on; }
 }
 
-impl UserFeedback {
-    /// Creates a UserFeedback object. This is generally anonymous.
-    /// TODO: rename this to AppFeedback
+impl AppFeedback {
+    /// Creates an AppFeedback object. This is generally anonymous.
     pub fn new(feedback: String, contact: String) -> Self {
         let created_on = Utc::now().to_string();
-        let new_feedback = UserFeedback { feedback, contact, created_on };
+        let new_feedback = AppFeedback { feedback, contact, created_on };
         return new_feedback;
     }
 }

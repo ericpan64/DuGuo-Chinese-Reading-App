@@ -4,6 +4,7 @@ let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggl
 let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
     return new bootstrap.Popover(popoverTriggerEl)
 })
+
 // Update to Loading Button onsubmit
 let switchToLoadingButton = (id) => {
     let button = document.getElementById(id)
@@ -11,6 +12,7 @@ let switchToLoadingButton = (id) => {
         <span class="sr-only">Loading...</span>`;
     button.setAttribute("disabled", "");
 }
+
 /// Text-to-Speech
 /// Wait for speechSynthesis load if available. from: https://stackoverflow.com/a/62032443/13073731
 /// TODO: add handling if zh-CN voice is not available
@@ -18,6 +20,7 @@ if ('speechSynthesis' in window) {
     speechSynthesis.cancel();
     speechSynthesis.getVoices();
 }
+
 /**
  * Performs Text-to-Speech step with given phrase.
  * @param {String} phrase Chinese String to read.
@@ -28,6 +31,7 @@ let sayPhrase = (phrase) => {
     utterance.rate = 0.8;
     return window.speechSynthesis.speak(utterance);
 }
+
 /// Handle Hash Changes
 /**
  * Sends POST request to /api/update-settings (defined in users.rs).
@@ -58,6 +62,7 @@ let postUserSetting = (hash_string) => {
     }
     xhr.send(params);
 }
+
 /**
  * Sends POST request to /api/vocab (defined in users.rs).
  * @param {String} hash_string Phrase uid (currently: simplified+raw_pinyin)
@@ -82,6 +87,7 @@ let postNewVocab = (hash_string) => {
     }
     xhr.send(params);
 }
+
 /**
  * Removes the download link after a user saves a phrase.
  * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
@@ -95,6 +101,7 @@ let removeDownloadLink = (uid) => {
         spans[i].setAttribute(title_attr, new_title);
     }
 }
+
 /**
  * Handles the hash updating logic. 
  */
@@ -119,4 +126,5 @@ let parseHashChange = () => {
         }
     }
 }
+/// Set event callback
 window.onhashchange = parseHashChange;

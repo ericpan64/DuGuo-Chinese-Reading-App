@@ -21,6 +21,7 @@ let attemptLogin = () => {
     console.log(params.toString())
     xhr.send(params.toString());
 }
+
 /// Notify user if they try to use a character that is not allowed.
 let getForbiddenChars = (pw) => {
     const invalid_chars = new Set(['<', '>', '!', '(', ')', '{', '}', '"' , '\'', ';', ':', '\\', '*']);
@@ -32,6 +33,7 @@ let getForbiddenChars = (pw) => {
     }
     return res;
 }
+
 /// Performs POST request to /api/register (defined in users.rs)
 let attemptRegister = () => {
     let xhr = new XMLHttpRequest();
@@ -59,6 +61,7 @@ let attemptRegister = () => {
     console.log(params.toString())
     xhr.send(params.toString());
 }
+
 /// Toggle password visibility in form
 let showPassword = () => {
     let login_pw = document.getElementById("pw-login")
