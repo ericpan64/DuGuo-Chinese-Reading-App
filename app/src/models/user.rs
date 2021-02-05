@@ -386,7 +386,7 @@ impl UserVocab {
 pub struct UserVocabList {
     username: String,
     /// Comma-delimited String
-    unique_phrase_list: String, 
+    unique_char_list: String, 
     cn_type: CnType
 }
 
@@ -397,14 +397,14 @@ impl DatabaseItem for UserVocabList {
 }
 
 impl UserVocabList {
-    pub fn get_user_vocab_list_string(db: &Database, username: &str) -> Option<String> {
+    pub fn get_user_char_list_string(db: &Database, username: &str) -> Option<String> {
         let (cn_type, _) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
         let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
         let res = match coll.find_one(query_doc, None) {
             Ok(query_res) => {
                 match query_res {
-                    Some(doc) => Some(doc.get("unique_phrase_list").and_then(Bson::as_str).unwrap().to_string()),
+                    Some(doc) => Some(doc.get("unique_char_list").and_then(Bson::as_str).unwrap().to_string()),
                     None => None
                 }            
             },
@@ -417,7 +417,7 @@ impl UserVocabList {
     }
 
     pub fn get_as_hashset(db: &Database, username: &str) -> HashSet<String> {
-        let list = match UserVocabList::get_user_vocab_list_string(db, &username) {
+        let list = match UserVocabList::get_user_char_list_string(db, &username) {
             Some(list) => list,
             None => String::new()
         };
@@ -437,32 +437,32 @@ impl UserVocabList {
                     Some(doc) => {
                         // Update existing list
                         let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
-                        let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
+                        let mut unique_char_list = prev_doc.unique_char_list.clone();
                         // Add unique chars
                         let phrase_string = String::from(new_phrase);
                         for c in (phrase_string).chars() {
-                            if !unique_phrase_list.contains(c) {
-                                unique_phrase_list += &c.to_string();
-                                unique_phrase_list += ",";
+                            if !unique_char_list.contains(c) {
+                                unique_char_list += &c.to_string();
+                                unique_char_list += ",";
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
                     }
                     None => {
                         // Create new instance with unique chars
-                        let mut unique_phrase_list = String::with_capacity(50);
+                        let mut unique_char_list = String::with_capacity(50);
                         let phrase_string = String::from(new_phrase);
                         for c in (phrase_string).chars() {
-                            if !unique_phrase_list.contains(c) {
-                                unique_phrase_list += &c.to_string();
-                                unique_phrase_list += ",";
+                            if !unique_char_list.contains(c) {
+                                unique_char_list += &c.to_string();
+                                unique_char_list += ",";
                             }
                         }
                         // Write to db
                         let username = username.to_string();
                         let cn_type = CnType::from_str(cn_type_str);
-                        let new_doc = UserVocabList { username, unique_phrase_list, cn_type };
+                        let new_doc = UserVocabList { username, unique_char_list, cn_type };
                         new_doc.try_insert(db)?;
                     }
                 }
@@ -481,18 +481,18 @@ impl UserVocabList {
                     Some(doc) => {
                         // Update existing list
                         let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
-                        let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
+                        let mut unique_char_list = prev_doc.unique_char_list.clone();
                         // Remove unique chars
                         let phrase_string = String::from(phrase_to_remove);
                         for c in (phrase_string).chars() {
-                            if unique_phrase_list.contains(c) {
-                                // remove the string from unique_phrase_list
+                            if unique_char_list.contains(c) {
+                                // remove the string from unique_char_list
                                 let c_with_comma = format!("{},", c);
-                                unique_phrase_list = unique_phrase_list.replace(&c_with_comma, "");
+                                unique_char_list = unique_char_list.replace(&c_with_comma, "");
                             }
                         }
                         // Write to db
-                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
+                        prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
                     },
                     None => {}
                 }

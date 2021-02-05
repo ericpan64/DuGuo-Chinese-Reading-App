@@ -29,11 +29,11 @@
             <br><br>
             <div class="btn-group" role="group" aria-label="Settings for phonetics visibility.">
                 {% if cn_phonetics == "Zhuyin" %}
-                <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Zhuyin</button>
+                <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_char_list)">Hide Saved Zhuyin</button>
                 <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics()">Hide All Zhuyin</button>
                 <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics()">Reset All Zhuyin</button>
                 {% else %}
-                <button id="hide-saved" class="btn btn-primary border border-light" onclick="hideSavedPhonetics(user_saved_phrase_list)">Hide Saved Pinyin</button>
+                <button id="hide-saved" class="btn btn-primary border border-light" onclick="hideSavedPhonetics(user_saved_char_list)">Hide Saved Pinyin</button>
                 <button id="hide-all" class="btn btn-primary border border-light" onclick="hideAllPhonetics()">Hide All Pinyin</button>
                 <button id="reset-all" class="btn btn-primary border border-light" onclick="resetAllPhonetics()">Reset All Pinyin</button>
                 {% endif %}
@@ -56,10 +56,10 @@
     document.title = decodeURIComponent(current_url[current_url.length - 1]);
     {% endif %}
     /// Button Functionality
-    {% if user_vocab_list_string is undefined %}
-    let user_saved_phrase_list = [];
+    {% if user_char_list_string is undefined %}
+    let user_saved_char_list = [];
     {% else %}
-    let user_saved_phrase_list = "{{user_vocab_list_string}}".split(',');
+    let user_saved_char_list = "{{user_char_list_string}}".split(',');
     {% endif %}
 </script>
 <script src="/static/handleKeyEvents.js"></script>
