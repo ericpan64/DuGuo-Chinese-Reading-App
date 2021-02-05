@@ -76,22 +76,17 @@ def load_cedict(conn):
     for _, row in cedict_df.iterrows():
         trad, simp, raw_pinyin, defn = row
         uid = generate_uid(simp, raw_pinyin)
-
         # skip cases where definition is a "variant of" another CEDICT entry
         if "variant of" in defn:
             continue
-        
         # skip case where previous entry is superset of current
         if (prev_raw_pinyin == raw_pinyin) and defn in prev_defn:
             continue
-
         # get formatted pinyin
         formatted_simp = convert_digits_to_chars(simp)
         formatted_pinyin = ' '.join(flatten_list(pfmt(formatted_simp)))
-
         # get zhuyin (BOPOMOFO)
         zhuyin = ' '.join(flatten_list(pfmt(formatted_simp, style=Style.BOPOMOFO)))
-        
         # handle case where current entry is superset of previous
         if (prev_raw_pinyin == raw_pinyin) and (prev_defn in defn):
             last_entry = entry_list.pop()
@@ -100,13 +95,11 @@ def load_cedict(conn):
         elif (prev_raw_pinyin == raw_pinyin) and ((prev_simp == simp) or (prev_trad == trad)):
             last_entry = entry_list.pop()
             defn = last_entry['defn'] + '$' + defn
-
         # get radical information
         lookup_radical = lambda char: "NA" if char not in radical_df.index else radical_df.loc[char].radical_char
         radical_map = { c: lookup_radical(c) for c in simp }
         radical_map = str(radical_map).replace("'", '')
         radical_map = radical_map.replace(',', ',\n') # make newlines for readability
-
         # append entry
         entry_list.append({
             'uid': uid,
@@ -118,11 +111,9 @@ def load_cedict(conn):
             'zhuyin': zhuyin,
             'radical_map': radical_map
         })
-
         # update prev items
         prev_trad, prev_simp, prev_raw_pinyin = trad, simp, raw_pinyin
         prev_defn = defn
-
     # add to Redis
     print("Loading CEDICT to Redis, this takes a few minutes...")
     for entry in entry_list:

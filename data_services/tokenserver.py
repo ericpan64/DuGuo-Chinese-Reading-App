@@ -102,7 +102,7 @@ def tokenize_str(s):
     # Generate delimited string
     n_tokens = len(str_tokens)
     delimited_list = [''] * n_tokens # pre-allocate since known size
-    # in this case, no conversion -> no pinyin -> not chinese (catches Chinese punctuation)
+    # In this case, no conversion -> no pinyin -> not chinese (catches Chinese punctuation)
     not_chinese_phrase = lambda x: x == reversed_raw_pinyin_list[-1] 
     for i in range(n_tokens):
         phrase = str_tokens[i]
@@ -181,7 +181,6 @@ if __name__ == '__main__':
                 sock.sendall(data.outb)  # Ready to write
                 data.outb = []
 
-
     while True:
         events = sel.select(timeout=None)
         for key, mask in events:
@@ -189,17 +188,3 @@ if __name__ == '__main__':
                 accept_wrapper(key.fileobj)
             else:
                 service_connection(key, mask)
-
-    # # Single threaded connections
-    # with socket.socket(IPV4, TCP) as s:
-    #     s.bind((TOKENIZER_HOST, TOKENIZER_PORT))
-    #     s.listen()
-    #     conn, addr = s.accept()
-    #     with conn:
-    #         print('Connected by: ', addr)
-    #         while True:
-    #             data = conn.recv(MAX_BUF)
-    #             if not data:
-    #                 break
-    #             data = tokenize_str(str(data, 'utf-8'))
-    #             conn.sendall(bytes(data, 'utf-8'))
