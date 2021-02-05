@@ -263,11 +263,7 @@ pub fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<Use
     let UserDocumentForm { title, source, body } = user_doc.into_inner();
     let title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
-    let source = convert_rawstr_to_string(source);
-    // read http header if present
-    let source = source.replace("http//", "http://");
-    let source = source.replace("https//", "https://");
-    
+    let source = convert_rawstr_to_string(source);    
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
@@ -293,10 +289,7 @@ pub struct UserUrlForm<'f> {
 #[post("/api/url-upload", data = "<user_url>")]
 pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
     let UserUrlForm { url } = user_url.into_inner();
-    let url = convert_rawstr_to_string(url); // Note: ':' is removed
-    // read http header if present
-    let url = url.replace("http//", "http://");
-    let url = url.replace("https//", "https://");
+    let url = convert_rawstr_to_string(url);
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
@@ -355,16 +348,8 @@ pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_status = match username_from_cookie {
         Some(username) => {
-            let cn_type = match setting.as_str() {
-                "trad" => Some(CnType::Traditional),
-                "simp" => Some(CnType::Simplified),
-                _ => None,
-            };
-            let cn_phonetics = match setting.as_str() {
-                "pinyin" => Some(CnPhonetics::Pinyin),
-                "zhuyin" => Some(CnPhonetics::Zhuyin),
-                _ => None,
-            };
+            let cn_type = CnType::from_str(&setting);
+            let cn_phonetics = CnPhonetics::from_str(&setting);
             match User::update_user_settings(&db, &username, cn_type, cn_phonetics) {
                 Ok(_) => Status::Accepted,
                 Err(_) => Status::BadRequest

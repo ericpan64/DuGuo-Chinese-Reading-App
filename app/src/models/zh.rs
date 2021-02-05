@@ -32,16 +32,16 @@ impl CnType {
             CnType::Simplified => "Simplified"
         };
     }
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_str(s: &str) -> Option<Self> {
         /// TODO: convert to lowercase, simplify matching
         return match s {
-            "Traditional" => CnType::Traditional,
-            "traditional" => CnType::Traditional,
-            "trad" => CnType::Traditional,
-            "Simplified" => CnType::Simplified,
-            "simplified" => CnType::Simplified,
-            "simp" => CnType::Simplified,
-            _ => CnType::Simplified // Default to simplified
+            "Traditional" => Some(CnType::Traditional),
+            "traditional" => Some(CnType::Traditional),
+            "trad" => Some(CnType::Traditional),
+            "Simplified" => Some(CnType::Simplified),
+            "simplified" => Some(CnType::Simplified),
+            "simp" => Some(CnType::Simplified),
+            _ => None
         }
     }
 }
@@ -66,16 +66,16 @@ impl CnPhonetics {
             CnPhonetics::Zhuyin => "Zhuyin"
         };
     }
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_str(s: &str) -> Option<Self> {
         /// TODO: convert to lowercase, simplify matching
         return match s {
-            "Pinyin" => CnPhonetics::Pinyin,
-            "pinyin" => CnPhonetics::Pinyin,
-            "Zhuyin" => CnPhonetics::Zhuyin,
-            "zhuyin" => CnPhonetics::Zhuyin,
-            "Bopomofo" => CnPhonetics::Zhuyin,
-            "bopomofo" => CnPhonetics::Zhuyin,
-            _ => CnPhonetics::Pinyin // Default to pinyin
+            "Pinyin" => Some(CnPhonetics::Pinyin),
+            "pinyin" => Some(CnPhonetics::Pinyin),
+            "Zhuyin" => Some(CnPhonetics::Zhuyin),
+            "zhuyin" => Some(CnPhonetics::Zhuyin),
+            "Bopomofo" => Some(CnPhonetics::Zhuyin),
+            "bopomofo" => Some(CnPhonetics::Zhuyin),
+            _ => None
         }
     }
 }

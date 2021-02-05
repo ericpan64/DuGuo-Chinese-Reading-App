@@ -489,7 +489,7 @@ impl UserVocabList {
                         unique_phrase_list += ",";
                         // Write to db
                         let username = username.to_string();
-                        let cn_type = CnType::from_str(cn_type_str);
+                        let cn_type = CnType::from_str(cn_type_str).unwrap();
                         let new_doc = UserVocabList { username, unique_char_list, unique_phrase_list, cn_type };
                         new_doc.try_insert(db)?;
                     }
