@@ -91,7 +91,7 @@ pub fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<Sa
     let text_as_string = convert_rawstr_to_string(text);
     let cn_type = convert_rawstr_to_string(cn_type);
     let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
-    let new_doc = (rt).block_on(SandboxDoc::new(text_as_string, cn_type, cn_phonetics, String::new()));
+    let new_doc = rt.block_on(SandboxDoc::new(text_as_string, cn_type, cn_phonetics, String::new()));
     let res_redirect = match new_doc.try_insert(&db) {
         Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),
         Err(_) => Redirect::to(uri!(index))
@@ -115,7 +115,7 @@ pub fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form
     // read http header if present
     let url = url.replace("http//", "http://");
     let url = url.replace("https//", "https://");
-    let new_doc = (rt).block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics));
+    let new_doc = rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics));
     let res_redirect = match new_doc.try_insert(&db) {
         Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),
         Err(_) => Redirect::to(uri!(index))

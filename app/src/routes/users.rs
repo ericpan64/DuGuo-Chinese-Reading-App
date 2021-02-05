@@ -293,7 +293,7 @@ pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = (rt).block_on(UserDoc::from_url(&db, username, url));
+            let new_doc = rt.block_on(UserDoc::from_url(&db, username, url));
             match new_doc.try_insert(&db) {
                 Ok(username) => Redirect::to(uri!(user_profile: username)),
                 Err(e) => { 
@@ -322,7 +322,7 @@ pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_vocab = (rt).block_on(UserVocab::new(&db, username, phrase, from_doc_title));
+            let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title));
             match new_vocab.try_insert(&db) {
                 Ok(_) => Status::Accepted,
                 Err(_) => Status::ExpectationFailed
