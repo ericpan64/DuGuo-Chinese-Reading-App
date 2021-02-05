@@ -385,8 +385,8 @@ impl UserVocab {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocabList {
     username: String,
-    /// Comma-delimited String
-    unique_char_list: String, 
+    unique_char_list: String,
+    unique_phrase_list: String,
     cn_type: CnType
 }
 
@@ -416,8 +416,19 @@ impl UserVocabList {
         return res;
     }
 
-    pub fn get_as_hashset(db: &Database, username: &str) -> HashSet<String> {
-        let list = match UserVocabList::get_user_char_list_string(db, &username) {
+    pub fn get_phrase_list_as_hashset(db: &Database, username: &str, cn_type: &CnType) -> HashSet<String> {
+        let coll = (*db).collection(USER_VOCAB_LIST_COLL_NAME);
+        let query_doc = doc! { "username": username, "cn_type": cn_type.as_str() };
+        let query_res = match coll.find_one(query_doc, None) {
+            Ok(query_res) => {
+                match query_res {
+                    Some(doc) => Some(doc.get("unique_phrase_list").and_then(Bson::as_str).unwrap().to_string()),
+                    None => None
+                }            
+            },
+            Err(_) => None
+        };
+        let list = match query_res {
             Some(list) => list,
             None => String::new()
         };
@@ -438,6 +449,7 @@ impl UserVocabList {
                         // Update existing list
                         let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
                         let mut unique_char_list = prev_doc.unique_char_list.clone();
+                        let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
                         // Add unique chars
                         let phrase_string = String::from(new_phrase);
                         for c in (phrase_string).chars() {
@@ -446,23 +458,28 @@ impl UserVocabList {
                                 unique_char_list += ",";
                             }
                         }
+                        unique_phrase_list += &phrase_string;
+                        unique_phrase_list += ",";
                         // Write to db
+                        // TODO: allow try_update to accept multiple fields
                         prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
+                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
                     }
                     None => {
                         // Create new instance with unique chars
                         let mut unique_char_list = String::with_capacity(50);
-                        let phrase_string = String::from(new_phrase);
-                        for c in (phrase_string).chars() {
+                        let mut unique_phrase_list = String::from(new_phrase);
+                        for c in (unique_phrase_list).chars() {
                             if !unique_char_list.contains(c) {
                                 unique_char_list += &c.to_string();
                                 unique_char_list += ",";
                             }
                         }
+                        unique_phrase_list += ",";
                         // Write to db
                         let username = username.to_string();
                         let cn_type = CnType::from_str(cn_type_str);
-                        let new_doc = UserVocabList { username, unique_char_list, cn_type };
+                        let new_doc = UserVocabList { username, unique_char_list, unique_phrase_list, cn_type };
                         new_doc.try_insert(db)?;
                     }
                 }
@@ -491,8 +508,12 @@ impl UserVocabList {
                                 unique_char_list = unique_char_list.replace(&c_with_comma, "");
                             }
                         }
+                        let phrase_with_comma = format!("{},", phrase_string);
+                        let unique_phrase_list = prev_doc.unique_phrase_list.replace(&phrase_with_comma, "");
                         // Write to db
+                        // TODO: improve try_update
                         prev_doc.try_update(db, "unique_char_list", &unique_char_list)?;
+                        prev_doc.try_update(db, "unique_phrase_list", &unique_phrase_list)?;
                     },
                     None => {}
                 }
