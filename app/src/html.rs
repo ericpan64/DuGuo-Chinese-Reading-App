@@ -41,7 +41,7 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
         const DOWNLOAD_ICON: &str = "https://icons.getbootstrap.com/icons/download.svg";
         let mut res = String::with_capacity(2500);
         // Start <span> (popup config)
-        res += format!("<span class=\"{}\" tabindex=\"1\"", entry.uid).as_str();
+        res += format!("<span class=\"{}\" tabindex=\"0\"", entry.uid).as_str();
         res += format!(" data-bs-toggle=\"popover\" data-bs-content=\"{}\"", format_defn_html(entry)).as_str();
         res += format!(" title=\"{} [{}]", phrase, phonetic_str).as_str();
         if include_sound_link {
