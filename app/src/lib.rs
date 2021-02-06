@@ -1,5 +1,5 @@
 /*
-/// Trait definitions and General purpose helper functions
+/// Trait definitions and General purpose helper functions.
 /// 
 /// lib.rs
 /// ├── CacheItem: Trait
@@ -16,11 +16,15 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use] extern crate rocket;
 
-/// Test doc comment
+/// Module handling user authentication and cookies.
 pub mod auth;
+/// Module with config &str values.
 pub mod config;
+/// Module that handles HTML rendering. Often used with alias "html_rendering".
 pub mod html;
+/// Module defining all data structures and associated functions.
 pub mod models;
+/// Module defining all of the Rocket web endpoints.
 pub mod routes;
 
 use crate::config::{DB_NAME, DB_URI, REDIS_URI};
@@ -74,14 +78,6 @@ pub trait DatabaseItem {
     fn as_document(&self) -> Document where Self: Serialize {
         return bson::to_document(self).unwrap();
     }
-    // /// Attempts to convert from bson::document::Document type.
-    // fn from_document(doc: Document) -> Self where Self: Default{
-    //     // create default object
-    //     // get all fields
-    //     // lookup each field in bson doc
-    //     // update the struct item
-    //     // return struct
-    // }
     /// Returns object as bson::Bson type.
     fn as_bson(&self) -> Bson where Self: Serialize {
         return bson::to_bson(self).unwrap();

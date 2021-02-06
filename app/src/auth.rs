@@ -153,7 +153,6 @@ fn check_if_jwt_is_active(expiration_timestamp: i64) -> bool {
 }
 
 /// Returns username in given UserCredentials if it is successfully found in the MongoDB.
-/// TODO: see if this can be generic
 fn get_username_from_valid_user_credentials(db: &Database, cred: UserCredentials) -> Option<String> {
     let coll = (*db).collection(USER_COLL_NAME);
     let cred_as_document = bson::to_document(&cred).unwrap();

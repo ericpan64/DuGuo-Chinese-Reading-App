@@ -206,7 +206,6 @@ impl UserDoc {
         return UserDoc::new(db, username, title_text, body_text, url);
     }
     /// Attempts to delete a matching object in MongoDB.
-    /// TODO: refactor this
     pub fn try_delete(db: &Database, username: &str, title: &str) -> bool {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -320,6 +319,7 @@ impl UserVocab {
     }
 }
 
+/// Running lists of the unique phrases and characters (from the phrases) that user has saved.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocabList {
     username: String,

@@ -51,6 +51,7 @@ use std::collections::HashMap;
 use tokio::runtime::Handle;
 
 /* GET */
+/// /u/<raw_username>
 #[get("/u/<raw_username>")]
 pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new(); // Note: <&str, String> makes more sense than <&str, &str> due to variable lifetimes
@@ -77,8 +78,7 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
     }
     return Template::render("userprofile", context);
 }
-
-
+/// /u/<raw_username>/<doc_title>
 #[get("/u/<raw_username>/<doc_title>")]
 pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new(); // Note: <&str, String> makes more sense than <&str, &str> due to variable lifetimes
@@ -110,7 +110,7 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
     }
     return Template::render("reader", context);
 }
-
+/// /api/delete-doc/<doc_title>
 #[get("/api/delete-doc/<doc_title>")]
 pub fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Redirect {
     let title = convert_rawstr_to_string(doc_title);
@@ -118,7 +118,7 @@ pub fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr
     UserDoc::try_delete(&db, &username, &title);
     return Redirect::to(uri!(user_profile: username));
 }
-
+/// /api/delete-vocab/<vocab_phrase>
 #[get("/api/delete-vocab/<vocab_phrase>")]
 pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &RawStr) -> Redirect {
     let phrase_string = convert_rawstr_to_string(vocab_phrase);
@@ -128,7 +128,7 @@ pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &R
     UserVocab::try_delete(&db, &username, &phrase_string, &cn_type);
     return Redirect::to(uri!(user_profile: username));
 }
-
+/// /api/logout
 #[get("/api/logout")]
 pub fn logout_user(mut cookies: Cookies) -> Redirect {
     let mut removal_cookie = Cookie::named(JWT_NAME);
@@ -136,7 +136,7 @@ pub fn logout_user(mut cookies: Cookies) -> Redirect {
     cookies.remove(removal_cookie);
     return Redirect::to("/");
 }
-
+/// Matches definition in handleTables.js (called in userprofile.html.tera).
 #[derive(Serialize)]
 pub struct UserDocCsvList {
     title: Vec<String>,
@@ -144,7 +144,7 @@ pub struct UserDocCsvList {
     source: Vec<String>,
     created_on: Vec<String>
 }
-
+/// /api/docs-to-csv
 #[get("/api/docs-to-csv")]
 pub fn documents_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserDocCsvList> {
     let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
@@ -165,7 +165,7 @@ pub fn documents_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<User
     };
     return Json(csv_list);
 }
-
+/// Matches definition in handleTables.js (called in userprofile.html.tera).
 #[derive(Serialize)]
 pub struct UserVocabCsvList {
     phrase: Vec<String>,
@@ -175,7 +175,7 @@ pub struct UserVocabCsvList {
     radical_map: Vec<String>,
     created_on: Vec<String>
 }
-
+/// /api/vocab-to-csv
 #[get("/api/vocab-to-csv")]
 pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVocabCsvList> {
     let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
@@ -199,18 +199,18 @@ pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVoca
 }
 
 /* POST */
+/// Matches definition in login.html.tera.
 #[derive(FromForm)]
 pub struct UserLoginForm<'f> {
     username: &'f RawStr,
     password: &'f RawStr,
 }
-
+/// /api/login
 #[post("/api/login", data = "<user_input>")]
 pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Status {
     let UserLoginForm { username, password } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
-
     let is_valid_password = User::check_password(&db, &username, &password);
     let res_status = match is_valid_password {
         true => {
@@ -218,21 +218,18 @@ pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<Us
             cookies.add(new_cookie);
             Status::Accepted
         },
-        false => {
-            // (TODO: record login attempt in database, limit 8 per day)
-            Status::Unauthorized
-        }
+        false => Status::Unauthorized
     };
     return res_status;
 }
-
+/// Matches definition in login.html.tera.
 #[derive(FromForm)]
 pub struct UserRegisterForm<'f> {
     username: &'f RawStr,
     email: &'f RawStr,
     password: &'f RawStr,
 }
-
+/// /api/register
 #[post("/api/register", data = "<user_input>")]
 pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Status {
     let UserRegisterForm { username, email, password } = user_input.into_inner();
@@ -251,14 +248,14 @@ pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form
     };
     return res_status;
 }
-
+/// Matches definition in userprofile.html.tera.
 #[derive(FromForm)]
 pub struct UserDocumentForm<'f> {
     title: &'f RawStr,
     source: &'f RawStr,
     body: &'f RawStr,
 }
-
+/// /api/upload
 #[post("/api/upload", data="<user_doc>")]
 pub fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
     let UserDocumentForm { title, source, body } = user_doc.into_inner();
@@ -281,12 +278,12 @@ pub fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<Use
     };
     return res_redirect;
 }
-
+/// Matches definition in userprofile.html.tera.
 #[derive(FromForm)]
 pub struct UserUrlForm<'f> {
     url: &'f RawStr,
 }
-
+/// /api/url-upload
 #[post("/api/url-upload", data = "<user_url>")]
 pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_url: Form<UserUrlForm<'_>>) -> Redirect {
     let UserUrlForm { url } = user_url.into_inner();
@@ -307,19 +304,18 @@ pub fn user_url_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     };
     return res_redirect;
 }
-
+/// Matches definition in template.js (primarily called in reader.html.tera).
 #[derive(FromForm)]
 pub struct UserVocabForm<'f> {
     phrase_uid: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
-
+/// /api/vocab
 #[post("/api/vocab", data="<user_vocab>")]
 pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
     let phrase = convert_rawstr_to_string(phrase_uid);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
-
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_status = match username_from_cookie {
         Some(username) => { 
@@ -336,12 +332,12 @@ pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle
     };
     return res_status;
 }
-
+/// Matches definition in userprofile.html.tera.
 #[derive(FromForm)]
 pub struct UserSettingForm<'f> {
     setting: &'f RawStr,
 }
-
+/// /api/update-settings
 #[post("/api/update-settings", data = "<user_setting>")]
 pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form<UserSettingForm<'_>>) -> Status {
     let UserSettingForm { setting } = user_setting.into_inner();

@@ -38,27 +38,28 @@ use std::collections::HashMap;
 use tokio::runtime::Handle;
 
 /* GET */
+/// /
 #[get("/")]
 pub fn index(cookies: Cookies, db: State<Database>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     add_user_cookie_to_context(&cookies, &db, &mut context);
     return Template::render("index", context);
 }
-
+/// /login
 #[get("/login")]
 pub fn login(cookies: Cookies, db: State<Database>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     add_user_cookie_to_context(&cookies, &db, &mut context);
     return Template::render("login", context);
 }
-
+/// /sandbox
 #[get("/sandbox")]
 pub fn sandbox(cookies: Cookies, db: State<Database>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
     add_user_cookie_to_context(&cookies, &db, &mut context);
     return Template::render("sandbox", context);
 }
-
+/// /sandbox/<doc_id>
 #[get("/sandbox/<doc_id>")]
 pub fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
@@ -74,7 +75,7 @@ pub fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
     }
     return Template::render("reader", context);
 }
-
+/// /feedback
 #[get("/feedback")]
 pub fn feedback(cookies: Cookies, db: State<Database>) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new();
@@ -83,13 +84,14 @@ pub fn feedback(cookies: Cookies, db: State<Database>) -> Template {
 }
 
 /* POST */
+/// Matches definition in sandbox.html.tera.
 #[derive(FromForm)]
 pub struct SandboxForm<'f> {
     text: &'f RawStr,
     cn_type: &'f RawStr,
     cn_phonetics: &'f RawStr,
 }
-
+/// /api/sandbox-upload
 #[post("/api/sandbox-upload", data = "<user_text>")]
 pub fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<SandboxForm<'_>>) -> Redirect {
     let SandboxForm { text, cn_type, cn_phonetics } = user_text.into_inner();    
@@ -103,14 +105,14 @@ pub fn sandbox_upload(db: State<Database>, rt: State<Handle>, user_text: Form<Sa
     };
     return res_redirect;
 }
-
+/// Matches definition in sandbox.html.tera.
 #[derive(FromForm)]
 pub struct SandboxUrlForm<'f> {
     url: &'f RawStr,
     cn_type: &'f RawStr,
     cn_phonetics: &'f RawStr,
 }
-
+/// /api/sandbox-url-upload
 #[post("/api/sandbox-url-upload", data = "<user_url>")]
 pub fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form<SandboxUrlForm<'_>>) -> Redirect {
     let SandboxUrlForm { url, cn_type, cn_phonetics } = user_url.into_inner();
@@ -124,13 +126,13 @@ pub fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form
     };
     return res_redirect;
 }
-
+/// Matches definition in feedback.html.tera.
 #[derive(FromForm)]
 pub struct AppFeedbackForm<'f> {
     feedback: &'f RawStr,
     contact: &'f RawStr,
 }
-
+/// /api/feedback
 #[post("/api/feedback", data = "<user_feedback>")]
 pub fn feedback_form(db: State<Database>, user_feedback: Form<AppFeedbackForm<'_>>) -> Redirect {
     let AppFeedbackForm { feedback, contact } = user_feedback.into_inner();
