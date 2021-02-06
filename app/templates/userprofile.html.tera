@@ -9,6 +9,12 @@
         }
     </style>
 {% endblock head %}
+{% block user_navbar %}
+    <li class="nav-item"><a class="nav-link" id="nav1" href="/">About</a></li>
+    <li class="nav-item"><a class="nav-link active" id="nav2" href="/u/{{username}}">Profile</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
+{% endblock user_navbar %}
+{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     {% if username is undefined %}
     <p>
@@ -86,8 +92,4 @@
     {% endif %}
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
     <script src="/static/handleTables.js"></script>
-    <script>
-        // Update active navbar
-        document.getElementById("nav2").classList.add("active");
-    </script>
 {% endblock content %}

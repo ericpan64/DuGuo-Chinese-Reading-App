@@ -1,6 +1,18 @@
 {% extends "template" %}
 {% block title %}{% if username is undefined %}Home{% else %}About{% endif %}{% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
+{% block user_navbar %}
+    {% if username is undefined %}
+    <li class="nav-item"><a class="nav-link active" id="nav1" href="/">Home</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
+    {% else %}
+    <li class="nav-item"><a class="nav-link active" id="nav1" href="/">About</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
+    {% endif %}
+{% endblock user_navbar %}
+{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     {% if username is undefined %}
     <h1>DuGuo (<span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. An open-source application to facilitate Chinese reading. Stems from 读 (to read) and 国 (country)<br>2. An extended implementation of the 中文读机 which was originally developed by Martin Kess from the OMSCS Education Technology class<br>" title="读国 [du2 guo2] <a role=&quot;button&quot; href=&quot;#~读国&quot;><img src=&quot;https://icons.getbootstrap.com/icons/volume-up-fill.svg&quot;></img></a><a role=&quot;button&quot; href=&quot;#读国&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">读国</span>)</h1>
@@ -32,8 +44,4 @@
         Thank you to Martin Kess for providing the initial implementation (the <span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class<br>" title="中文读机 [zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/volume-up-fill.svg&quot;></img></a><a role=&quot;button&quot; href=&quot;#中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) which provided a well-scoped architecture and very strong foundation to build on.
         <br>
         Visit the <a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github Repo</a> to view the stack and other notes on the project.
-    <script>
-        // Update active navbar
-        document.getElementById("nav1").classList.add("active");
-    </script>
 {% endblock content %}

@@ -1,6 +1,12 @@
 {% extends "template" %}
 {% block title %} Sandbox {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
+{% block user_navbar %}
+    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
+    <li class="nav-item"><a class="nav-link active" id="nav2" href="/sandbox">Sandbox</a></li>
+    <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
+{% endblock user_navbar %}
+{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     <p>Try-out the app by uploading some text! Adjust settings based on how you would like the output to render.</p>
     <span>
@@ -38,9 +44,5 @@
         <br><br>
         <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
     </form>
-    <script>
-        // Update active navbar
-        document.getElementById("nav2").classList.add("active");
-    </script>
     <script src="/static/handleSandbox.js"></script>
 {% endblock content %}

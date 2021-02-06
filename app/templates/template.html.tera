@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-    {% block head %}
     <head>
+        {% block head %}
         <meta charset="UTF-8">
         <title>{% block title %}{% endblock title %}</title>
     
@@ -12,12 +12,13 @@
         
         {# Bootstrap Tags #}
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {% endblock head %}
     </head>
-    {% endblock head %}
     <body class="container-fluid">
         <nav class="navbar navbar-expand navbar-dark navbar-static-top bg-primary">
             <div class="container">
                 <ul class="navbar-nav">
+                    {% block user_navbar %}
                     {% if username is undefined %}
                     <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
                     <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
@@ -27,10 +28,13 @@
                     <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
                     <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
                     {% endif %}
+                    {% endblock user_navbar %}
                 </ul>
                 <ul class="navbar-nav">
+                    {% block static_navbar %}
                     <li class="nav-item"><a class="nav-link" id="nav4" href="/feedback">Feedback</a></li>
                     <li class="nav-item"><a class="nav-link" id="nav5" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github</a></li>
+                    {% endblock static_navbar %}
                 </ul>      
             </div>
         </nav>
