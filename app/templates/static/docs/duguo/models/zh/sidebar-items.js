@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["CnPhonetics",""],["CnType",""]],"struct":[["CnEnDictEntry",""]]});

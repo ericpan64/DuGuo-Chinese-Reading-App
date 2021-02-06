@@ -1,4 +1,5 @@
-# DuGuo (v0.1.0)
+# DuGuo
+[![docs: 0.1.0](https://img.shields.io/badge/Docs-0.1.0-blue)](https://duguo-app.com/static/docs/duguo/index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Overview
 
@@ -41,7 +42,7 @@ Barring the ability to live in a foreign country, DuGuo hopes to offer the next-
 
 ## Existing Tools
 
-There are several existing tools that provide similar functionality, including (but not limited to): [Zhongwen Chrome Extension](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde?hl=en), [Purple Culture Pinyin Converter](https://www.purpleculture.net/chinese-pinyin-converter/), [mdbg.net](https://www.mdbg.net/chinese/dictionary), [Hànzì Analyzer](http://hemiola.com/), [pin1yin1](https://www.pin1yin1.com/), etc.
+There are several existing tools that provide similar functionality, including (but not limited to): [Zhongwen Chrome Extension](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde?hl=en), [Purple Culture Pinyin Converter](https://www.purpleculture.net/chinese-pinyin-converter/), [Du Chinese (mobile)](https://www.duchinese.net/), [mdbg.net](https://www.mdbg.net/chinese/dictionary), [Hànzì Analyzer](http://hemiola.com/), [pin1yin1](https://www.pin1yin1.com/), etc.
 
 The main differentiator I hope to provide with this project is improved UX (pinyin toggling, contextual saving) and the ability to persist documents to a database (allows building a long-term knowledge base). Ultimately this is provided as an additional tool to help users learn Chinese, so definitely use the combination of tools that best supplements your learning experience.
 
