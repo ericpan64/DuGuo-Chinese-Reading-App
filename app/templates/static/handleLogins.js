@@ -1,4 +1,4 @@
-// Add server response for form submissions. Ref: https://stackoverflow.com/a/47675314
+/// Performs POST request to /api/login (defined in users.rs)
 let attemptLogin = () => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/login", true);
@@ -21,6 +21,8 @@ let attemptLogin = () => {
     console.log(params.toString())
     xhr.send(params.toString());
 }
+
+/// Notify user if they try to use a character that is not allowed.
 let getForbiddenChars = (pw) => {
     const invalid_chars = new Set(['<', '>', '!', '(', ')', '{', '}', '"' , '\'', ';', ':', '\\', '*']);
     let res = "";
@@ -31,6 +33,8 @@ let getForbiddenChars = (pw) => {
     }
     return res;
 }
+
+/// Performs POST request to /api/register (defined in users.rs)
 let attemptRegister = () => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/register");
@@ -57,11 +61,11 @@ let attemptRegister = () => {
     console.log(params.toString())
     xhr.send(params.toString());
 }
-/// Toggle password visibility
+
+/// Toggle password visibility in form
 let showPassword = () => {
     let login_pw = document.getElementById("pw-login")
     let reg_pw = document.getElementById("pw-reg")
-
     if (login_pw.type == "password") {
         login_pw.type = "text"
         reg_pw.type = "text"

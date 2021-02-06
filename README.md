@@ -1,4 +1,5 @@
-# DuGuo (v0.1.0)
+# DuGuo
+[![docs: 0.1.0](https://img.shields.io/badge/Docs-0.1.0-blue)](https://duguo-app.com/static/docs/duguo/index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Overview
 
@@ -6,7 +7,7 @@ DuGuo is a web application that allows users to read Chinese text in an interact
 
 ### Deployment
 
-The app is currently available at [duguo-app.com](https://duguo-app.com). The production deployment is hosted on AWS. This repository contains all code and configuration to run an instance locally using docker-compose (from the root directory, `docker-compose up`).
+The app is currently available at [duguo.app](https://duguo.app) (redirects to [duguo-app.com](https://duguo-app.com)). The production deployment is hosted on AWS. This repository contains all code and configuration to run an instance locally using docker-compose (from the root directory, run `docker-compose up`).
 
 ### Tech Stack
 
@@ -15,7 +16,7 @@ The app is made of 3 components:
 2. An NLP tokenization service written in Python using [spaCy's Chinese module](https://spacy.io/models/zh) (which builds on top of [jieba](https://github.com/fxsjy/jieba)). [OpenCC](https://github.com/BYVoid/OpenCC) and [pypinyin](https://github.com/mozillazg/python-pinyin) are used during processing. 
 3. Data persistance via a database ([mongoDB](https://www.mongodb.com/)) and a cache ([Redis](https://redis.io/)).
 
-Tokenized words are looked-up in the [CC-CEDICT](https://cc-cedict.org/wiki/) which is generously available for use under a Creative Commons license.
+Tokenized words are looked-up in the [CC-CEDICT](https://cc-cedict.org/wiki/) which is generously available for use under a Creative Commons license. Radical information (for saved vocab) is sourced from [this web API](http://ccdb.hemiola.com/) and can be quickly accessed using the accompanying [Hemiola Chinese Character Browser](http://hanzi.hemiola.com/).
 
 ## Motivation
 
@@ -41,7 +42,7 @@ Barring the ability to live in a foreign country, DuGuo hopes to offer the next-
 
 ## Existing Tools
 
-There are several existing tools that provide similar functionality, including (but not limited to): [Zhongwen Chrome Extension](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde?hl=en), [Purple Culture Pinyin Converter](https://www.purpleculture.net/chinese-pinyin-converter/), [mdbg.net](https://www.mdbg.net/chinese/dictionary), [pin1yin1](https://www.pin1yin1.com/), etc.
+There are several existing tools that provide similar functionality, including (but not limited to): [Zhongwen Chrome Extension](https://chrome.google.com/webstore/detail/zhongwen-chinese-english/kkmlkkjojmombglmlpbpapmhcaljjkde?hl=en), [Purple Culture Pinyin Converter](https://www.purpleculture.net/chinese-pinyin-converter/), [Du Chinese (mobile)](https://www.duchinese.net/), [mdbg.net](https://www.mdbg.net/chinese/dictionary), [Hànzì Analyzer](http://hemiola.com/), [pin1yin1](https://www.pin1yin1.com/), etc.
 
 The main differentiator I hope to provide with this project is improved UX (pinyin toggling, contextual saving) and the ability to persist documents to a database (allows building a long-term knowledge base). Ultimately this is provided as an additional tool to help users learn Chinese, so definitely use the combination of tools that best supplements your learning experience.
 

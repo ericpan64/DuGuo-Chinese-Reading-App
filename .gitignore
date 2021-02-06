@@ -5,3 +5,4 @@ app/target
 app/temp
 app/src/config.rs
 data_services/config.py
+app/Cargo.lock

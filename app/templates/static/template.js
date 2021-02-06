@@ -1,16 +1,57 @@
-// Text-to-Speech
-// Wait for speechSynthesis load if available. from: https://stackoverflow.com/a/62032443/13073731
-if ('speechSynthesis' in window) {
-    speechSynthesis.cancel();
-    speechSynthesis.getVoices();
+/// General Handling
+/// Enable pop-ups
+let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+    return new bootstrap.Popover(popoverTriggerEl)
+})
+
+/// Update to Loading Button onsubmit
+let switchToLoadingButton = (id) => {
+    let button = document.getElementById(id)
+    button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span class="sr-only">Loading...</span>`;
+    button.setAttribute("disabled", "");
 }
-let sayPhrase = (phrase) => {
+
+/// Missing Text-to-Speech Handling
+/// Removes the speech link after a user saves a phrase for all phrases on the page.
+let removeAllSpeechImages = () => {
+    speech_link = `<img src="https://icons.getbootstrap.com/icons/volume-up-fill.svg"></img>`;
+    let spans = document.querySelectorAll("span[data-bs-content]");
+    const title_attr = "data-bs-original-title";
+    for (let i=0; i < spans.length; i++) {
+        let new_title = spans[i].getAttribute(title_attr).replace(speech_link, "");
+        spans[i].setAttribute(title_attr, new_title);
+    }
+}
+/// Adds alert with error message if speechSynthesis load fails
+let replaceButtonGroup = (msg) => {
+    const button_group_id = "reader-btn-group";
+    let div = document.getElementById(button_group_id);
+    if (div != null) {
+        div.innerHTML = `<div class="alert alert-primary" role="alert">${msg}</div>`;
+        div.setAttribute('aria-label', 'Error loading speechSynthesis, text-to-speech unavailable.');
+        div.parentElement.insertBefore(document.createElement('br'), div);
+    }
+}
+
+/**
+ * Performs Text-to-Speech step with given phrase.
+ * @param {String} phrase Chinese String to read.
+ */
+/// TODO: Support different Chinese voice variants (e.g. zh-TW, zh-HK)
+let sayPhrase = (phrase, lang='zh-CN') => {
     let utterance = new SpeechSynthesisUtterance(phrase);
-    utterance.lang = 'zh-CN';
+    utterance.lang = lang;
     utterance.rate = 0.8;
     return window.speechSynthesis.speak(utterance);
 }
+
 /// Handle Hash Changes
+/**
+ * Sends POST request to /api/update-settings (defined in users.rs).
+ * @param {String} hash_string String starting with $
+ */
 let postUserSetting = (hash_string) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/update-settings");
@@ -36,11 +77,16 @@ let postUserSetting = (hash_string) => {
     }
     xhr.send(params);
 }
+
+/**
+ * Sends POST request to /api/vocab (defined in users.rs).
+ * @param {String} hash_string Phrase uid (currently: simplified+raw_pinyin)
+ */
 let postNewVocab = (hash_string) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/vocab");
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    let params = `saved_phrase=${hash_string}&from_doc_title=${document.title}`;
+    let params = `phrase_uid=${hash_string}&from_doc_title=${document.title}`;
     xhr.onload = () => {
         if (xhr.status == 202) {
             alert(`Successfully added ${hash_string} to your dictionary!`);
@@ -56,6 +102,11 @@ let postNewVocab = (hash_string) => {
     }
     xhr.send(params);
 }
+
+/**
+ * Removes the download link after a user saves a phrase.
+ * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
+ */
 let removeDownloadLink = (uid) => {
     download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
     let spans = document.getElementsByClassName(uid);
@@ -65,15 +116,19 @@ let removeDownloadLink = (uid) => {
         spans[i].setAttribute(title_attr, new_title);
     }
 }
+
+/**
+ * Handles the hash updating logic. 
+ */
 let parseHashChange = () => {
     if (location.hash) {
         let hash_string = location.hash.substring(1);
         hash_string = decodeURIComponent(hash_string);
         // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
         history.replaceState("", document.title, window.location.pathname + window.location.search);
-        // Text-to-Speech if starts with ~
-        // User Config if starts with $
-        // Otherwise, Saving Vocab
+        // If starts with ~: try Text-to-Speech
+        // If starts with $: try User settings update
+        // Otherwise       : try to save as UserVocab
         if (hash_string.charAt(0) == '~') {
             hash_string = hash_string.substring(1);
             sayPhrase(hash_string);
@@ -86,4 +141,17 @@ let parseHashChange = () => {
         }
     }
 }
+/// Set event callback
 window.onhashchange = parseHashChange;
+window.onload = () => {
+    if ('speechSynthesis' in window) {
+        let is_mobile = ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) );
+        if (is_mobile) {
+            removeAllSpeechImages();
+            replaceButtonGroup('Note: Text-to-Speech is not currently supported on mobile. To use the feature, try desktop!');
+        }
+    } else { 
+        removeAllSpeechImages();
+        replaceButtonGroup('Note: The speechSynthesis API is not detected in your browser. Try using a different and non-mobile browser!');
+    }    
+}
