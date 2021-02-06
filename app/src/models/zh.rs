@@ -1,5 +1,5 @@
 /*
-/// Data Structures relating to Chinese text
+/// Data Structures relating to Chinese text.
 /// 
 /// chinese.rs
 /// ├── CnType: Enum
@@ -94,8 +94,9 @@ pub struct CnEnDictEntry {
 }
 
 /// For CnEnDictEntry, the current uid is generated using: vec![simp, raw_pinyin]
-/// TODO: make above information required implementation for CacheItem (return uid keys as vec, at worst for documentation)
-impl CacheItem for CnEnDictEntry { }
+impl CacheItem for CnEnDictEntry {
+    fn get_uid_ordered_values(&self) -> Vec<&str> { return vec![&self.simp, &self.raw_pinyin]; }
+}
 
 impl CnEnDictEntry {
     /// Looks up a CEDICT entry in Redis using the specified uid.

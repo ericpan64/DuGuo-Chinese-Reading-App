@@ -14,6 +14,7 @@
 
 use blake2::{Blake2b, Digest};
 use crate::{
+    DatabaseItem,
     config::{JWT_LIFETIME, JWT_NAME, JWT_SECRET, USER_COLL_NAME},
     models::user::User
 };
@@ -101,8 +102,9 @@ pub fn str_to_hashed_string(str_to_hash: &str, salt: &str) -> String {
 fn generate_jwt(db: &Database, username: String, password: String) -> Result<String, Box<dyn Error>> {
     let jwt_header: Header = Header::default();
     let jwt_encoding_key: EncodingKey = EncodingKey::from_secret(JWT_SECRET);
-    
-    let pw_salt = User::get_user_salt(db, &username)?;
+    let pw_salt = User::get_values_from_query(&db, 
+        doc!{ "username": &username }, 
+        vec!["pw_salt"])[0].to_owned();
     let pw_hash = str_to_hashed_string(&password, &pw_salt);
     let cred = UserCredentials {
         username,
@@ -151,6 +153,7 @@ fn check_if_jwt_is_active(expiration_timestamp: i64) -> bool {
 }
 
 /// Returns username in given UserCredentials if it is successfully found in the MongoDB.
+/// TODO: see if this can be generic
 fn get_username_from_valid_user_credentials(db: &Database, cred: UserCredentials) -> Option<String> {
     let coll = (*db).collection(USER_COLL_NAME);
     let cred_as_document = bson::to_document(&cred).unwrap();

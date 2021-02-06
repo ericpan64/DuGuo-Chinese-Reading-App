@@ -22,7 +22,11 @@ use crate::{
     auth::add_user_cookie_to_context,
     models::sandbox::{SandboxDoc, AppFeedback}
 };
-use mongodb::sync::Database;
+use itertools::Itertools;
+use mongodb::{
+    bson::doc,
+    sync::Database
+};
 use rocket::{
     http::{RawStr, Cookies},
     request::Form,
@@ -59,13 +63,14 @@ pub fn sandbox(cookies: Cookies, db: State<Database>) -> Template {
 pub fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
-    let (html, cn_phonetics) = match SandboxDoc::get_doc_html_and_phonetics_from_id(&db, doc_id) {
-        Some((text, phonetics)) => (text, phonetics),
-        None => (String::new(), String::new())
-    };
+    let query_vec = SandboxDoc::get_values_from_query(&db, 
+        doc!{ "doc_id": doc_id },
+        vec!["body_html", "cn_phonetics"]
+    );
+    let (body_html, cn_phonetics) = query_vec.iter().next_tuple().unwrap();
     context.insert("cn_phonetics", &cn_phonetics);
-    if &html != "" {
-        context.insert("paragraph_html", &html);
+    if body_html.as_str() != "" {
+        context.insert("paragraph_html", &body_html);
     }
     return Template::render("reader", context);
 }
@@ -109,12 +114,9 @@ pub struct SandboxUrlForm<'f> {
 #[post("/api/sandbox-url-upload", data = "<user_url>")]
 pub fn sandbox_url_upload(db: State<Database>, rt: State<Handle>, user_url: Form<SandboxUrlForm<'_>>) -> Redirect {
     let SandboxUrlForm { url, cn_type, cn_phonetics } = user_url.into_inner();
-    let url = convert_rawstr_to_string(url); // Note: ':' is removed
+    let url = convert_rawstr_to_string(url);
     let cn_type = convert_rawstr_to_string(cn_type);
     let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
-    // read http header if present
-    let url = url.replace("http//", "http://");
-    let url = url.replace("https//", "https://");
     let new_doc = rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics));
     let res_redirect = match new_doc.try_insert(&db) {
         Ok(inserted_id) => Redirect::to(uri!(sandbox_view_doc: inserted_id)),

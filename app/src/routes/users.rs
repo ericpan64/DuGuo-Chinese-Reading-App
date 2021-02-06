@@ -90,10 +90,14 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
                 // Get html to render
                 let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
                 let title = convert_rawstr_to_string(doc_title);
-                let doc_body = UserDoc::get_body_from_user_doc(&db, &username, &title).unwrap_or_default();
+                let doc_body = UserDoc::get_values_from_query(&db, 
+                    doc!{ "username": &username, "title": &title},
+                    vec!["body"])[0].to_owned();
                 let vocab_set = UserVocabList::get_phrase_list_as_hashset(&db, &username, &cn_type);
                 let doc_html_res = rt.block_on(html_rendering::convert_string_to_tokenized_html(&doc_body, &cn_type, &cn_phonetics, Some(vocab_set)));
-                let user_char_list_string = UserVocabList::get_user_char_list_string(&db, &username, &cn_type).unwrap_or_default();
+                let user_char_list_string = UserVocabList::get_values_from_query(&db, 
+                    doc! { "username": &username, "cn_type": cn_type.as_str() },
+                    vec!["unique_char_list"])[0].to_owned();
                 context.insert("paragraph_html", doc_html_res);
                 context.insert("user_char_list_string", user_char_list_string);
                 context.insert("cn_phonetics", cn_phonetics.to_string());
@@ -151,14 +155,13 @@ pub fn documents_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<User
         None => doc! { "username": "" }
     };
     // upper-bound at 2500 docs (approx match with <=5MB csv limit), update as needed
-    const CAPACITY: usize = 2500;
     let fields: Vec<&str> = vec!["title", "body", "source", "created_on"];
-    let field_vals = UserDoc::get_doc_fields_as_vectors(&db, query_doc, fields.clone(), Some(CAPACITY)).unwrap();
+    let field_vals = UserDoc::aggregate_all_values_from_query(&db, query_doc, fields);
     let csv_list = UserDocCsvList {
-        title: field_vals.get(fields[0]).unwrap().to_vec(),
-        body: field_vals.get(fields[1]).unwrap().to_vec(),
-        source: field_vals.get(fields[2]).unwrap().to_vec(),
-        created_on: field_vals.get(fields[3]).unwrap().to_vec()
+        title: field_vals[0].to_owned(),
+        body: field_vals[1].to_owned(),
+        source: field_vals[2].to_owned(),
+        created_on: field_vals[3].to_owned()
     };
     return Json(csv_list);
 }
@@ -182,17 +185,15 @@ pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVoca
         },
         None => doc! { "username": "" }
     };
-    // upper-bound at 100000 vocab (approx match with <=5MB csv limit), update as needed
-    const CAPACITY: usize = 100000;
     let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "radical_map", "created_on"];
-    let field_vals = UserVocab::get_doc_fields_as_vectors(&db, query_doc, fields.clone(), Some(CAPACITY)).unwrap();
+    let field_vals = UserVocab::aggregate_all_values_from_query(&db, query_doc, fields);
     let csv_list = UserVocabCsvList {
-        phrase: field_vals.get(fields[0]).unwrap().to_vec(),
-        phrase_phonetics: field_vals.get(fields[1]).unwrap().to_vec(),
-        def: field_vals.get(fields[2]).unwrap().to_vec(),
-        from_doc_title: field_vals.get(fields[3]).unwrap().to_vec(),
-        radical_map: field_vals.get(fields[4]).unwrap().to_vec(),
-        created_on: field_vals.get(fields[5]).unwrap().to_vec()
+        phrase: field_vals[0].to_owned(),
+        phrase_phonetics: field_vals[1].to_owned(),
+        def: field_vals[2].to_owned(),
+        from_doc_title: field_vals[3].to_owned(),
+        radical_map: field_vals[4].to_owned(),
+        created_on: field_vals[5].to_owned()
     };
     return Json(csv_list);
 }
