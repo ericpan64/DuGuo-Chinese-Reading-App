@@ -1,11 +1,11 @@
 /// General Handling
-// Enable pop-ups
+/// Enable pop-ups
 let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
 let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
     return new bootstrap.Popover(popoverTriggerEl)
 })
 
-// Update to Loading Button onsubmit
+/// Update to Loading Button onsubmit
 let switchToLoadingButton = (id) => {
     let button = document.getElementById(id)
     button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -13,21 +13,36 @@ let switchToLoadingButton = (id) => {
     button.setAttribute("disabled", "");
 }
 
-/// Text-to-Speech
-/// Wait for speechSynthesis load if available. from: https://stackoverflow.com/a/62032443/13073731
-/// TODO: add handling if zh-CN voice is not available
-if ('speechSynthesis' in window) {
-    speechSynthesis.cancel();
-    speechSynthesis.getVoices();
+/// Missing Text-to-Speech Handling
+/// Removes the speech link after a user saves a phrase for all phrases on the page.
+let removeAllSpeechImages = () => {
+    speech_link = `<img src="https://icons.getbootstrap.com/icons/volume-up-fill.svg"></img>`;
+    let spans = document.querySelectorAll("span[data-bs-content]");
+    const title_attr = "data-bs-original-title";
+    for (let i=0; i < spans.length; i++) {
+        let new_title = spans[i].getAttribute(title_attr).replace(speech_link, "");
+        spans[i].setAttribute(title_attr, new_title);
+    }
+}
+/// Adds alert with error message if speechSynthesis load fails
+let replaceButtonGroup = (msg) => {
+    const button_group_id = "reader-btn-group";
+    let div = document.getElementById(button_group_id);
+    if (div != null) {
+        div.innerHTML = `<div class="alert alert-primary" role="alert">${msg}</div>`;
+        div.setAttribute('aria-label', 'Error loading speechSynthesis, text-to-speech unavailable.');
+        div.parentElement.insertBefore(document.createElement('br'), div);
+    }
 }
 
 /**
  * Performs Text-to-Speech step with given phrase.
  * @param {String} phrase Chinese String to read.
  */
-let sayPhrase = (phrase) => {
+/// TODO: Support different Chinese voice variants (e.g. zh-TW, zh-HK)
+let sayPhrase = (phrase, lang='zh-CN') => {
     let utterance = new SpeechSynthesisUtterance(phrase);
-    utterance.lang = 'zh-CN';
+    utterance.lang = lang;
     utterance.rate = 0.8;
     return window.speechSynthesis.speak(utterance);
 }
@@ -128,3 +143,15 @@ let parseHashChange = () => {
 }
 /// Set event callback
 window.onhashchange = parseHashChange;
+window.onload = () => {
+    if ('speechSynthesis' in window) {
+        let is_mobile = ( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) );
+        if (is_mobile) {
+            removeAllSpeechImages();
+            replaceButtonGroup('Note: Text-to-Speech is not currently supported on mobile. To use the feature, try desktop!');
+        }
+    } else { 
+        removeAllSpeechImages();
+        replaceButtonGroup('Note: The speechSynthesis API is not detected in your browser. Try using a different and non-mobile browser!');
+    }    
+}

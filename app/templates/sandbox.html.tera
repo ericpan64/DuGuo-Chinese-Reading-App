@@ -29,7 +29,7 @@
     </span>
     <br><br>
     <form action="/api/sandbox-upload" id="upload" onsubmit="switchToLoadingButton('upload-button')" method="POST">
-        <textarea name="text" form="upload" rows="5" cols="100" required>希望这个网站能帮助您多读中文！</textarea>
+        <textarea name="text" form="upload" rows="5" cols="35" required>希望这个网站能帮助您多读中文！</textarea>
         <input type="hidden" name="cn_type" value="simp">
         <input type="hidden" name="cn_phonetics" value="pinyin">
         <br><br>
