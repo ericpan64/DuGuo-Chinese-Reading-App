@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["User",""],["UserDoc",""],["UserVocab",""],["UserVocabList","Running lists of the unique phrases and characters (from the phrases) that user has saved."]]});
