@@ -93,13 +93,15 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
                 let doc_body = UserDoc::get_values_from_query(&db, 
                     doc!{ "username": &username, "title": &title},
                     vec!["body"])[0].to_owned();
-                let vocab_set = UserVocabList::get_phrase_list_as_hashset(&db, &username, &cn_type);
-                let doc_html_res = rt.block_on(html_rendering::convert_string_to_tokenized_html(&doc_body, &cn_type, &cn_phonetics, Some(vocab_set)));
-                let user_char_list_string = UserVocabList::get_values_from_query(&db, 
+                let doc_html_res = rt.block_on(html_rendering::convert_string_to_tokenized_html(&doc_body, &cn_type, &cn_phonetics));
+                let query_res = UserVocabList::get_values_from_query(&db, 
                     doc! { "username": &username, "cn_type": cn_type.as_str() },
-                    vec!["unique_char_list"])[0].to_owned();
+                    vec!["unique_char_list", "unique_uid_list"]);
+                let user_char_list_string = query_res[0].to_owned();
+                let user_uid_list_string = query_res[1].to_owned();
                 context.insert("paragraph_html", doc_html_res);
                 context.insert("user_char_list_string", user_char_list_string);
+                context.insert("user_uid_list_string", user_uid_list_string);
                 context.insert("cn_phonetics", cn_phonetics.to_string());
             }
         },
@@ -112,20 +114,19 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
 }
 /// /api/delete-doc/<doc_title>
 #[get("/api/delete-doc/<doc_title>")]
-pub fn delete_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Redirect {
+pub fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Redirect {
     let title = convert_rawstr_to_string(doc_title);
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-    UserDoc::try_delete(&db, &username, &title);
+    rt.block_on(UserDoc::try_delete(&db, &username, &title));
     return Redirect::to(uri!(user_profile: username));
 }
-/// /api/delete-vocab/<vocab_phrase>
-#[get("/api/delete-vocab/<vocab_phrase>")]
-pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, vocab_phrase: &RawStr) -> Redirect {
-    let phrase_string = convert_rawstr_to_string(vocab_phrase);
+/// /api/delete-vocab/<vocab_uid>
+#[get("/api/delete-vocab/<vocab_uid>")]
+pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Redirect {
+    let phrase_uid = convert_rawstr_to_string(vocab_uid);
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-    
     let (cn_type, _) = User::get_user_settings(&db, &username);
-    UserVocab::try_delete(&db, &username, &phrase_string, &cn_type);
+    rt.block_on(UserVocab::try_delete(&db, &username, &phrase_uid, &cn_type));
     return Redirect::to(uri!(user_profile: username));
 }
 /// /api/logout

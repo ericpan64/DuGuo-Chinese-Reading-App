@@ -104,20 +104,6 @@ let postNewVocab = (hash_string) => {
 }
 
 /**
- * Removes the download link after a user saves a phrase.
- * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
- */
-let removeDownloadLink = (uid) => {
-    download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
-    let spans = document.getElementsByClassName(uid);
-    const title_attr = "data-bs-original-title";
-    for (let i=0; i < spans.length; i++) {
-        let new_title = spans[i].getAttribute(title_attr).replace(download_link, "");
-        spans[i].setAttribute(title_attr, new_title);
-    }
-}
-
-/**
  * Handles the hash updating logic. 
  */
 let parseHashChange = () => {
