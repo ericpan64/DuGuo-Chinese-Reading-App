@@ -314,11 +314,8 @@ impl UserVocab {
         let cursor = coll.find(query_doc, None)?; 
         for item in cursor {
             let doc = item?;
-            let phrase = doc.get_str("phrase")?;
-            if UserVocab::try_delete(db, username, phrase, cn_type).await == false {
-                res = false;
-                eprintln!("Error: could not delete phrase: {}", phrase);
-            }
+            let uid = doc.get_str("uid")?;
+            res = res && UserVocab::try_delete(db, username, uid, cn_type).await;
         }
         return Ok(res);
     }

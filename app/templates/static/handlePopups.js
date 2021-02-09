@@ -1,9 +1,15 @@
+/// Enable pop-ups
+let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+    return new bootstrap.Popover(popoverTriggerEl)
+})
+
 /**
  * Removes the download link after a user saves a phrase.
  * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
  */
 let removeDownloadLink = (uid) => {
-    download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
+    const download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
     let spans = document.getElementsByClassName(uid);
     const title_attr = "data-bs-original-title";
     for (let i=0; i < spans.length; i++) {
@@ -13,7 +19,9 @@ let removeDownloadLink = (uid) => {
 }
 
 /// Remove download link for all saved phrases (defined in reader.html.tera)
-user_saved_uid_list.forEach(removeDownloadLink);
+for (let i=0; i < user_saved_uid_list.length; i++) {
+    removeDownloadLink(user_saved_uid_list[i]);
+}
 
 /// Closes active popovers (by clicking)
 let close_active_popovers = (event) => {
