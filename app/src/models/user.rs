@@ -309,7 +309,7 @@ impl UserVocab {
     /// Attempts to delete all UserVocab linked to a given UserDoc.
     pub async fn try_delete_all_from_title(db: &Database, username: &str, from_doc_title: &str, cn_type: &CnType) -> Result<bool, Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": username, "from_doc_title": from_doc_title };
+        let query_doc = doc! { "username": username, "from_doc_title": from_doc_title, "cn_type": cn_type.as_str() };
         let mut res = true;
         let cursor = coll.find(query_doc, None)?; 
         for item in cursor {
