@@ -154,6 +154,7 @@ pub struct UserDoc {
     username: String,
     pub title: String,
     pub body: String,
+    pub body_html: String,
     pub source: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -163,7 +164,7 @@ pub struct UserDoc {
 impl DatabaseItem for UserDoc {
     fn collection_name() -> &'static str { return USER_DOC_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> {
-        return vec!["username", "title", "body", 
+        return vec!["username", "title", "body", "body_html",
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
     /// Note: this is not unique per document, a unique primary_key is username + title.
@@ -172,8 +173,9 @@ impl DatabaseItem for UserDoc {
 
 impl UserDoc {
     /// Generates a new UserDoc. For title collisions, a new title is automatically generated (appended by -#).
-    pub fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
+    pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let desired_title = desired_title.replace(" ", "");
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -194,13 +196,13 @@ impl UserDoc {
             false => desired_title
         };
         let created_on = Utc::now().to_string();
-        let new_doc = UserDoc { username, title, body, source, cn_type, cn_phonetics, created_on };
+        let new_doc = UserDoc { username, title, body, body_html, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
     /// Generates a new UserDoc with HTML-parsed title + text from the given URL.
     pub async fn from_url(db: &Database, username: String, url: String) -> Self {
         let (title_text, body_text) = scrape_text_from_url(&url).await;
-        return UserDoc::new(db, username, title_text, body_text, url);
+        return UserDoc::new(db, username, title_text, body_text, url).await;
     }
     /// Attempts to delete a matching object in MongoDB.
     pub async fn try_delete(db: &Database, username: &str, title: &str) -> bool {

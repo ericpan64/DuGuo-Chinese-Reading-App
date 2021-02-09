@@ -80,7 +80,7 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
 }
 /// /u/<raw_username>/<doc_title>
 #[get("/u/<raw_username>/<doc_title>")]
-pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
+pub fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new(); // Note: <&str, String> makes more sense than <&str, &str> due to variable lifetimes
     let username = convert_rawstr_to_string(raw_username);
     // Compare username with logged-in username from JWT
@@ -90,10 +90,9 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, r
                 // Get html to render
                 let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
                 let title = convert_rawstr_to_string(doc_title);
-                let doc_body = UserDoc::get_values_from_query(&db, 
+                let doc_html_res = UserDoc::get_values_from_query(&db, 
                     doc!{ "username": &username, "title": &title},
-                    vec!["body"])[0].to_owned();
-                let doc_html_res = rt.block_on(html_rendering::convert_string_to_tokenized_html(&doc_body, &cn_type, &cn_phonetics));
+                    vec!["body_html"])[0].to_owned();
                 let query_res = UserVocabList::get_values_from_query(&db, 
                     doc! { "username": &username, "cn_type": cn_type.as_str() },
                     vec!["unique_char_list", "unique_uid_list"]);
@@ -258,7 +257,7 @@ pub struct UserDocumentForm<'f> {
 }
 /// /api/upload
 #[post("/api/upload", data="<user_doc>")]
-pub fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
+pub fn user_doc_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_doc: Form<UserDocumentForm<'_>>) -> Redirect {
     let UserDocumentForm { title, source, body } = user_doc.into_inner();
     let title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
@@ -266,7 +265,7 @@ pub fn user_doc_upload(cookies: Cookies, db: State<Database>, user_doc: Form<Use
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_redirect = match username_from_cookie {
         Some(username) => { 
-            let new_doc = UserDoc::new(&db, username, title, body, source);
+            let new_doc = rt.block_on(UserDoc::new(&db, username, title, body, source));
             match new_doc.try_insert(&db) {
                 Ok(username) => Redirect::to(uri!(user_profile: username)),
                 Err(e) => {
