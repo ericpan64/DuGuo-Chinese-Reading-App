@@ -236,7 +236,6 @@ pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
     let email = convert_rawstr_to_string(email);
-
     let new_user = User::new(username.clone(), password.clone(), email);
     let res_status = match new_user.try_insert(&db) {
         Ok(_) => {
@@ -244,7 +243,7 @@ pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form
             cookies.add(new_cookie);
             Status::Accepted
         },
-        Err(_) => { Status::UnprocessableEntity }
+        Err(_) => Status::UnprocessableEntity
     };
     return res_status;
 }

@@ -47,8 +47,10 @@ impl DatabaseItem for User {
                 Ok(_) => { },
                 Err(e) => { return Err(Box::new(e)); }
             }
+            return Ok(String::from(self.primary_key()));
         }
-        return Ok(String::from(self.primary_key()));
+        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::PermissionDenied, 
+            "Username and/or Email are taken.")));
     }
     fn collection_name() -> &'static str { return USER_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> { 
