@@ -1,5 +1,5 @@
 # DuGuo
-[![docs: 0.1.0](https://img.shields.io/badge/Docs-0.1.0-blue)](https://duguo-app.com/static/docs/duguo/index.html)
+[![docs: 0.1.0](https://img.shields.io/badge/Docs-0.1.0-blue)](https://duguo-app.com/static/doc/duguo/index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ## Overview
 

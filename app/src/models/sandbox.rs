@@ -44,7 +44,7 @@ impl SandboxDoc {
         let doc_id = Uuid::new_v4().to_string();
         let cn_type = CnType::from_str(&cn_type).unwrap();
         let cn_phonetics = CnPhonetics::from_str(&cn_phonetics).unwrap();
-        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics, None).await;
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let created_on = Utc::now().to_string();
         let new_doc = SandboxDoc { doc_id, body, body_html, source, cn_type, cn_phonetics, created_on };
         return new_doc;

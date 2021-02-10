@@ -61,6 +61,7 @@ def tokenize_str(s):
     """
     # Convert to Simplified, then tokenize
     s = trad_converter.convert(s)
+    s = s.replace(' ', '') # remove whitespace (large whitespace is inconsistently tokenized)
     tokens = tokenizer(s)
     # Get NER component as set (if any)
     token_entities = nlp(' '.join([str(t) for t in tokens])).ents
@@ -70,22 +71,19 @@ def tokenize_str(s):
     j = 0
     for i in range(len(tokens)):
         t = str(tokens[i])
-        if t == ' ':
-            continue
-        elif t in CEDICT_SET or not entire_phrase_is_chinese(t):
+        if t in CEDICT_SET or not entire_phrase_is_chinese(t):
             str_tokens[j] = t
             j += 1
         else:
             # use divide-and-conquer approach: recursively split until all tokens are accounted for
             subtokens = break_down_large_token_into_subtoken_list(t)
             n_st = len(subtokens)
-            str_tokens[j: n_st] = subtokens
+            str_tokens[j: j+n_st] = subtokens
             j += n_st
     while str_tokens[-1] == '':
         str_tokens.pop()
     # Handle special characters to match tokenizer output
     # for special characters within an alphanumeric phrase, tokenizer splits it but pfmt doesn't
-    # for spaces, tokenizer ignores but pfmt doesn't
     n_pinyin  = len(s)
     init_pinyin_list = flatten_list(pfmt(s, style=Style.TONE3, neutral_tone_with_five=True))
     raw_pinyin_list = [''] * n_pinyin # pre-allocate since known size

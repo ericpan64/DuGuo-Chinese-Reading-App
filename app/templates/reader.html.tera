@@ -56,11 +56,17 @@
         let current_url = window.location.href.split("/");
         document.title = decodeURIComponent(current_url[current_url.length - 1]);
         {% endif %}
-        /// Button Functionality
+        /// "Hide Saved Pinyin" Functionality
         {% if user_char_list_string is undefined %}
         let user_saved_char_list = [];
         {% else %}
         let user_saved_char_list = "{{user_char_list_string}}".split(',');
+        {% endif %}
+        /// Remove download links from saved phrases
+        {% if user_uid_list_string is undefined%}
+        let user_saved_uid_list = [];
+        {% else %}
+        let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
         {% endif %}
     </script>
     <script src="/static/handlePopups.js"></script>

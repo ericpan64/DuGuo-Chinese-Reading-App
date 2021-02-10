@@ -113,6 +113,8 @@ pub trait DatabaseItem {
     }
     /// From the first result matching the query_doc, returns the values from input fields
     /// as a Vec<String> (with matching indices as the input fields).
+    /// In the case of a failed lookup, a single item (String::new()) is returned in the Vec.
+    /// Thus, the len of resulting Vec is always == the len of the fields Vec.
     fn get_values_from_query(db: &Database, query_doc: Document, fields: Vec<&str>) -> Vec<String> {
         let coll = (*db).collection(Self::collection_name());
         let valid_fields = Self::all_field_names();
@@ -124,6 +126,10 @@ pub trait DatabaseItem {
                 } else {
                     res_vec.push(String::new());
                 }
+            }
+        } else {
+            for _ in fields {
+                res_vec.push(String::new());
             }
         }
         return res_vec;

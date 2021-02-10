@@ -24,10 +24,7 @@ use mongodb::{
 };
 use rand::{self, Rng};
 use serde::{Serialize, Deserialize};
-use std::{
-    collections::HashSet,
-    error::Error
-};
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -50,8 +47,10 @@ impl DatabaseItem for User {
                 Ok(_) => { },
                 Err(e) => { return Err(Box::new(e)); }
             }
+            return Ok(String::from(self.primary_key()));
         }
-        return Ok(String::from(self.primary_key()));
+        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::PermissionDenied, 
+            "Username and/or Email are taken.")));
     }
     fn collection_name() -> &'static str { return USER_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> { 
@@ -157,6 +156,7 @@ pub struct UserDoc {
     username: String,
     pub title: String,
     pub body: String,
+    pub body_html: String,
     pub source: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -166,7 +166,7 @@ pub struct UserDoc {
 impl DatabaseItem for UserDoc {
     fn collection_name() -> &'static str { return USER_DOC_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> {
-        return vec!["username", "title", "body", 
+        return vec!["username", "title", "body", "body_html",
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
     /// Note: this is not unique per document, a unique primary_key is username + title.
@@ -175,8 +175,9 @@ impl DatabaseItem for UserDoc {
 
 impl UserDoc {
     /// Generates a new UserDoc. For title collisions, a new title is automatically generated (appended by -#).
-    pub fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
+    pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let desired_title = desired_title.replace(" ", "");
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
@@ -197,22 +198,22 @@ impl UserDoc {
             false => desired_title
         };
         let created_on = Utc::now().to_string();
-        let new_doc = UserDoc { username, title, body, source, cn_type, cn_phonetics, created_on };
+        let new_doc = UserDoc { username, title, body, body_html, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
     /// Generates a new UserDoc with HTML-parsed title + text from the given URL.
     pub async fn from_url(db: &Database, username: String, url: String) -> Self {
         let (title_text, body_text) = scrape_text_from_url(&url).await;
-        return UserDoc::new(db, username, title_text, body_text, url);
+        return UserDoc::new(db, username, title_text, body_text, url).await;
     }
     /// Attempts to delete a matching object in MongoDB.
-    pub fn try_delete(db: &Database, username: &str, title: &str) -> bool {
+    pub async fn try_delete(db: &Database, username: &str, title: &str) -> bool {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let query_doc = doc! { "username": username, "title": title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }; 
         let res = match coll.delete_one(query_doc, None) {
             Ok(_) => {
-                match UserVocab::try_delete_all_from_title(db, username, title, &cn_type) {
+                match UserVocab::try_delete_all_from_title(db, username, title, &cn_type).await {
                     Ok(b) => b,
                     Err(_) => false
                 }
@@ -243,7 +244,7 @@ impl DatabaseItem for UserVocab {
         let coll = (*db).collection(Self::collection_name());
         let new_doc = self.as_document();
         coll.insert_one(new_doc, None)?;
-        UserVocabList::append_to_user_vocab_list(db, &self.username, &self.phrase, &self.cn_type)?;
+        UserVocabList::append_to_user_vocab_list(db, &self.username, &self.phrase, &self.cn_type, &self.uid)?;
         return Ok(String::from(self.primary_key()));
     }
     fn collection_name() -> &'static str { return USER_VOCAB_COLL_NAME; }
@@ -287,12 +288,18 @@ impl UserVocab {
         return (phrase, defn, phrase_phonetics, phrase_html);
     }
     /// Attempts to delete the given UserVocab item.
-    pub fn try_delete(db: &Database, username: &str, phrase: &str, cn_type: &CnType) -> bool {
+    pub async fn try_delete(db: &Database, username: &str, uid: &str, cn_type: &CnType) -> bool {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
+        let mut conn = connect_to_redis().await.unwrap();
+        let entry = CnEnDictEntry::from_uid(&mut conn, String::from(uid)).await;
+        let phrase = match cn_type {
+            CnType::Traditional => &entry.trad,
+            CnType::Simplified => &entry.simp
+        };
         let query_doc = doc! { "username": username, "phrase": phrase, "cn_type": cn_type.as_str() };
         let res = match coll.delete_one(query_doc, None) {
             Ok(_) => {
-                match UserVocabList::remove_from_user_vocab_list(db, username, phrase, cn_type) {
+                match UserVocabList::remove_from_user_vocab_list(db, username, phrase, cn_type, uid) {
                     Ok(_) => true,
                     Err(_) => false
                 }
@@ -302,18 +309,15 @@ impl UserVocab {
         return res;
     }
     /// Attempts to delete all UserVocab linked to a given UserDoc.
-    pub fn try_delete_all_from_title(db: &Database, username: &str, from_doc_title: &str, cn_type: &CnType) -> Result<bool, Box<dyn Error>> {
+    pub async fn try_delete_all_from_title(db: &Database, username: &str, from_doc_title: &str, cn_type: &CnType) -> Result<bool, Box<dyn Error>> {
         let coll = (*db).collection(USER_VOCAB_COLL_NAME);
-        let query_doc = doc! { "username": username, "from_doc_title": from_doc_title };
+        let query_doc = doc! { "username": username, "from_doc_title": from_doc_title, "cn_type": cn_type.as_str() };
         let mut res = true;
         let cursor = coll.find(query_doc, None)?; 
         for item in cursor {
             let doc = item?;
-            let phrase = doc.get_str("phrase")?;
-            if UserVocab::try_delete(db, username, phrase, cn_type) == false {
-                res = false;
-                eprintln!("Error: could not delete phrase: {}", phrase);
-            }
+            let uid = doc.get_str("uid")?;
+            res = res && UserVocab::try_delete(db, username, uid, cn_type).await;
         }
         return Ok(res);
     }
@@ -324,33 +328,22 @@ impl UserVocab {
 pub struct UserVocabList {
     username: String,
     unique_char_list: String,
-    unique_phrase_list: String,
+    unique_uid_list: String,
     cn_type: CnType
 }
 
 impl DatabaseItem for UserVocabList {
     fn collection_name() -> &'static str { return USER_VOCAB_LIST_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> {
-        return vec!["username", "unique_char_list", "unique_phrase_list", "cn_type"];
+        return vec!["username", "unique_char_list", "unique_uid_list", "cn_type"];
     }
     /// Note: this is not necessarily unique per user, a unique primary key is username + cn_type
     fn primary_key(&self) -> &str { return &self.username; } 
 }
 
 impl UserVocabList {
-    /// Gets HashSet<String> of phrases that the user has saved for given CnType.
-    pub fn get_phrase_list_as_hashset(db: &Database, username: &str, cn_type: &CnType) -> HashSet<String> {
-        let list = UserVocab::get_values_from_query(db, 
-            doc!{ "username": username, "cn_type": cn_type.as_str() },
-            vec!["unique_phrase_list"])[0].to_owned();
-        let mut res: HashSet<String> = HashSet::new();
-        for c in list.split(',') {
-            res.insert(c.to_string());
-        }
-        return res;
-    }
     /// Updates UserVocabList object for given username with information form new_phrase.
-    fn append_to_user_vocab_list(db: &Database, username: &str, new_phrase: &str, cn_type: &CnType) -> Result<(), Box<dyn Error>> {
+    fn append_to_user_vocab_list(db: &Database, username: &str, new_phrase: &str, cn_type: &CnType, uid: &str) -> Result<(), Box<dyn Error>> {
         let append_to_char_list = |list: &mut String, phrase: &str| {
             for c in phrase.chars() {
                 if !(*list).contains(c) {
@@ -366,29 +359,29 @@ impl UserVocabList {
             let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
             let mut unique_char_list = prev_doc.unique_char_list.clone();
             append_to_char_list(&mut unique_char_list, new_phrase);
-            let mut unique_phrase_list = prev_doc.unique_phrase_list.clone();
-            unique_phrase_list += new_phrase;
-            unique_phrase_list += ",";
+            let mut unique_uid_list = prev_doc.unique_uid_list.clone();
+            unique_uid_list += uid;
+            unique_uid_list += ",";
             // Write to db
             prev_doc.try_update(db, 
-                vec!["unique_char_list", "unique_phrase_list"], 
-                vec![&unique_char_list, &unique_phrase_list])?;
+                vec!["unique_char_list", "unique_uid_list"], 
+                vec![&unique_char_list, &unique_uid_list])?;
         } else {
             // Create new instance with unique chars
             let mut unique_char_list = String::with_capacity(50);
             append_to_char_list(&mut unique_char_list, new_phrase);
-            let mut unique_phrase_list = String::from(new_phrase);
-            unique_phrase_list += ",";
+            let mut unique_uid_list = String::from(uid);
+            unique_uid_list += ",";
             // Write to db
             let username = username.to_string();
             let cn_type = CnType::from_str(cn_type_str).unwrap();
-            let new_doc = UserVocabList { username, unique_char_list, unique_phrase_list, cn_type };
+            let new_doc = UserVocabList { username, unique_char_list, unique_uid_list, cn_type };
             new_doc.try_insert(db)?;
         };
         return Ok(());
     }
     /// Removes information in UserVocabList object from username based on phrase_to_remove.
-    fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType) -> Result<(), Box<dyn Error>> {
+    fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType, uid: &str) -> Result<(), Box<dyn Error>> {
         let query_res = UserVocabList::try_lookup(db, doc! {"username": username, "cn_type": cn_type.as_str() });
         if let Some(doc) = query_res {
             let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
@@ -401,12 +394,12 @@ impl UserVocabList {
                     unique_char_list = unique_char_list.replace(&c_with_comma, "");
                 }
             }
-            let phrase_with_comma = format!("{},", phrase_string);
-            let unique_phrase_list = prev_doc.unique_phrase_list.replace(&phrase_with_comma, "");
+            let uid_with_comma = format!("{},", uid);
+            let unique_uid_list = prev_doc.unique_uid_list.replace(&uid_with_comma, "");
             // Write to db
             prev_doc.try_update(db, 
-                vec!["unique_char_list", "unique_phrase_list"], 
-                vec![&unique_char_list, &unique_phrase_list])?;
+                vec!["unique_char_list", "unique_uid_list"], 
+                vec![&unique_char_list, &unique_uid_list])?;
         } else { }
         return Ok(());
     }

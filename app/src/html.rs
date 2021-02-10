@@ -24,7 +24,6 @@ use mongodb::{
 use regex::Regex;
 use std::{
     io::prelude::*,
-    collections::HashSet,
     net::TcpStream
 };
 
@@ -93,7 +92,7 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
 
 /// Renders the HTML using the given CnType and CnPhonetics.
 /// Refer to tokenizer_string() for formatting details.
-pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics, user_saved_phrases: Option<HashSet<String>>) -> String {
+pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
     const PHRASE_DELIM: char = '$';
     const PINYIN_DELIM: char = '`';
     let mut conn = connect_to_redis().await.unwrap();
@@ -101,10 +100,6 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
     // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
     let mut res = String::with_capacity(n_phrases * 2500);
-    let user_saved_phrases: HashSet<String> = match user_saved_phrases {
-        Some(set) => set,
-        None => HashSet::new()
-    };
     for token in tokenized_string.split(PHRASE_DELIM) {
         let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
         let phrase = token_vec[0]; // If Chinese, then Simplified
@@ -128,13 +123,7 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
             if entry.lookup_failed() {
                 res += generate_html_for_not_found_phrase(phrase).as_str();
             } else {
-                let include_sound_link = true;
-                let phrase = match cn_type {
-                    CnType::Traditional => &entry.trad,
-                    CnType::Simplified => &entry.simp
-                };
-                let include_download_link = !(user_saved_phrases.contains(phrase));
-                res += render_phrase_html(&entry, cn_type, cn_phonetics, include_sound_link, include_download_link).as_str();
+                res += render_phrase_html(&entry, cn_type, cn_phonetics, true, true).as_str();
             }
         }
     }
@@ -200,9 +189,9 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserVocab { phrase, from_doc_title, phrase_html, created_on, radical_map, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
+                let UserVocab { uid, from_doc_title, phrase_html, created_on, radical_map, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
                 let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
-                let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", phrase, TRASH_ICON);
+                let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", uid, TRASH_ICON);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);
                 res += &row;
             }

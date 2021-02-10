@@ -1,10 +1,4 @@
 /// General Handling
-/// Enable pop-ups
-let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-    return new bootstrap.Popover(popoverTriggerEl)
-})
-
 /// Update to Loading Button onsubmit
 let switchToLoadingButton = (id) => {
     let button = document.getElementById(id)
@@ -90,7 +84,7 @@ let postNewVocab = (hash_string) => {
     xhr.onload = () => {
         if (xhr.status == 202) {
             alert(`Successfully added ${hash_string} to your dictionary!`);
-            try { user_saved_phrase_list = user_saved_phrase_list.concat(hash_string.split('')); } 
+            try { user_saved_uid_list = user_saved_uid_list.concat(hash_string); } 
             finally { switchOffWordVisibility(hash_string); }
             
         } else {
@@ -104,20 +98,6 @@ let postNewVocab = (hash_string) => {
 }
 
 /**
- * Removes the download link after a user saves a phrase.
- * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
- */
-let removeDownloadLink = (uid) => {
-    download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
-    let spans = document.getElementsByClassName(uid);
-    const title_attr = "data-bs-original-title";
-    for (let i=0; i < spans.length; i++) {
-        let new_title = spans[i].getAttribute(title_attr).replace(download_link, "");
-        spans[i].setAttribute(title_attr, new_title);
-    }
-}
-
-/**
  * Handles the hash updating logic. 
  */
 let parseHashChange = () => {
@@ -126,6 +106,7 @@ let parseHashChange = () => {
         hash_string = decodeURIComponent(hash_string);
         // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
         history.replaceState("", document.title, window.location.pathname + window.location.search);
+        history.back();
         // If starts with ~: try Text-to-Speech
         // If starts with $: try User settings update
         // Otherwise       : try to save as UserVocab

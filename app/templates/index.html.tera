@@ -44,5 +44,12 @@
         Thank you to Martin Kess for providing the initial implementation (the <span tabindex="0" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class<br>" title="中文读机 [zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/volume-up-fill.svg&quot;></img></a><a role=&quot;button&quot; href=&quot;#中文读机&quot;><img src=&quot;https://icons.getbootstrap.com/icons/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) which provided a well-scoped architecture and very strong foundation to build on.
         <br>
         Visit the <a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github Repo</a> to view the stack and other notes on the project.
+    <script>
+    {% if user_uid_list_string is undefined%}
+    let user_saved_uid_list = [];
+    {% else %}
+    let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
+    {% endif %}
+    </script>
     <script src="/static/handlePopups.js"></script>
 {% endblock content %}
