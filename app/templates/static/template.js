@@ -106,6 +106,7 @@ let parseHashChange = () => {
         hash_string = decodeURIComponent(hash_string);
         // Remove the hash selector. From: https://stackoverflow.com/a/5298684/13073731
         history.replaceState("", document.title, window.location.pathname + window.location.search);
+        history.back();
         // If starts with ~: try Text-to-Speech
         // If starts with $: try User settings update
         // Otherwise       : try to save as UserVocab
