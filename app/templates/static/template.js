@@ -1,9 +1,3 @@
-/// Enable pop-ups
-let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
-let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
-    return new bootstrap.Popover(popoverTriggerEl)
-})
-
 /// General Handling
 /// Update to Loading Button onsubmit
 let switchToLoadingButton = (id) => {
