@@ -1,3 +1,9 @@
+/// Enable pop-ups
+let popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+let popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+    return new bootstrap.Popover(popoverTriggerEl)
+})
+
 /// General Handling
 /// Update to Loading Button onsubmit
 let switchToLoadingButton = (id) => {
@@ -18,6 +24,7 @@ let removeAllSpeechImages = () => {
         spans[i].setAttribute(title_attr, new_title);
     }
 }
+
 /// Adds alert with error message if speechSynthesis load fails
 let replaceButtonGroup = (msg) => {
     const button_group_id = "reader-btn-group";
@@ -122,6 +129,7 @@ let parseHashChange = () => {
         }
     }
 }
+
 /// Set event callback
 window.onhashchange = parseHashChange;
 window.onload = () => {
