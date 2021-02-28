@@ -16,7 +16,7 @@ let switchToLoadingButton = (id) => {
 /// Missing Text-to-Speech Handling
 /// Removes the speech link after a user saves a phrase for all phrases on the page.
 let removeAllSpeechImages = () => {
-    speech_link = `<img src="https://icons.getbootstrap.com/icons/volume-up-fill.svg"></img>`;
+    speech_link = `<img src="/static/icons/volume-up-fill.svg"></img>`;
     let spans = document.querySelectorAll("span[data-bs-content]");
     const title_attr = "data-bs-original-title";
     for (let i=0; i < spans.length; i++) {

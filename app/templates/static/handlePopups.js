@@ -3,7 +3,7 @@
  * @param {String} uid Phrase uid (currently: simplified+raw_pinyin)
  */
 let removeDownloadLink = (uid) => {
-    const download_link = ` <a role="button" href="#${uid}"><img src="https://icons.getbootstrap.com/icons/download.svg"></img></a>`;
+    const download_link = ` <a role="button" href="#${uid}"><img src="/static/icons/download.svg"></img></a>`;
     let spans = document.getElementsByClassName(uid);
     const title_attr = "data-bs-original-title";
     for (let i=0; i < spans.length; i++) {

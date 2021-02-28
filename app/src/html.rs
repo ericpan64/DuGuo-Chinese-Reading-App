@@ -36,8 +36,8 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
     };
     // Rendering Helper Fn (keep as closure to retain context)
     let perform_phrase_render = |phrase: &str, phonetic_str: &str, char_list: Vec<char>, phonetic_list: Vec<&str>| -> String {
-        const SOUND_ICON: &str = "https://icons.getbootstrap.com/icons/volume-up-fill.svg";
-        const DOWNLOAD_ICON: &str = "https://icons.getbootstrap.com/icons/download.svg";
+        const SOUND_ICON: &str = "/static/icons/volume-up-fill.svg";
+        const DOWNLOAD_ICON: &str = "/static/icons/download.svg";
         let mut res = String::with_capacity(2500);
         // Start <span> (popup config)
         res += format!("<span class=\"{}\" tabindex=\"0\"", entry.uid).as_str();
@@ -133,7 +133,7 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
 /// Renders the UserDoc table for userprofile.html.tera.
 pub fn render_document_table(db: &Database, username: &str) -> String {
     // get all documents for user
-    const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
+    const TRASH_ICON: &str = "/static/icons/trash.svg";
     let coll = (*db).collection(USER_DOC_COLL_NAME);
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
@@ -174,7 +174,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
 
 /// Renders the UserVocab table for userprofile.html.tera.
 pub fn render_vocab_table(db: &Database, username: &str) -> String {
-    const TRASH_ICON: &str = "https://icons.getbootstrap.com/icons/trash.svg";
+    const TRASH_ICON: &str = "/static/icons/trash.svg";
     let coll = (*db).collection(USER_VOCAB_COLL_NAME);
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
