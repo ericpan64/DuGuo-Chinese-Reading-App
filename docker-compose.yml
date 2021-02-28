@@ -30,7 +30,7 @@ services:
   tokenizer-server:
     build:
       context: ./data_services
-      dockerfile: python.Dockerfile
+      dockerfile: Dockerfile
     container_name: duguo-tokenizer
     restart: on-failure
     ports:
@@ -43,7 +43,7 @@ services:
   rocket-web-server:
     build:
       context: ./app
-      dockerfile: rust.Dockerfile
+      dockerfile: Dockerfile
     container_name: duguo-app
     depends_on:
       - tokenizer-server
