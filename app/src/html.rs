@@ -230,12 +230,13 @@ fn format_defn_html(entry: &CnEnDictEntry) -> String {
     const MULTI_DEFN_DELIM: char = '$'; // Used when a single phrase represents multiple different concepts
     let mut res = String::with_capacity(2500);
     let all_defns: Vec<&str> = entry.defn.split(MULTI_DEFN_DELIM).collect();
-    for (i, defn) in all_defns.iter().enumerate() {
-        let defn = &defn[1..defn.len()-1];
-        let defn = defn.replace("\"", "\'");
-        for (j, li) in defn.split(DEFN_DELIM).enumerate() {
+    for (i, defns) in all_defns.iter().enumerate() {
+        let defns = &defns[1..defns.len()-1];
+        let defns = defns.replace("\"", "\'");
+        let defn_vec: Vec<&str> = defns.split(DEFN_DELIM).collect();
+        for (j, li) in defn_vec.iter().enumerate() {
             res += format!("{}. {}", j+1, li).as_str();
-            if j != defn.len() - 1 {
+            if j != defn_vec.len() - 1 {
                 res += "<br>";
             } else if i != all_defns.len() - 1 {
                 res += "<hr>"
