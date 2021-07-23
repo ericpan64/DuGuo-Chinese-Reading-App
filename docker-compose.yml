@@ -42,7 +42,7 @@ services:
     #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/data_services:/token-server
   rocket-web-server:
     build:
-      context: ./app
+      context: ./app/backend
       dockerfile: Dockerfile
     container_name: duguo-app
     depends_on:

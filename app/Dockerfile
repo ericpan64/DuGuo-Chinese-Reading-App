@@ -1,5 +1,5 @@
 FROM rustlang/rust:nightly
-WORKDIR /app
+WORKDIR /app/backend
 COPY . .
 EXPOSE 8000
 
