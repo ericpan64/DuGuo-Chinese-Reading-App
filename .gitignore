@@ -1,9 +1,9 @@
 *.DS_Store
 *.pyc
 .idea/*
-app/target
-app/temp
-app/src/config.rs
+app/backend/target
+app/backend/temp
+app/backend/templates/static/docs
+app/backend/Cargo.lock
+app/frontend/elm-stuff
 data_services/config.py
-app/Cargo.lock
-app/templates/static/docs
