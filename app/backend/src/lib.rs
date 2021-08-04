@@ -239,7 +239,7 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             routes::users::documents_to_csv_json,
             routes::users::vocab_to_csv_json,
             routes::users::logout_user])
-        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/static")))
+        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "../static")))
         .launch();
     return Ok(());
 }

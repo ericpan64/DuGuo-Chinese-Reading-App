@@ -1,8 +1,8 @@
 /*
-/// Launches website!
+/// Launches backend!
 */
 
-use duguo; // lib.rs
+use duguo_backend; // lib.rs
 fn main() {
-    duguo::launch_rocket().unwrap();
+    duguo_backend::launch_rocket().unwrap();
 }

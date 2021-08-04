@@ -1,6 +1,5 @@
 [package]
-name = "duguo"
-description = "A Rocket web-app designed to facilitate learning how to read Chinese."
+name = "duguo_backend"
 repository = "https://github.com/ericpan64/DuGuo-Chinese-Reading-App"
 homepage = "https://duguo-app.com"
 version = "0.1.0"
