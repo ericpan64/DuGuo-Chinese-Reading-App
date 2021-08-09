@@ -252,15 +252,17 @@ fn is_english_phrase(s: &str) -> bool {
     return s.len() == s.chars().count();
 }
 
-/// A weak check to distinguish phrases with Chinese puntuation.
-/// Chinese punctuation is a Chinese char (3 bytes) that should be skipped in processing.
+/// Identifies phrases with Chinese puntuation.
+/// Chinese punctuation is a Chinese char that shouldn't be proceed a a phrase.
 fn has_chinese_punctuation(s: &str) -> bool {
-    const PUNCT: [char; 15] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—', '；'];
     let mut res = false;
     for c in s.chars() {
-        if PUNCT.contains(&c) {
-            res = true;
-            break;
+        match *(&c) {
+            '\u{3000}'..='\u{303D}' => {
+                res = true;
+                break;
+            },
+            _ => {}
         }
     }
     return res;
