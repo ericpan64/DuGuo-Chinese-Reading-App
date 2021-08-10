@@ -16,16 +16,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use] extern crate rocket;
 
-/// Module handling user authentication and cookies.
 pub mod auth;
-/// Module with config &str values.
 pub mod config;
-/// Module that handles HTML rendering. Often used with alias "html_rendering".
 pub mod html;
-/// Module defining all data structures and associated functions.
 pub mod models;
-/// Module defining all of the Rocket web endpoints.
-pub mod routes;
+pub mod api;
 
 use crate::config::{DB_NAME, DB_URI, REDIS_URI};
 use mongodb::{
@@ -35,7 +30,6 @@ use mongodb::{
 use reqwest;
 use rocket::http::RawStr;
 use rocket_contrib::{
-    templates::Template,
     serve::StaticFiles
 };
 use serde::Serialize;
@@ -211,35 +205,32 @@ pub async fn scrape_text_from_url(url: &str) -> (String, String) {
 /// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
 pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
     let db = connect_to_mongodb()?;
-    let rt = Runtime::new().unwrap();
-    let rt = rt.handle().clone();
+    let runtime = Runtime::new().unwrap();
+    let rt = runtime.handle().clone();
     rocket::ignite()
-        .attach(Template::fairing())
         .manage(db)
         .manage(rt)
-        .mount("/", routes![
-            routes::primary::index, 
-            routes::primary::login, 
-            routes::primary::sandbox, 
-            routes::primary::sandbox_upload, 
-            routes::primary::sandbox_url_upload, 
-            routes::primary::sandbox_view_doc, 
-            routes::primary::feedback, 
-            routes::primary::feedback_form,
-            routes::users::login_form, 
-            routes::users::register_form, 
-            routes::users::user_profile, 
-            routes::users::user_doc_upload, 
-            routes::users::user_url_upload,
-            routes::users::user_view_doc,
-            routes::users::user_vocab_upload,
-            routes::users::delete_user_doc,
-            routes::users::delete_user_vocab,
-            routes::users::update_settings,
-            routes::users::documents_to_csv_json,
-            routes::users::vocab_to_csv_json,
-            routes::users::logout_user])
-        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "../static")))
+        // .mount("/api/", routes![
+        //     // api::sandbox_upload, 
+        //     // api::sandbox_url_upload, 
+        //     // api::sandbox_view_doc, 
+        //     // api::feedback_form,
+        //     // api::login_form, 
+        //     // api::register_form, 
+        //     // api::user_profile, 
+        //     // api::user_doc_upload, 
+        //     // api::user_url_upload,
+        //     // api::user_view_doc,
+        //     // api::user_vocab_upload,
+        //     // api::delete_user_doc,
+        //     // api::delete_user_vocab,
+        //     api::update_settings,
+        //     // api::documents_to_csv_json,
+        //     // api::vocab_to_csv_json,
+        //     // api::logout_user
+        //     ])
+        .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/html")).rank(2))
+        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../static")).rank(1))
         .launch();
     return Ok(());
 }

@@ -6,9 +6,10 @@ target = "index.html"
 # Build in release mode.
 release = false
 # The output dir for all final assets.
-dist = "../static/html"
+dist = "html"
 # The public URL from which assets are to be served.
-public_url = "/static"
+# public_url = "/static/"
+public_url = "./" # TODO: this is for dev, remove once Rocket is back up
 
 [watch]
 # Paths to watch, defaults to build target parent folder.
@@ -18,7 +19,7 @@ ignore = []
 
 [serve]
 # The port to serve on.
-port = 8080
+port = 8000
 # Open a browser tab once the initial build is complete.
 open = false
 

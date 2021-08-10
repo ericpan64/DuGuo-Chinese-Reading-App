@@ -11,3 +11,4 @@ license = "MIT"
 
 [dependencies]
 yew = "0.18"
+yew-router = "0.15.0"

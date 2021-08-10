@@ -28,4 +28,4 @@ itertools = "0.10.0"
 [dependencies.rocket_contrib]
 version = "0.4.6"
 default-features = false
-features = ["tera_templates", "serve", "json"]
+features = ["serve", "json"]

@@ -1,4 +1,5 @@
 use yew::prelude::*;
+use duguo_frontend::app_router::AppRouter;
 
 enum Msg {
     AddOne,
@@ -43,6 +44,7 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
+                <AppRouter/>
                 <button onclick=self.link.callback(|_| Msg::AddOne)>{"+1"}</button>
                 <p>{ self.value }</p>
                 <button onclick=self.link.callback(|_| Msg::SubtractOne)>{"-1"}</button>
