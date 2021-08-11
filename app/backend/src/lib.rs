@@ -210,25 +210,25 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
     rocket::ignite()
         .manage(db)
         .manage(rt)
-        // .mount("/api/", routes![
-        //     // api::sandbox_upload, 
-        //     // api::sandbox_url_upload, 
-        //     // api::sandbox_view_doc, 
-        //     // api::feedback_form,
-        //     // api::login_form, 
-        //     // api::register_form, 
-        //     // api::user_profile, 
-        //     // api::user_doc_upload, 
-        //     // api::user_url_upload,
-        //     // api::user_view_doc,
-        //     // api::user_vocab_upload,
-        //     // api::delete_user_doc,
-        //     // api::delete_user_vocab,
-        //     api::update_settings,
-        //     // api::documents_to_csv_json,
-        //     // api::vocab_to_csv_json,
-        //     // api::logout_user
-        //     ])
+        .mount("/api/", routes![
+            // api::sandbox_upload, 
+            // api::sandbox_url_upload, 
+            // api::sandbox_view_doc, 
+            // api::feedback_form,
+            api::login, 
+            api::register, 
+            // api::user_profile, 
+            // api::user_doc_upload, 
+            // api::user_url_upload,
+            // api::user_view_doc,
+            api::vocab,
+            api::delete_doc,
+            api::delete_vocab,
+            api::update_settings,
+            api::docs_to_csv,
+            api::vocab_to_csv,
+            // api::logout_user
+            ])
         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/html")).rank(2))
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../static")).rank(1))
         .launch();

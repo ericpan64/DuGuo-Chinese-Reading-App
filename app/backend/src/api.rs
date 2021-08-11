@@ -40,7 +40,7 @@ use rocket::{
     response::Redirect,
     State,
 };
-use rocket_contrib::json::Json;
+use rocket_contrib::{json, json::{Json, JsonValue}};
 use serde::Serialize;
 use std::collections::HashMap;
 use tokio::runtime::Handle;
@@ -62,23 +62,23 @@ use tokio::runtime::Handle;
 //     }
 //     return Template::render("reader", context);
 // }
-// /// /api/delete-doc/<doc_title>
-// #[get("/api/delete-doc/<doc_title>")]
-// pub fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Status {
-//     let title = convert_rawstr_to_string(doc_title);
-//     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-//     rt.block_on(UserDoc::try_delete(&db, &username, &title));
-//     return Status::Ok;
-// }
-// /// /api/delete-vocab/<vocab_uid>
-// #[get("/api/delete-vocab/<vocab_uid>")]
-// pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Status {
-//     let phrase_uid = convert_rawstr_to_string(vocab_uid);
-//     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-//     let (cn_type, _) = User::get_user_settings(&db, &username);
-//     rt.block_on(UserVocab::try_delete(&db, &username, &phrase_uid, &cn_type));
-//     return Status::Ok;
-// }
+/// /api/delete-doc/<doc_title>
+#[get("/delete-doc/<doc_title>")]
+pub fn delete_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Status {
+    let title = convert_rawstr_to_string(doc_title);
+    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
+    rt.block_on(UserDoc::try_delete(&db, &username, &title));
+    return Status::Ok;
+}
+/// /api/delete-vocab/<vocab_uid>
+#[get("/delete-vocab/<vocab_uid>")]
+pub fn delete_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Status {
+    let phrase_uid = convert_rawstr_to_string(vocab_uid);
+    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
+    let (cn_type, _) = User::get_user_settings(&db, &username);
+    rt.block_on(UserVocab::try_delete(&db, &username, &phrase_uid, &cn_type));
+    return Status::Ok;
+}
 // /// /api/logout
 // #[get("/api/logout")]
 // pub fn logout_user(mut cookies: Cookies) -> Redirect {
@@ -87,7 +87,7 @@ use tokio::runtime::Handle;
 //     cookies.remove(removal_cookie);
 //     return Redirect::to("/");
 // }
-// /// Matches definition in handleTables.js (called in userprofile.html.tera).
+
 // #[derive(Serialize)]
 // pub struct UserDocCsvList {
 //     title: Vec<String>,
@@ -95,28 +95,28 @@ use tokio::runtime::Handle;
 //     source: Vec<String>,
 //     created_on: Vec<String>
 // }
-// /// /api/docs-to-csv
-// #[get("/api/docs-to-csv")]
-// pub fn documents_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserDocCsvList> {
-//     let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
-//         Some(username) => {
-//             let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-//             doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
-//         },
-//         None => doc! { "username": "" }
-//     };
-//     // upper-bound at 2500 docs (approx match with <=5MB csv limit), update as needed
-//     let fields: Vec<&str> = vec!["title", "body", "source", "created_on"];
-//     let field_vals = UserDoc::aggregate_all_values_from_query(&db, query_doc, fields);
-//     let csv_list = UserDocCsvList {
-//         title: field_vals[0].to_owned(),
-//         body: field_vals[1].to_owned(),
-//         source: field_vals[2].to_owned(),
-//         created_on: field_vals[3].to_owned()
-//     };
-//     return Json(csv_list);
-// }
-// /// Matches definition in handleTables.js (called in userprofile.html.tera).
+/// /api/docs-to-csv
+#[get("/docs-to-csv")]
+pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
+    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
+        Some(username) => {
+            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
+        },
+        None => doc! { "username": "" }
+    };
+    // upper-bound at 2500 docs (approx match with <=5MB csv limit), update as needed
+    let fields: Vec<&str> = vec!["title", "body", "source", "created_on"];
+    let field_vals = UserDoc::aggregate_all_values_from_query(&db, query_doc, fields);
+    // Matches definition in handleTables.js (called in userprofile.html.tera).
+    return Json(json!({
+        "title": field_vals[0].to_owned(),
+        "body": field_vals[1].to_owned(),
+        "source": field_vals[2].to_owned(),
+        "created_on": field_vals[3].to_owned()
+    }));
+}
+
 // #[derive(Serialize)]
 // pub struct UserVocabCsvList {
 //     phrase: Vec<String>,
@@ -126,28 +126,28 @@ use tokio::runtime::Handle;
 //     radical_map: Vec<String>,
 //     created_on: Vec<String>
 // }
-// /// /api/vocab-to-csv
-// #[get("/api/vocab-to-csv")]
-// pub fn vocab_to_csv_json(cookies: Cookies, db: State<Database>) -> Json<UserVocabCsvList> {
-//     let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
-//         Some(username) => {
-//             let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-//             doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
-//         },
-//         None => doc! { "username": "" }
-//     };
-//     let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "radical_map", "created_on"];
-//     let field_vals = UserVocab::aggregate_all_values_from_query(&db, query_doc, fields);
-//     let csv_list = UserVocabCsvList {
-//         phrase: field_vals[0].to_owned(),
-//         phrase_phonetics: field_vals[1].to_owned(),
-//         def: field_vals[2].to_owned(),
-//         from_doc_title: field_vals[3].to_owned(),
-//         radical_map: field_vals[4].to_owned(),
-//         created_on: field_vals[5].to_owned()
-//     };
-//     return Json(csv_list);
-// }
+/// /api/vocab-to-csv
+#[get("/vocab-to-csv")]
+pub fn vocab_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
+    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
+        Some(username) => {
+            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
+        },
+        None => doc! { "username": "" }
+    };
+    let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "radical_map", "created_on"];
+    let field_vals = UserVocab::aggregate_all_values_from_query(&db, query_doc, fields);
+    // Matches definition in handleTables.js (called in userprofile.html.tera).
+    return Json(json!({
+        "phrase": field_vals[0].to_owned(),
+        "phrase_phonetics": field_vals[1].to_owned(),
+        "def": field_vals[2].to_owned(),
+        "from_doc_title": field_vals[3].to_owned(),
+        "radical_map": field_vals[4].to_owned(),
+        "created_on": field_vals[5].to_owned()
+    }));
+}
 
 // /* POST */
 // /// Matches definition in sandbox.html.tera.
@@ -212,54 +212,54 @@ use tokio::runtime::Handle;
 //     return Redirect::to(uri!(feedback));
 // }
 
-// /// Matches definition in login.html.tera.
-// #[derive(FromForm)]
-// pub struct UserLoginForm<'f> {
-//     username: &'f RawStr,
-//     password: &'f RawStr,
-// }
-// /// /api/login
-// #[post("/api/login", data = "<user_input>")]
-// pub fn login_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Status {
-//     let UserLoginForm { username, password } = user_input.into_inner();
-//     let username = convert_rawstr_to_string(username);
-//     let password = convert_rawstr_to_string(password);
-//     let is_valid_password = User::check_password(&db, &username, &password);
-//     let res_status = match is_valid_password {
-//         true => {
-//             let new_cookie = generate_http_cookie(&db, username, password);
-//             cookies.add(new_cookie);
-//             Status::Accepted
-//         },
-//         false => Status::Unauthorized
-//     };
-//     return res_status;
-// }
-// /// Matches definition in login.html.tera.
-// #[derive(FromForm)]
-// pub struct UserRegisterForm<'f> {
-//     username: &'f RawStr,
-//     email: &'f RawStr,
-//     password: &'f RawStr,
-// }
-// /// /api/register
-// #[post("/api/register", data = "<user_input>")]
-// pub fn register_form(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Status {
-//     let UserRegisterForm { username, email, password } = user_input.into_inner();
-//     let username = convert_rawstr_to_string(username);
-//     let password = convert_rawstr_to_string(password);
-//     let email = convert_rawstr_to_string(email);
-//     let new_user = User::new(username.clone(), password.clone(), email);
-//     let res_status = match new_user.try_insert(&db) {
-//         Ok(_) => {
-//             let new_cookie = generate_http_cookie(&db, username, password);
-//             cookies.add(new_cookie);
-//             Status::Accepted
-//         },
-//         Err(_) => Status::UnprocessableEntity
-//     };
-//     return res_status;
-// }
+/// Matches definition in login.html.tera.
+#[derive(FromForm)]
+pub struct UserLoginForm<'f> {
+    username: &'f RawStr,
+    password: &'f RawStr,
+}
+/// /api/login
+#[post("/login", data = "<user_input>")]
+pub fn login(mut cookies: Cookies, db: State<Database>, user_input: Form<UserLoginForm<'_>>) -> Status {
+    let UserLoginForm { username, password } = user_input.into_inner();
+    let username = convert_rawstr_to_string(username);
+    let password = convert_rawstr_to_string(password);
+    let is_valid_password = User::check_password(&db, &username, &password);
+    let res_status = match is_valid_password {
+        true => {
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
+        },
+        false => Status::Unauthorized
+    };
+    return res_status;
+}
+/// Matches definition in login.html.tera.
+#[derive(FromForm)]
+pub struct UserRegisterForm<'f> {
+    username: &'f RawStr,
+    email: &'f RawStr,
+    password: &'f RawStr,
+}
+/// /api/register
+#[post("/register", data = "<user_input>")]
+pub fn register(mut cookies: Cookies, db: State<Database>, user_input: Form<UserRegisterForm<'_>>) -> Status {
+    let UserRegisterForm { username, email, password } = user_input.into_inner();
+    let username = convert_rawstr_to_string(username);
+    let password = convert_rawstr_to_string(password);
+    let email = convert_rawstr_to_string(email);
+    let new_user = User::new(username.clone(), password.clone(), email);
+    let res_status = match new_user.try_insert(&db) {
+        Ok(_) => {
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
+        },
+        Err(_) => Status::UnprocessableEntity
+    };
+    return res_status;
+}
 // /// Matches definition in userprofile.html.tera.
 // #[derive(FromForm)]
 // pub struct UserDocumentForm<'f> {
@@ -316,41 +316,41 @@ use tokio::runtime::Handle;
 //     };
 //     return res_redirect;
 // }
-// /// Matches definition in template.js (primarily called in reader.html.tera).
-// #[derive(FromForm)]
-// pub struct UserVocabForm<'f> {
-//     phrase_uid: &'f RawStr,
-//     from_doc_title: &'f RawStr,
-// }
-// /// /api/vocab
-// #[post("/api/vocab", data="<user_vocab>")]
-// pub fn user_vocab_upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
-//     let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
-//     let phrase = convert_rawstr_to_string(phrase_uid);
-//     let from_doc_title = convert_rawstr_to_string(from_doc_title);
-//     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
-//     let res_status = match username_from_cookie {
-//         Some(username) => { 
-//             let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title));
-//             match new_vocab.try_insert(&db) {
-//                 Ok(_) => Status::Accepted,
-//                 Err(_) => Status::ExpectationFailed
-//             }
-//         },
-//         None => {
-//             println!("Error: no username found from cookie");
-//             Status::BadRequest
-//         }
-//     };
-//     return res_status;
-// }
+/// Matches definition in template.js (primarily called in reader.html.tera).
+#[derive(FromForm)]
+pub struct UserVocabForm<'f> {
+    phrase_uid: &'f RawStr,
+    from_doc_title: &'f RawStr,
+}
+/// /api/vocab
+#[post("/api/vocab", data="<user_vocab>")]
+pub fn vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
+    let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
+    let phrase = convert_rawstr_to_string(phrase_uid);
+    let from_doc_title = convert_rawstr_to_string(from_doc_title);
+    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
+    let res_status = match username_from_cookie {
+        Some(username) => { 
+            let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title));
+            match new_vocab.try_insert(&db) {
+                Ok(_) => Status::Accepted,
+                Err(_) => Status::ExpectationFailed
+            }
+        },
+        None => {
+            println!("Error: no username found from cookie");
+            Status::BadRequest
+        }
+    };
+    return res_status;
+}
 /// Matches definition in userprofile.html.tera.
 #[derive(FromForm)]
 pub struct UserSettingForm<'f> {
     setting: &'f RawStr,
 }
 /// /api/update-settings
-#[post("/api/update-settings", data = "<user_setting>")]
+#[post("/update-settings", data = "<user_setting>")]
 pub fn update_settings(cookies: Cookies, db: State<Database>, user_setting: Form<UserSettingForm<'_>>) -> Status {
     let UserSettingForm { setting } = user_setting.into_inner();
     let setting = convert_rawstr_to_string(setting);
