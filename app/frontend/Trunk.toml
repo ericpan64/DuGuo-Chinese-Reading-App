@@ -9,7 +9,7 @@ release = false
 dist = "html"
 # The public URL from which assets are to be served.
 # public_url = "/static/"
-public_url = "./" # TODO: this is for dev, remove once Rocket is back up
+public_url = "/" # TODO: this is for dev, remove once Rocket is back up
 
 [watch]
 # Paths to watch, defaults to build target parent folder.

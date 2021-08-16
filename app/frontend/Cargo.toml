@@ -10,5 +10,5 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-yew = "0.18"
+yew = { version = "0.18" } # Note: some weird bug with yew_stdweb - try importing stdweb on its own
 yew-router = "0.15.0"
