@@ -1,7 +1,57 @@
 use yew::prelude::*;
+use yew::html::IntoPropValue;
+use std::borrow::Cow;
 
 pub struct Home {
     link: ComponentLink<Self>,
+    duey_img: String,
+}
+
+pub enum Msg {
+    CheerfulDuey,
+    NeutralDuey,
+    SurprisedDuey
+}
+
+impl Component for Home {
+    type Message = Msg;
+    type Properties = ();
+
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let duey_img = String::from("static/img/duey_normal.png");
+        Self { link, duey_img }
+    }
+
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            Msg::CheerfulDuey => {
+                self.duey_img = String::from("static/img/duey_cheerful.png");
+                true
+            },
+            Msg::NeutralDuey => {
+                self.duey_img = String::from("static/img/duey_normal.png");
+                true
+            }
+            Msg::SurprisedDuey => {
+                self.duey_img = String::from("static/img/duey_exclam.png");
+                true
+            }
+        }
+    }
+
+    fn change(&mut self, _: Self::Properties) -> ShouldRender {
+        false
+    }
+
+    fn view(&self) -> Html {
+        html! {
+            <>
+                {self.view_header()}
+                {self.view_stack()}
+                {self.view_duey()}
+            </>
+        }
+    }
 }
 
 impl Home {
@@ -64,9 +114,13 @@ impl Home {
                         <div class="col-lg-8">
                             <div class="text-center mb-5" data-aos="fade-up">
                                 <h2>{"Learn with your friends, including Duey!"}</h2>
-                                <img width="200em" src="static/img/duey_normal.png" alt="Duey, the DuGuo mascot!"/>
+                                <img width="200em" src={self.duey_img.clone()} 
+                                    onmouseover=self.link.callback(|_| Msg::CheerfulDuey)
+                                    onmouseout=self.link.callback(|_| Msg::NeutralDuey)
+                                    alt="Duey, the DuGuo mascot!"/>
                                 <p class="lead">{"Share source links with your friends to sync collaboration and learning. In the meanwhile, Duey (对龙) is here to keep you company and cheer you on!"}</p>
-                                <p>{"(and he'll leave you alone if you ask him to)"}</p>
+                                <p onmouseover=self.link.callback(|_| Msg::SurprisedDuey)
+                                    onmouseout=self.link.callback(|_| Msg::NeutralDuey)>{"(and he'll leave you alone if you ask him to)"}</p>
                             </div>
                             <div class="list-group small mb-2">
                                 <a class="btn btn-lg btn-primary font-weight-500" href="#sandbox">{"Try it now!"}<i class="ml-2" data-feather="arrow-right"></i></a>
@@ -77,33 +131,6 @@ impl Home {
                     </div>
                 </div>
             </div>
-        }
-    }
-}
-
-impl Component for Home {
-    type Message = ();
-    type Properties = ();
-
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self { link }
-    }
-
-    fn update(&mut self, _: Self::Message) -> ShouldRender {
-        false
-    }
-
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
-        html! {
-            <>
-                {self.view_header()}
-                {self.view_stack()}
-                {self.view_duey()}
-            </>
         }
     }
 }
