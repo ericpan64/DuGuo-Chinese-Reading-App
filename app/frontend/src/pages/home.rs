@@ -18,7 +18,7 @@ impl Component for Home {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let duey_img = String::from("static/img/Duey/duey_normal.png");
+        let duey_img = String::from("static/img/duey/duey_normal.png");
         Self { link, duey_img }
     }
 
@@ -94,7 +94,7 @@ impl Home {
                         </div>
                         <div class="col-lg-4">
                             <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/code.svg"/></div>
-                            <h3>{"Read the code"}</h3>
+                            <h3>{"Modify the code"}</h3>
                             <p class="mb-0">{"This project is open-source and available on GitHub ("}<a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App" target = "_blank">{"link"}</a>{"). Issues, forks, and PRs welcome!"}</p>
                         </div>
                     </div>

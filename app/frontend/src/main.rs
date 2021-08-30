@@ -1,6 +1,18 @@
+#![recursion_limit = "128"]
 use yew::prelude::*;
-use duguo_frontend::pages::Home;
+use yew_router::prelude::*;
+use duguo_frontend::pages::{Home, Login};
 
+// TODO: skip the #[to] macro, manually route stuff below (use the RealWorld example)
+
+
+#[derive(Switch, Clone, Debug)]
+pub enum AppRoute {
+    #[to="/#login"]
+    Login,
+    #[to="/"]
+    Home,
+}
 
 struct Model {
     link: ComponentLink<Self>,
@@ -11,10 +23,10 @@ impl Model {
         html! {
         <nav class="navbar navbar-marketing navbar-expand-lg bg-white navbar-light fixed-top">
             <div class="container">
-                <a class="navbar-brand text-primary" href="index.html">{"DuGuo (读国)"}</a><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i data-feather="menu"></i></button>
+                <a class="navbar-brand text-primary" href="/">{"DuGuo (读国)"}</a><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i data-feather="menu"></i></button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ml-auto mr-lg-5">
-                        <li class="nav-item"><a class="nav-link" href="index.html">{"Home"}</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/">{"Home"}</a></li>
                     </ul>
                     <a class="btn font-weight-500 ml-lg-4 btn-primary" href="#login">{"Login Now"}<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
                 </div>
@@ -33,7 +45,7 @@ impl Model {
                                 <div class="footer-brand">{"DuGuo"}
                                     <a class="icon-list-social-link" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App"><i class="fab fa-github"></i></a>
                                 </div>
-                                <div class="mb-3">{"Built using Start Bootstrap. Submit anonymous feedback "}<a href="#!">{"here."}</a></div>
+                                <div class="mb-3">{"Designed using Start Bootstrap. Submit anonymous feedback "}<a href="#!">{"here."}</a></div>
                             </div>
                         </div>
                         <hr class="my-5" />
@@ -84,7 +96,15 @@ impl Component for Model {
             <div id="layoutDefault">
                 <div id="layoutDefault_content">
                     {self.view_navbar()}
-                    <Home/>
+                    <main>
+                        <Router<AppRoute, ()> 
+                            render= Router::render(|switch: AppRoute| {
+                                match switch {
+                                    AppRoute::Home => { html! { <Home/> }},
+                                    AppRoute::Login => { html! {<Login/>}}
+                                }
+                            })/>
+                    </main>
                     {self.view_footer()}
                 </div>
             </div>
