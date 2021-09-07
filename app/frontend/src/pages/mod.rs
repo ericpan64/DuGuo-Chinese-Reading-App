@@ -1,4 +1,12 @@
 pub mod home;
 pub mod login;
+pub mod feedback;
+pub mod sandbox;
+pub mod reader;
+pub mod profile;
 pub use self::home::Home;
 pub use self::login::Login;
+pub use self::feedback::Feedback;
+pub use self::sandbox::Sandbox;
+pub use self::reader::Reader;
+pub use self::profile::Profile;

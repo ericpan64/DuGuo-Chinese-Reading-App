@@ -1,15 +1,20 @@
 #![recursion_limit = "128"]
 use yew::prelude::*;
 use yew_router::prelude::*;
-use duguo_frontend::pages::{Home, Login};
-
-// TODO: skip the #[to] macro, manually route stuff below (use the RealWorld example)
-
+use duguo_frontend::pages::*;
 
 #[derive(Switch, Clone, Debug)]
 pub enum AppRoute {
     #[to="/#login"]
     Login,
+    #[to="/#feedback"]
+    Feedback,
+    #[to="/#sandbox"]
+    Sandbox,
+    #[to="/#reader"]
+    Reader,
+    #[to="/#user/{uid}"]
+    Profile(String),
     #[to="/"]
     Home,
 }
@@ -27,6 +32,8 @@ impl Model {
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav ml-auto mr-lg-5">
                         <li class="nav-item"><a class="nav-link" href="/">{"Home"}</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/#sandbox">{"Sandbox"}</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/#feedback">{"Feedback"}</a></li>
                     </ul>
                     <a class="btn font-weight-500 ml-lg-4 btn-primary" href="#login">{"Login Now"}<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
                 </div>
@@ -52,11 +59,11 @@ impl Model {
                         <div class="row align-items-center">
                             <div class="col-md-6 small">{"Copyright &copy; DuGuo Maintainers 2021"}</div>
                             <div class="col-md-6 text-md-right small">
-                                <a href="#!">{"Feedback"}</a>
-                                {"&middot;"}
+                                <a href="/#feedback">{"Feedback"}</a>
+                                {"·"}
                                 <a href="#!">{"Privacy Policy"}</a>
-                                {"&middot;"}
-                                <a href="#!">{"Terms &amp; Conditions"}</a>
+                                {"·"}
+                                <a href="#!">{"Terms & Conditions"}</a>
                             </div>
                         </div>
                     </div>
@@ -70,27 +77,9 @@ impl Component for Model {
     type Message = ();
     type Properties = ();
 
-    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self {
-            link,
-        }
-    }
-
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        // match msg {
-        //     Msg::... => {
-
-        //     }
-        // }
-        false
-    }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        // Returns "true" if props differ
-        // In this case, there are no props (yet...)
-        false
-    }
-
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self { Self { link } }
+    fn update(&mut self, msg: Self::Message) -> ShouldRender { false }
+    fn change(&mut self, _props: Self::Properties) -> ShouldRender { false }
     fn view(&self) -> Html {
         html! {
             <div id="layoutDefault">
@@ -101,7 +90,11 @@ impl Component for Model {
                             render= Router::render(|switch: AppRoute| {
                                 match switch {
                                     AppRoute::Home => { html! { <Home/> }},
-                                    AppRoute::Login => { html! {<Login/>}}
+                                    AppRoute::Login => { html! {<Login/>}},
+                                    AppRoute::Feedback => { html! {<Feedback/>}},
+                                    AppRoute::Sandbox => { html! {<Sandbox/>}},
+                                    AppRoute::Reader => { html! {<Reader/>}},
+                                    AppRoute::Profile(uid) => { html! {<Profile uid={uid}/>}}
                                 }
                             })/>
                     </main>

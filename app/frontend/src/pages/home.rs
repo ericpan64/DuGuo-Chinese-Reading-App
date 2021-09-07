@@ -1,6 +1,4 @@
 use yew::prelude::*;
-use yew::html::IntoPropValue;
-use std::borrow::Cow;
 
 pub struct Home {
     link: ComponentLink<Self>,
