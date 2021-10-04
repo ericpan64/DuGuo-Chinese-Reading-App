@@ -6,6 +6,7 @@
 ///     └── convert_string_to_tokenized_html
 ///     └── render_document_table
 ///     └── render_vocab_table
+/// TODO: Wipe this out, replace with just tokenization service
 */
 
 use crate::{

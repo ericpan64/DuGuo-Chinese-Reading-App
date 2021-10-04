@@ -1,9 +1,9 @@
 FROM rustlang/rust:nightly
-WORKDIR /app/backend
+WORKDIR /app
 COPY . .
 EXPOSE 8000
 
-# TODO: see if there's a way to add frontend compilation here
+# TODO: add frontend compilation here
 # Testing
 RUN cargo build
 CMD ["cargo", "run"]

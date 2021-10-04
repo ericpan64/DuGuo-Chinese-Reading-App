@@ -1,6 +1,8 @@
 /*
 /// Module handling user authentication and cookies
 /// 
+/// TODO: Update these docs across files once implementation is complete
+///
 /// auth.rs
 /// ├── UserCredentials: Struct
 /// ├── UserToken: Struct
