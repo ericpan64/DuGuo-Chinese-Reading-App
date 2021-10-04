@@ -1,23 +1,10 @@
 #![recursion_limit = "128"]
 use yew::prelude::*;
 use yew_router::prelude::*;
-use duguo_frontend::pages::*;
-
-#[derive(Switch, Clone, Debug)]
-pub enum AppRoute {
-    #[to="/#login"]
-    Login,
-    #[to="/#feedback"]
-    Feedback,
-    #[to="/#sandbox"]
-    Sandbox,
-    #[to="/#reader"]
-    Reader,
-    #[to="/#u/{uid}"]
-    Profile(String),
-    #[to="/"]
-    Home,
-}
+use duguo_frontend::{
+    Route,
+    pages::*
+};
 
 struct Model { }
 
@@ -34,15 +21,15 @@ impl Component for Model {
                 <div id="layoutDefault_content">
                     <main>
                         {self.view_navbar()}
-                        <Router<AppRoute, ()> 
-                            render= Router::render(|switch: AppRoute| {
+                        <Router<Route, ()> 
+                            render= Router::render(|switch: Route| {
                                 match switch {
-                                    AppRoute::Home => { html! { <Home/> }},
-                                    AppRoute::Login => { html! { <Login/> }},
-                                    AppRoute::Feedback => { html! {<Feedback/>}},
-                                    AppRoute::Sandbox => { html! {<Sandbox/>}},
-                                    AppRoute::Reader => { html! {<Reader/>}},
-                                    AppRoute::Profile(uid) => { 
+                                    Route::Home => { html! { <Home/> }},
+                                    Route::Login => { html! { <Login/> }},
+                                    Route::Feedback => { html! {<Feedback/>}},
+                                    Route::Sandbox => { html! {<Sandbox/>}},
+                                    Route::Reader => { html! {<Reader/>}},
+                                    Route::Profile(uid) => { 
                                         html! {<Profile uid={uid}/>}
                                     }
                                 }
@@ -59,19 +46,20 @@ impl Component for Model {
 impl Model {
     fn view_navbar(&self) -> Html {
         html! {
-        <nav class="navbar navbar-marketing navbar-expand-lg bg-white navbar-light fixed-top">
-            <div class="container">
-                <a class="navbar-brand text-primary" href="/">{"DuGuo (读国)"}</a><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i data-feather="menu"></i></button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ml-auto mr-lg-5">
-                        <li class="nav-item"><a class="nav-link" href="/">{"Home"}</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/#sandbox">{"Sandbox"}</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/#feedback">{"Feedback"}</a></li>
-                    </ul>
-                    <a class="btn font-weight-500 ml-lg-4 btn-primary" href="/#login">{"Login Now"}<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
+            <nav class="navbar navbar-marketing navbar-expand-lg bg-white navbar-light fixed-top">
+                <div class="container">
+                    <RouterAnchor<Route> classes="navbar-brand text-primary" route=Route::Home>{"DuGuo (读国)"}</RouterAnchor<Route>>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><i data-feather="menu"></i></button>
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                        <ul class="navbar-nav ml-auto mr-lg-5">
+                            <li class="nav-item"><RouterAnchor<Route> classes="nav-link" route=Route::Home>{"Home"}</RouterAnchor<Route>></li>
+                            <li class="nav-item"><RouterAnchor<Route> classes="nav-link" route=Route::Sandbox>{"Sandbox"}</RouterAnchor<Route>></li>
+                            <li class="nav-item"><RouterAnchor<Route> classes="nav-link" route=Route::Feedback>{"Feedback"}</RouterAnchor<Route>></li>
+                        </ul>
+                        <a class="btn font-weight-500 ml-lg-4 btn-primary" href="/#login">{"Login Now"}<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
+                    </div>
                 </div>
-            </div>
-        </nav>
+            </nav>
         }
     }
 
@@ -86,9 +74,6 @@ impl Model {
                             </div>
                             <div class="mt-1">{"Designed using Start Bootstrap. \nBuilt using Yew + Rocket (Rust). \nSubmit anonymous feedback"}<a href="#/feedback">{" here."}</a></div>
                         </div>
-
-                         
-
                     </div>
                 </footer>
             </div>

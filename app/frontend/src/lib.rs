@@ -1,9 +1,10 @@
-// pub mod components;
-pub mod pages;
-// TODO: merge this into centralized crate for shared "stdlib" values
+use yew_router::prelude::*;
 
 pub const BASE_URL: &'static str = "http://localhost:8000";
+// pub mod components;
+pub mod pages;
 
+// TODO: merge Enums into centralized crate for shared "stdlib" values
 pub enum Phonetic {
     Zhuyin,
     Pinyin,
@@ -30,4 +31,20 @@ impl CnType {
             CnType::Simplified => "Simplified"
         };
     }
+}
+
+#[derive(Switch, Clone, Debug)]
+pub enum Route {
+    #[to="/login"]
+    Login,
+    #[to="/feedback"]
+    Feedback,
+    #[to="/sandbox"]
+    Sandbox,
+    #[to="/reader"]
+    Reader,
+    #[to="/u/{uid}"]
+    Profile(String),
+    #[to="/"]
+    Home,
 }
