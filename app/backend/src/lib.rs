@@ -9,6 +9,7 @@ pub mod auth;
 pub mod config;
 pub mod models;
 pub mod api;
+pub mod routes;
 
 use crate::{
     config::{DB_URI, DB_NAME, REDIS_URI, TOKENIZER_HOSTNAME, TOKENIZER_PORT},
@@ -284,6 +285,11 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             api::update_settings,
             ])
         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/html")).rank(2))
+        .mount("/", routes![
+            routes::login,
+            routes::feedback,
+            routes::sandbox,
+        ])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../static")).rank(1))
         .launch();
     return Ok(());
