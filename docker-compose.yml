@@ -19,6 +19,18 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=example
     volumes:
       - mongo-data:/data/db
+  mongodb-express:
+    image: mongo-express
+    container_name: mongoexpress
+    restart: always
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=root
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=example
+    ports:
+      - 8081:8081
+    depends_on:
+      - mongodb
   redis:
     image: redis
     container_name: redis-cache
@@ -38,8 +50,8 @@ services:
     depends_on:
       - mongodb
       - redis
-    # volumes:
-    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/data_services:/token-server
+    volumes:
+      - /home/epan/Documents/GitHub/DuGuo-Chinese-Reading-App/data_services:/data-services
   rocket-web-server:
     build:
       context: ./app
@@ -49,5 +61,5 @@ services:
       - tokenizer-server
     ports:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
-    # volumes:
-    #   - /home/epan/Documents/Github/DuGuo-Chinese-Reading-App/app:/app
+    volumes:
+      - /home/epan/Documents/GitHub/DuGuo-Chinese-Reading-App/app:/app

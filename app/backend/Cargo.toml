@@ -17,7 +17,7 @@ hex = "0.3.1"
 serde = "1.0.118"
 jsonwebtoken = "7.2.0"
 chrono = "0.4.19"
-reqwest = { version = "0.10.2", features = ["blocking"] }
+reqwest = { version = "0.11.4", features = ["blocking", "json"] }
 scraper = "0.12.0"
 redis = { version = "0.17.0", features = ["tokio-comp"] }
 regex = "1"

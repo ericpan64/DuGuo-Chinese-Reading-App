@@ -1,5 +1,5 @@
 FROM python:3.8.7
-WORKDIR /token-server
+WORKDIR /data-services
 COPY . .
 RUN pip install -r requirements.txt
 RUN python -m spacy download zh_core_web_sm

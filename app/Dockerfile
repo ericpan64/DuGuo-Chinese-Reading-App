@@ -5,6 +5,7 @@ EXPOSE 8000
 
 # TODO: add frontend compilation here
 # Testing
+WORKDIR /app/backend
 RUN cargo build
 CMD ["cargo", "run"]
 
