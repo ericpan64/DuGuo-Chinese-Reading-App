@@ -210,16 +210,11 @@ pub fn upload_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     let body = convert_rawstr_to_string(body);
     let source = convert_rawstr_to_string(source);
     let url = convert_rawstr_to_string(url);
-    // Parse url if available
-    let use_url = match url.as_str() {
-        "" => false,
-        _ => &body == ""
-    };
     let res_status = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
         Some(username) => { 
-            let new_doc = match use_url {
-                false => rt.block_on(UserDoc::new(&db, username, title, body, source)),
-                true => rt.block_on(UserDoc::from_url(&db, username, url))
+            let new_doc = match url.as_str() != "" {
+                true => rt.block_on(UserDoc::from_url(&db, username, url)),
+                false => rt.block_on(UserDoc::new(&db, username, title, body, source))
             };
             match new_doc.try_insert(&db) {
                 Ok(_) => Status::Accepted,
@@ -248,14 +243,9 @@ pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Fo
     let url = convert_rawstr_to_string(url);
     let cn_type = convert_rawstr_to_string(cn_type);
     let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
-    // Parse url if available
-    let try_url = match url.as_str() {
-        "" => false,
-        _ => &body == ""
-    };
-    let new_doc = match try_url {
-        false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, url)),
-        true => rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics))
+    let new_doc = match url.as_str() != "" {
+        true => rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics)),
+        false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, url))
     };
     let res_json = match new_doc.try_insert(&db) {
         Ok(uid) => Json(json!({"uid": uid})),
