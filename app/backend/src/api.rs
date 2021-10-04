@@ -1,23 +1,7 @@
 /*
-/// Route handling for authenticated users.
+/// API Route Handling
 /// Expected form inputs are stored as Structs and defined above the corresponding route.
 /// Note: the `/api/` base dir is appended when route is mounted in lib.rs.
-///
-/// api.rs
-/// ├── GET
-/// |   └── /api/sandbox/{doc_id}
-/// |   └── /api/delete-doc
-/// |   └── /api/delete-vocab
-/// |   └── /api/logout
-/// |   └── /api/docs-to-csv
-/// |   └── /api/vocab-to-csv
-/// |
-/// └── POST
-///     └── /api/feedback
-///     └── /api/auth
-///     └── /api/upload
-///     └── /api/vocab
-///     └── /api/update_settings
 */
 
 use crate::{
@@ -37,40 +21,64 @@ use mongodb::{
 };
 use rocket::{
     http::{RawStr, Cookie, Cookies, Status},
-    request::{Form, LenientForm},
+    request::Form,
     State,
 };
 use rocket_contrib::{json, json::{Json, JsonValue}};
 use tokio::runtime::Handle;
 
 // /* GET */
-// TODO: Add the GET API for getting a user doc (previous deferred to html.rs)
-// TODO: Add tokenization route service
-
 /// /api/sandbox/<doc_id>
-#[get("/sandbox/<doc_id>")]
-pub fn sandbox(db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
+#[get("/get-sandbox-doc/<doc_id>")]
+pub fn get_sandbox_doc(db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
     let doc_id = convert_rawstr_to_string(doc_id);
-    let query_vec = SandboxDoc::get_values_from_query(&db, 
-        doc!{ "doc_id": doc_id },
-        vec!["body_html", "cn_phonetics"]
-    );
+    let res = match SandboxDoc::try_lookup_one(&db, doc!{"doc_id": doc_id}) {
+        Some(doc) => doc,
+        None => doc!{"error": "No document found"}
+    };
+    return Json(json!{res});
+}
+/// /api/get-user-doc/<doc_title>
+#[get("/get-user-doc/<doc_title>")]
+pub fn get_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Json<JsonValue> {
+    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
+    let doc_title = convert_rawstr_to_string(doc_title);
+    let res = match UserDoc::try_lookup_one(&db, doc!{"username": username, "title": doc_title}) {
+        Some(doc) => doc,
+        None => doc!{"error": "No document found"}
+    };
+    return Json(json!{res});
+}
+/// /api/get-user-lists
+#[get("/get-user-lists")]
+pub fn get_user_lists(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
+    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
+    let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
+    let doc_titles: Vec<String> = UserDoc::aggregate_all_values_from_query(&db,
+        doc!{"username": &username},
+        vec!["title"]
+    )[0].to_owned(); // unpacks
+    let vocab_list = UserVocab::try_lookup_all(&db,
+        doc!{"username": &username}
+    ).unwrap();
     return Json(json!({
-        "body_html": query_vec[0].to_owned(),
-        "cn_phonetics": query_vec[1].to_owned(),
+        "cn_type": cn_type,
+        "cn_phonetics": cn_phonetics,
+        "title_list": doc_titles, // Vec<String>
+        "vocab_list": vocab_list, // Vec<Document>
     }));
 }
 /// /api/delete-doc/<doc_title>
-#[get("/delete-doc/<doc_title>")]
-pub fn delete_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Status {
+#[get("/delete-user-doc/<doc_title>")]
+pub fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Status {
     let title = convert_rawstr_to_string(doc_title);
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
     rt.block_on(UserDoc::try_delete(&db, &username, &title));
     return Status::Ok;
 }
 /// /api/delete-vocab/<vocab_uid>
-#[get("/delete-vocab/<vocab_uid>")]
-pub fn delete_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Status {
+#[get("/delete-user-vocab/<vocab_uid>")]
+pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Status {
     let phrase_uid = convert_rawstr_to_string(vocab_uid);
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
     let (cn_type, _) = User::get_user_settings(&db, &username);
@@ -85,7 +93,6 @@ pub fn logout(mut cookies: Cookies) -> Status {
     cookies.remove(removal_cookie);
     return Status::Ok;
 }
-
 /// /api/docs-to-csv
 #[get("/docs-to-csv")]
 pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
@@ -105,7 +112,6 @@ pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
         "created_on": field_vals[3].to_owned()
     }));
 }
-
 /// /api/vocab-to-csv
 #[get("/vocab-to-csv")]
 pub fn vocab_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
@@ -148,74 +154,68 @@ pub fn feedback(db: State<Database>, user_feedback: Form<AppFeedbackForm<'_>>) -
     };
     return res;
 }
-
-/// Matches definition in ../../frontend/src/login.rs
 #[derive(FromForm)]
 pub struct UserAuthForm<'f> {
     username: &'f RawStr,
     password: &'f RawStr,
     email: &'f RawStr,
 }
-/// /api/auth
-#[post("/auth", data = "<user_input>")]
-pub fn auth(mut cookies: Cookies, db: State<Database>, user_input: LenientForm<UserAuthForm<'_>>) -> Status {
+/// /api/login
+#[post("/login", data = "<user_input>")]
+pub fn login(mut cookies: Cookies, db: State<Database>, user_input: Form<UserAuthForm<'_>>) -> Status {
     let UserAuthForm { username, password, email } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
     let email = convert_rawstr_to_string(email);
-    let res_status = match email == "" {
+    let res_status = match User::check_password(&db, &username, &password) {
         true => {
-            let new_user = User::new(username.clone(), password.clone(), email);
-            match new_user.try_insert(&db) {
-                Ok(_) => {
-                    let new_cookie = generate_http_cookie(&db, username, password);
-                    cookies.add(new_cookie);
-                    Status::Accepted
-                },
-                Err(_) => Status::InternalServerError
-            }
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
         },
-        false => {
-            let is_valid_password = User::check_password(&db, &username, &password);
-            match is_valid_password {
-                true => {
-                    let new_cookie = generate_http_cookie(&db, username, password);
-                    cookies.add(new_cookie);
-                    Status::Accepted
-                },
-                false => Status::Unauthorized
-            }
-        }
+        false => Status::Unauthorized
     };
     return res_status;
 }
-/// LenientForm that is used in Sandbox and Profile pages
+/// /api/register
+#[post("/register", data = "<user_input>")]
+pub fn register(mut cookies: Cookies, db: State<Database>, user_input: Form<UserAuthForm<'_>>) -> Status {
+    let UserAuthForm { username, password, email } = user_input.into_inner();
+    let username = convert_rawstr_to_string(username);
+    let password = convert_rawstr_to_string(password);
+    let email = convert_rawstr_to_string(email);
+    let new_user = User::new(username.clone(), password.clone(), email);
+    let res_status = match new_user.try_insert(&db) {
+        Ok(_) => {
+            let new_cookie = generate_http_cookie(&db, username, password);
+            cookies.add(new_cookie);
+            Status::Accepted
+        },
+        Err(_) => Status::InternalServerError
+    };
+    return res_status;
+}
 #[derive(FromForm)]
-pub struct UploadForm<'f> {
-    title: &'f RawStr,
-    source: &'f RawStr,
+pub struct UserDocForm<'f> {
     body: &'f RawStr,
     url: &'f RawStr,
-    cn_type: &'f RawStr,
-    cn_phonetics: &'f RawStr,
+    title: &'f RawStr,
+    source: &'f RawStr,
 }
-/// /api/upload
-#[post("/upload", data="<upload_doc>")]
-pub fn upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, upload_doc: LenientForm<UploadForm<'_>>) -> Status {
-    let UploadForm { title, source, body, url, cn_type, cn_phonetics } = upload_doc.into_inner();
+/// /api/upload-user-doc
+#[post("/upload-user-doc", data="<upload_doc>")]
+pub fn upload_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, upload_doc: Form<UserDocForm<'_>>) -> Status {
+    let UserDocForm { title, source, body, url } = upload_doc.into_inner();
     let title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
     let source = convert_rawstr_to_string(source);
     let url = convert_rawstr_to_string(url);
-    let cn_type = convert_rawstr_to_string(cn_type);
-    let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
     // Parse url if available
     let use_url = match url.as_str() {
         "" => false,
         _ => &body == ""
     };
-    let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
-    let res_status = match username_from_cookie {
+    let res_status = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
         Some(username) => { 
             let new_doc = match use_url {
                 false => rt.block_on(UserDoc::new(&db, username, title, body, source)),
@@ -229,32 +229,48 @@ pub fn upload(cookies: Cookies, db: State<Database>, rt: State<Handle>, upload_d
                 }
             }
         },
-        None => {
-            let new_doc = match use_url {
-                false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, source)),
-                true => rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics))
-            };
-            match new_doc.try_insert(&db) {
-                Ok(_) => Status::Accepted,
-                Err(e) => {
-                    eprintln!("Exception when inserting doc: {:?}", e);
-                    Status::UnprocessableEntity
-                }
-            }
-        }
+        None => Status::Unauthorized
     };
     return res_status;
 }
-
-/// Matches definition in template.js (primarily called in reader.html.tera).
+#[derive(FromForm)]
+pub struct SandboxDocForm<'f> {
+    body: &'f RawStr,
+    url: &'f RawStr,
+    cn_type: &'f RawStr,
+    cn_phonetics: &'f RawStr,
+}
+/// /api/upload-sandbox-doc
+#[post("/upload-sandbox-doc", data="<upload_doc>")]
+pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Form<SandboxDocForm<'_>>) -> Json<JsonValue> {
+    let SandboxDocForm { body, url, cn_type, cn_phonetics } = upload_doc.into_inner();
+    let body = convert_rawstr_to_string(body);
+    let url = convert_rawstr_to_string(url);
+    let cn_type = convert_rawstr_to_string(cn_type);
+    let cn_phonetics = convert_rawstr_to_string(cn_phonetics);
+    // Parse url if available
+    let try_url = match url.as_str() {
+        "" => false,
+        _ => &body == ""
+    };
+    let new_doc = match try_url {
+        false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, url)),
+        true => rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics))
+    };
+    let res_json = match new_doc.try_insert(&db) {
+        Ok(uid) => Json(json!({"uid": uid})),
+        Err(e) => Json(json!({"error": e.to_string()}))
+    };
+    return res_json;
+}
 #[derive(FromForm)]
 pub struct UserVocabForm<'f> {
     phrase_uid: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
 /// /api/vocab
-#[post("/vocab", data="<user_vocab>")]
-pub fn vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
+#[post("/upload-vocab", data="<user_vocab>")]
+pub fn upload_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
     let phrase = convert_rawstr_to_string(phrase_uid);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
@@ -267,14 +283,10 @@ pub fn vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_voca
                 Err(_) => Status::ExpectationFailed
             }
         },
-        None => {
-            eprintln!("Error: no username found from cookie");
-            Status::BadRequest
-        }
+        None => Status::Unauthorized
     };
     return res_status;
 }
-/// Matches definition in userprofile.html.tera.
 #[derive(FromForm)]
 pub struct UserSettingForm<'f> {
     setting: &'f RawStr,

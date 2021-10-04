@@ -18,11 +18,16 @@
 
 pub mod auth;
 pub mod config;
-pub mod html;
 pub mod models;
 pub mod api;
 
-use crate::config::{DB_NAME, DB_URI, REDIS_URI};
+use crate::{
+    config::{DB_URI, DB_NAME, REDIS_URI, TOKENIZER_HOSTNAME, TOKENIZER_PORT},
+    models::{
+        user::{User, UserDoc, UserVocab},
+        zh::{CnType, CnPhonetics, CnEnDictEntry, CnPhrase}
+    }
+};
 use mongodb::{
     bson::{self, doc, document::Document, Bson},
     sync::Database
@@ -36,7 +41,9 @@ use serde::Serialize;
 use scraper;
 use std::{
     error::Error,
-    marker::Sized
+    marker::Sized,
+    io::prelude::*,
+    net::TcpStream
 };
 use redis::aio::Connection;
 use tokio::runtime::Runtime;
@@ -77,9 +84,23 @@ pub trait DatabaseItem {
         return bson::to_bson(self).unwrap();
     }
     /// Attempts to lookup a full Document based on the provided query Document.
-    fn try_lookup(db: &Database, query_doc: Document) -> Option<Document> where Self: Sized {
+    fn try_lookup_one(db: &Database, query_doc: Document) -> Option<Document> where Self: Sized {
         let coll = (*db).collection(Self::collection_name());
         return coll.find_one(query_doc, None).unwrap();
+    }
+    /// Attempts to lookup Vec<Document> based on the provided query Document.
+    fn try_lookup_all(db: &Database, query_doc: Document) -> Option<Vec<Document>> where Self: Sized {
+        let coll = (*db).collection(Self::collection_name());
+        let cursor = coll.find(query_doc, None).unwrap();
+        let mut docs: Vec<Document> = Vec::new();
+        for doc_res in cursor {
+            docs.push(doc_res.unwrap());
+        }
+        let res = match docs.len() {
+            0 => None,
+            _ => Some(docs)
+        };
+        return res;
     }
     /// Attempts to insert the object into MongoDB.
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
@@ -200,6 +221,54 @@ pub async fn scrape_text_from_url(url: &str) -> (String, String) {
     return (title_text, body_text);
 }
 
+/// Renders the HTML using the given CnType and CnPhonetics.
+/// Refer to tokenizer_string() for formatting details.
+pub async fn convert_string_to_tokenized_phrases(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> Vec<CnPhrase> {
+    const PHRASE_DELIM: char = '$';
+    const PINYIN_DELIM: char = '`';
+    let mut conn = connect_to_redis().await.unwrap();
+    let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
+    let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
+    // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
+    // TODO: make this a json payload for Frontend
+    let mut res = Vec::with_capacity(n_phrases);
+    for token in tokenized_string.split(PHRASE_DELIM) {
+        let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
+        let raw_phrase = token_vec[0].to_string(); // If Chinese, then Simplified
+        let raw_phonetics = token_vec[1].to_string();
+        let uid = CnEnDictEntry::generate_uid(vec![&raw_phrase,&raw_phonetics]);
+        let entry = CnEnDictEntry::from_uid(&mut conn, uid).await;
+        let lookup_success = entry.lookup_succeeded();
+        let curr_phrase = CnPhrase {
+            entry,
+            lookup_success,
+            raw_phrase,
+            raw_phonetics
+        };
+        res.push(curr_phrase);
+    }
+    return res;
+}
+
+/// Connect to tokenizer service and tokenizes the string. The delimiters are $ and ` since neither character appears in CEDICT.
+/// The format of the string is: "phrase1`raw_pinyin$phrase2`raw_pinyin2$ ..."
+/// The string is written to the TCP stream until completion.
+/// From the tokenizer, 2 messages are sent: 
+///     1) A u64 (as bytes) indicating the size of the tokenizer results
+///     2) The tokenizer result string (as bytes)
+fn tokenize_string(mut s: String) -> std::io::Result<String> {
+    s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
+    let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
+    stream.write_all(s.as_bytes())?;
+    let mut header_bytes = [0; 64];
+    stream.read_exact(&mut header_bytes)?;
+    let n_bytes: usize = String::from_utf8(header_bytes.to_vec()).unwrap()
+        .trim().parse::<usize>().unwrap();
+    let mut tokenized_bytes = vec![0; n_bytes];
+    stream.read_exact(&mut tokenized_bytes)?;
+    let res = String::from_utf8(tokenized_bytes).unwrap();
+    return Ok(res);
+}
 /// Starts the Rocket web server and corresponding services. Called in main.rs.
 /// Note: the Tokio version is deliberately set to 0.2.24 to match the MongoDB 1.1.1 driver.
 /// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
@@ -211,16 +280,20 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
         .manage(db)
         .manage(rt)
         .mount("/api/", routes![
-            api::sandbox,
-            api::delete_doc,
-            api::delete_vocab,
+            api::get_sandbox_doc,
+            api::get_user_doc,
+            api::get_user_lists,
+            api::delete_user_doc,
+            api::delete_user_vocab,
             api::logout,
             api::docs_to_csv,
             api::vocab_to_csv,
             api::feedback,
-            api::auth,
-            api::upload,
-            api::vocab,
+            api::login,
+            api::register,
+            api::upload_sandbox_doc,
+            api::upload_user_doc,
+            api::upload_vocab,
             api::update_settings,
             ])
         .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/html")).rank(2))

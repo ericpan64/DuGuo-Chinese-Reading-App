@@ -1,10 +1,11 @@
 /*
 /// Data Structures relating to Chinese text.
 /// 
-/// chinese.rs
+/// zh.rs
 /// ├── CnType: Enum
 /// ├── CnPhonetics: Enum
-/// └── CnEnDictEntry: Struct
+/// ├── CnEnDictEntry: Struct
+/// └── CnPhrase: Struct
 */
 
 use crate::CacheItem;
@@ -81,7 +82,7 @@ impl fmt::Display for CnPhonetics {
 }
 
 /* Structs */
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct CnEnDictEntry {
     pub uid: String,
     pub trad: String,
@@ -119,8 +120,8 @@ impl CnEnDictEntry {
         return res;
     }
     /// Returns true if object is a "failed lookup" entry, false otherwise.
-    pub fn lookup_failed(&self) -> bool {
-        return self.formatted_pinyin == "";
+    pub fn lookup_succeeded(&self) -> bool {
+        return self.formatted_pinyin != "";
     }
     /// Generates generic "failed lookup" entry.
     /// The uid is preserved so the failed case can be identified.
@@ -138,4 +139,12 @@ impl CnEnDictEntry {
         }; 
         return res;
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct CnPhrase {
+    pub entry: CnEnDictEntry,
+    pub lookup_success: bool,
+    pub raw_phrase: String,
+    pub raw_phonetics: String,
 }
