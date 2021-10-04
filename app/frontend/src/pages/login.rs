@@ -5,17 +5,6 @@ pub struct Login {
     show_pw: bool
 }
 
-pub struct UserLoginForm {
-    username: String,
-    password: String,
-}
-
-pub struct UserRegisterForm {
-    username: String,
-    email: String,
-    password: String,
-}
-
 pub enum Msg {
     AttemptLogin,
     AttemptRegister,
@@ -30,15 +19,13 @@ impl Component for Login {
         let show_pw = false;
         Self { link, show_pw }
     }
-
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        // TODO: implement these functions to perform API request
         match msg {
-            Msg::AttemptLogin => {
-                
+            Msg::AttemptLogin => { 
                 false
             },
             Msg::AttemptRegister => {
-                
                 false
             },
             Msg::ShowPassword(b) => {
@@ -47,37 +34,39 @@ impl Component for Login {
             }
         }
     }
-
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
-
+    fn change(&mut self, _: Self::Properties) -> ShouldRender { false }
     fn view(&self) -> Html {
+        let flip = !&self.show_pw;
         html! {
-            <>
+            <div class="page-header-content">
                 <header class="page-header page-header-light bg-white">
-                    <div class="page-header-content pt-5">
+                    <div class="container">
+                        <h1>{"Login / Register"}</h1>
+                        <div class="alert alert-warning" role="alert">
+                            {"Note that the following characters are not allowed: < > ! ( ) { } \" ' ; : \\ *"}
+                        </div>
                         <div class="container">
-                            <h1>{"Login / Register"}</h1>
-                            <div class="alert alert-warning" role="alert">
-                                {"Note that the following characters are not allowed: < > ! ( ) {{ }} \" ' ; : \\ *"}
-                            </div>
-                            <ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist">
-                                <li class="nav-item">
-                                <a class="nav-link active" id="pills-login-tab" data-toggle="pill" href="#pills-login" role="tab" aria-controls="pills-login" aria-selected="true">{"Login"}</a>
-                                </li>
-                                <li class="nav-item">
-                                <a class="nav-link" id="pills-register-tab" data-toggle="pill" href="#pills-register" role="tab" aria-controls="pills-register" aria-selected="false">{"Register"}</a>
-                                </li>
-                            </ul>
-                            <div class="tab-content" id="pills-tabContent">
-                                {self.view_login_form()}
-                                {self.view_register_form()}
-                            </div>
+                            <form class="pt-3" id="form">
+                                <div class="form-group">
+                                    <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
+                                </div>
+                                <div class="form-group">
+                                    <input id="pw-reg" class="form-control" type=self.get_pw_type() name="password" placeholder="Password (min 8 chars)" minlength="8" required=true/>
+                                </div>
+                                <div class="form-group">
+                                    <input class="form-control" type="email" name="email" placeholder="Email (optional)"/>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                                    <label class="form-check-label" for="showPwCheck" onclick=self.link.callback(move |_| Msg::ShowPassword(flip))>{"Show Password"}</label>
+                                </div>
+                                <button class="btn btn-primary mr-1" onclick=self.link.callback(|_| Msg::AttemptLogin)>{"Login"}</button>
+                                <button class="btn btn-outline-primary ml-1" onclick=self.link.callback(|_| Msg::AttemptRegister)>{"Register"}</button>
+                            </form>
                         </div>
                     </div>
                 </header>
-            </>
+            </div>
         }
     }
 }
@@ -113,25 +102,10 @@ impl Login {
         }
     }
     fn view_register_form(&self) -> Html {
-        let flip = !&self.show_pw;
+        
         html! {
             <div class="tab-pane fade pt-3" id="pills-register" role="tabpanel" aria-labelledby="pills-register-tab">
-                <form class="pt-3" id="register" onsubmit=self.link.callback(|_| Msg::AttemptRegister)>
-                    <div class="form-group">
-                        <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
-                    </div>
-                    <div class="form-group">
-                        <input id="pw-reg" class="form-control" type=self.get_pw_type() name="password" placeholder="Password (min 8 chars)" minlength="8" required=true/>
-                    </div>
-                    <div class="form-group">
-                        <input class="form-control" type="email" name="email" placeholder="Email" required=true/>
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="showPwCheck"/>
-                        <label class="form-check-label" for="showPwCheck" onclick=self.link.callback(move |_| Msg::ShowPassword(flip))>{"Show Password"}</label>
-                    </div>
-                    <button class="btn btn-outline-primary" type="submit">{"Register"}</button>
-                </form>
+
             </div>
         }
     }

@@ -25,7 +25,7 @@ open = false
 
 [clean]
 # The output dir for all final assets.
-dist = "compiled"
+dist = "html"
 # Optionally perform a cargo clean.
 cargo = false
 

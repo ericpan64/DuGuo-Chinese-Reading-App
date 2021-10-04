@@ -16,31 +16,16 @@ impl Component for Reader {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self { link }
-    }
-
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self { Self { link } }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        // TODO: implement phonetic showing
+        // TODO: implement Reader start/stop
         match msg {
             _ => false
         }
     }
-
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
-
+    fn change(&mut self, _: Self::Properties) -> ShouldRender { false }
     fn view(&self) -> Html {
-        html! {
-            <>
-                {self.view_header()}
-            </>
-        }
-    }
-}
-
-impl Reader {
-    fn view_header(&self) -> Html {
         html! {
             <header class="page-header page-header-light bg-white">
                 <div class="page-header-content">
@@ -75,5 +60,4 @@ impl Reader {
             </header>
         }
     }
-
 }

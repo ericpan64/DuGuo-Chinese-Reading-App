@@ -61,7 +61,7 @@ impl Home {
                         <div class="row align-items-center">
                             <div class="col-lg-6" data-aos="fade-up">
                                 <h1 class="page-header-title">{"Learn how to read Chinese the right way"}</h1>
-                                <p class="page-header-text mb-5">{"Welcome to DuGuo, an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!"}</p>
+                                <p class="page-header-text mb-5">{"DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!"}</p>
                                 <a class="btn btn-lg btn-primary font-weight-500 mr-3" href="#sandbox">{"Try the Sandbox"}<i class="ml-2" data-feather="arrow-right"></i></a><a class="btn btn-lg btn-primary-soft text-primary font-weight-500" href="#docs">{"Documentation"}</a>
                             </div>
                             <div class="col-lg-6 d-none d-lg-block" data-aos="fade-up" data-aos-delay="100"><img class="img-fluid" src="static/img/Insertion-sort-example.gif" /></div>

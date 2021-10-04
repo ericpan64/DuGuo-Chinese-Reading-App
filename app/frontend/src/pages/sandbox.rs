@@ -7,7 +7,6 @@ pub struct Sandbox {
     cn_type: CnType,
 }
 
-
 pub enum Msg {
     UpdatePhonetic(Phonetic),
     UpdateCnType(CnType),
@@ -69,7 +68,7 @@ impl Sandbox {
                         <p>{"Try-out the app by uploading some text! Adjust settings based on how you would like the output to render."}</p>
                         <p>{"Any Chinese text should render - by default the server attempts to lookup Simplified, and then Traditional."}</p>
                         <span>
-                            <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-primary dropdown-toggle mr-2" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 {render_phonetic_text}
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -78,7 +77,7 @@ impl Sandbox {
                             </ul>
                         </span>
                         <span>
-                            <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-primary dropdown-toggle ml-2" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 {render_cn_text}
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
@@ -87,14 +86,14 @@ impl Sandbox {
                             </ul>
                         </span>
                         <br/><br/>
-                        <form action="/api/sandbox-upload" id="upload" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
-                            <textarea name="text" form="upload" rows="5" cols="35" required=true>{"希望这个网站能帮助您多读中文！"}</textarea>
+                        <form action="/api/upload" id="upload" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
+                            <textarea name="body" form="upload" rows="5" cols="35" required=true>{"希望这个网站能帮助您多读中文！"}</textarea>
                             <br/><br/>
                             <button id="upload-button" class="btn btn-outline-primary" type="submit">{"Upload Text"}</button>
                         </form>
                         <br/>
                         <p>{"Or try uploading a URL to a Chinese article (news, leisure, etc.). If you're feeling lucky, "}<a href="https://zh.wikipedia.org/wiki/Special:%E9%9A%8F%E6%9C%BA%E9%A1%B5%E9%9D%A2" target="_blank">{"here's"}</a>{" a link to a random Chinese Wikipedia article."}</p>
-                        <form class="form" action="/api/sandbox-url-upload" id="sandbox-url-form" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
+                        <form class="form" action="/api/upload" id="sandbox-url-form" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
                             <input type="text" name="url" placeholder="Article URL" required=true />
                             <br/><br/>
                             <button id="url-upload-button" class="btn btn-outline-primary" type="submit">{"Upload using URL"}</button>

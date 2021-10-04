@@ -13,3 +13,4 @@ license = "MIT"
 yew = { version = "0.18" } # Note: some weird bug with yew_stdweb - try importing stdweb on its own
 yew-router = "0.15.0"
 reqwest = "0.11.4"
+wasm-bindgen = "=0.2.74"

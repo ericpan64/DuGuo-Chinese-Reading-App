@@ -1,5 +1,8 @@
-pub mod components;
+// pub mod components;
 pub mod pages;
+// TODO: merge this into centralized crate for shared "stdlib" values
+
+pub const BASE_URL: &'static str = "http://localhost:8000";
 
 pub enum Phonetic {
     Zhuyin,
