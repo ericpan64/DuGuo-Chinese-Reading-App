@@ -1,16 +1,5 @@
 /*
 /// Trait definitions and General purpose helper functions.
-/// 
-/// lib.rs
-/// ├── CacheItem: Trait
-/// ├── DatabaseItem: Trait
-/// |
-/// └── pub fn:
-///     └── connect_to_mongodb
-///     └── connect_to_redis
-///     └── convert_rawstr_to_string
-///     └── scrape_text_from_url
-///     └── launch_rocket
 */
 
 #![feature(proc_macro_hygiene, decl_macro)]
@@ -24,8 +13,7 @@ pub mod api;
 use crate::{
     config::{DB_URI, DB_NAME, REDIS_URI, TOKENIZER_HOSTNAME, TOKENIZER_PORT},
     models::{
-        user::{User, UserDoc, UserVocab},
-        zh::{CnType, CnPhonetics, CnEnDictEntry, CnPhrase}
+        zh::{CnEnDictEntry, CnPhrase}
     }
 };
 use mongodb::{
@@ -223,14 +211,13 @@ pub async fn scrape_text_from_url(url: &str) -> (String, String) {
 
 /// Renders the HTML using the given CnType and CnPhonetics.
 /// Refer to tokenizer_string() for formatting details.
-pub async fn convert_string_to_tokenized_phrases(s: &str, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> Vec<CnPhrase> {
+pub async fn convert_string_to_tokenized_phrases(s: &str) -> Vec<CnPhrase> {
     const PHRASE_DELIM: char = '$';
     const PINYIN_DELIM: char = '`';
     let mut conn = connect_to_redis().await.unwrap();
     let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
     let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
     // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
-    // TODO: make this a json payload for Frontend
     let mut res = Vec::with_capacity(n_phrases);
     for token in tokenized_string.split(PHRASE_DELIM) {
         let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();

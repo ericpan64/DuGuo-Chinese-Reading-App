@@ -10,7 +10,7 @@ use crate::{
     auth::{generate_http_cookie, get_username_from_cookie},
     config::JWT_NAME,
     models::{
-        sandbox::{AppFeedback, SandboxDoc},
+        public::{AppFeedback, SandboxDoc},
         user::{User, UserDoc, UserVocab},
         zh::{CnType, CnPhonetics}
     }
@@ -166,7 +166,7 @@ pub fn login(mut cookies: Cookies, db: State<Database>, user_input: Form<UserAut
     let UserAuthForm { username, password, email } = user_input.into_inner();
     let username = convert_rawstr_to_string(username);
     let password = convert_rawstr_to_string(password);
-    let email = convert_rawstr_to_string(email);
+    let _ = email;
     let res_status = match User::check_password(&db, &username, &password) {
         true => {
             let new_cookie = generate_http_cookie(&db, username, password);

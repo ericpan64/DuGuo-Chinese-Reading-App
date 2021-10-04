@@ -1,17 +1,5 @@
 /*
 /// Module handling user authentication and cookies
-/// 
-/// TODO: Update these docs across files once implementation is complete
-///
-/// auth.rs
-/// ├── UserCredentials: Struct
-/// ├── UserToken: Struct
-/// |
-/// └── pub fn:
-///     └── generate_http_cookie
-///     └── add_user_cookie_to_context
-///     └── get_username_from_cookie
-///     └── str_to_hashed_string
 */
 
 use blake2::{Blake2b, Digest};

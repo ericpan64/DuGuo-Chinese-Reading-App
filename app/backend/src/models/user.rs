@@ -178,7 +178,7 @@ impl UserDoc {
     pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
         let desired_title = desired_title.replace(" ", "");
-        let tokenized_body_json = convert_string_to_tokenized_phrases(&body, &cn_type, &cn_phonetics).await;
+        let tokenized_body_json = convert_string_to_tokenized_phrases(&body).await;
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).unwrap()) != None;

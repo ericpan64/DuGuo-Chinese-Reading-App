@@ -1,6 +1,5 @@
 /*
 /// Data Structures not associated with a User account.
-/// TODO: rename to `public.rs`
 /// sandbox.rs
 /// ├── SandboxDoc: Strict
 /// └── AppFeedback: Struct
@@ -45,7 +44,7 @@ impl SandboxDoc {
         let cn_type = CnType::from_str(&cn_type).unwrap();
         let cn_phonetics = CnPhonetics::from_str(&cn_phonetics).unwrap();
         let created_on = Utc::now().to_string();
-        let tokenized_body_json = convert_string_to_tokenized_phrases(&body, &cn_type, &cn_phonetics).await;
+        let tokenized_body_json = convert_string_to_tokenized_phrases(&body).await;
         let new_doc = SandboxDoc { doc_id, body, tokenized_body_json, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
