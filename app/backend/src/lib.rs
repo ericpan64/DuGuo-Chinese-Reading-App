@@ -23,9 +23,6 @@ use mongodb::{
 };
 use reqwest;
 use rocket::http::RawStr;
-use rocket_contrib::{
-    serve::StaticFiles
-};
 use serde::Serialize;
 use scraper;
 use std::{
@@ -35,7 +32,7 @@ use std::{
     net::TcpStream
 };
 use redis::aio::Connection;
-use tokio::runtime::Runtime;
+
 
 /* Traits */
 /// An object that can be found in Redis (using a uid).
@@ -256,41 +253,4 @@ fn tokenize_string(mut s: String) -> std::io::Result<String> {
     stream.read_exact(&mut tokenized_bytes)?;
     let res = String::from_utf8(tokenized_bytes).unwrap();
     return Ok(res);
-}
-/// Starts the Rocket web server and corresponding services. Called in main.rs.
-/// Note: the Tokio version is deliberately set to 0.2.24 to match the MongoDB 1.1.1 driver.
-/// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
-pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
-    let db = connect_to_mongodb()?;
-    let runtime = Runtime::new().unwrap();
-    let rt = runtime.handle().clone();
-    rocket::ignite()
-        .manage(db)
-        .manage(rt)
-        .mount("/api/", routes![
-            api::get_sandbox_doc,
-            api::get_user_doc,
-            api::get_user_lists,
-            api::delete_user_doc,
-            api::delete_user_vocab,
-            api::logout,
-            api::docs_to_csv,
-            api::vocab_to_csv,
-            api::feedback,
-            api::login,
-            api::register,
-            api::upload_sandbox_doc,
-            api::upload_user_doc,
-            api::upload_vocab,
-            api::update_settings,
-            ])
-        .mount("/", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../frontend/html")).rank(2))
-        .mount("/", routes![
-            routes::login,
-            routes::feedback,
-            routes::sandbox,
-        ])
-        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../static")).rank(1))
-        .launch();
-    return Ok(());
 }
