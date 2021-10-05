@@ -1,5 +1,6 @@
 use yew_router::prelude::*;
 
+pub mod components;
 pub mod pages;
 
 // TODO: merge Enums into centralized crate for shared "stdlib" values
