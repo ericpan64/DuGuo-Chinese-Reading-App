@@ -6,6 +6,7 @@
 
 use crate::{
     convert_rawstr_to_string, 
+    routes as Routes,
     DatabaseItem,
     auth::{generate_http_cookie, get_username_from_cookie},
     config::JWT_NAME,
@@ -22,6 +23,7 @@ use mongodb::{
 use rocket::{
     http::{RawStr, Cookie, Cookies, Status},
     request::Form,
+    response::Redirect,
     State,
 };
 use rocket_contrib::{json, json::{Json, JsonValue}};
@@ -143,16 +145,13 @@ pub struct AppFeedbackForm<'f> {
 }
 /// /api/feedback
 #[post("/feedback", data = "<user_feedback>")]
-pub fn feedback(db: State<Database>, user_feedback: Form<AppFeedbackForm<'_>>) -> Status {
+pub fn feedback(db: State<Database>, user_feedback: Form<AppFeedbackForm<'_>>) -> Redirect {
     let AppFeedbackForm { feedback, contact } = user_feedback.into_inner();
     let feedback = convert_rawstr_to_string(feedback);
     let contact = convert_rawstr_to_string(contact);
     let new_feedback = AppFeedback::new(feedback, contact);
-    let res = match new_feedback.try_insert(&db) {
-        Ok(_) => Status::Accepted,
-        Err(_) => Status::InternalServerError
-    };
-    return res;
+    new_feedback.try_insert(&db).unwrap();
+    return Redirect::to(uri!(Routes::feedback));
 }
 #[derive(FromForm)]
 pub struct UserAuthForm<'f> {
