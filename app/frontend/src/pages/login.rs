@@ -60,7 +60,7 @@ impl Component for Login {
                                     <input type="checkbox" class="form-check-input" id="showPwCheck"/>
                                     <label class="form-check-label" for="showPwCheck" onclick=self.link.callback(move |_| Msg::ShowPassword(flip))>{"Show Password"}</label>
                                 </div>
-                                <button class="btn btn-primary mr-1" onclick=self.link.callback(|_| Msg::AttemptLogin)>{"Login"}</button>
+                                <button class="btn btn-outline-primary mr-1" onclick=self.link.callback(|_| Msg::AttemptLogin)>{"Login"}</button>
                                 <button class="btn btn-outline-primary ml-1" onclick=self.link.callback(|_| Msg::AttemptRegister)>{"Register"}</button>
                             </form>
                         </div>
