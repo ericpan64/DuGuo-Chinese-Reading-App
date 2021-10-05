@@ -25,8 +25,8 @@ impl Component for Feedback {
             // Make reqwest
         });
         html! {
-            <div class="page-header-content">
-                <header class="page-header page-header-light bg-white">
+            <header class="page-header page-header-light bg-white">
+                <div class="page-header-content">
                     <div class="container">
                         <h1>{"Feedback"}</h1>
                         <p>{"Let us know your thoughts below! Leave your contact info (optional) if you would like a response and/or are open to further discuss your thoughts."}</p>
@@ -39,8 +39,8 @@ impl Component for Feedback {
                             <button class="btn btn-outline-primary" type="submit">{"Submit"}</button>
                         </form>
                     </div>
-                </header>
-            </div>
+                </div>
+            </header>
         }
     }
 }

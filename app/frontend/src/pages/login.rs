@@ -81,32 +81,4 @@ impl Login {
         }
         return res;
     }
-    fn view_login_form(&self) -> Html {
-        let flip = !&self.show_pw;
-        html ! {
-            <div class="tab-pane fade show active pt-3" id="pills-login" role="tabpanel" aria-labelledby="pills-login-tab">
-                <form class="pt-3" id="login" onsubmit=self.link.callback(|_| Msg::AttemptLogin)>
-                    <div class="form-group">
-                        <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
-                    </div>
-                    <div class="form-group">
-                        <input id="pw-login" class="form-control" type=self.get_pw_type() name="password" placeholder="Password" required=true/>
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="showPwCheck"/>
-                        <label class="form-check-label" for="showPwCheck" onclick=self.link.callback(move |_| Msg::ShowPassword(flip))>{"Show Password"}</label>
-                    </div>
-                    <button class="btn btn-outline-primary" type="submit">{"Log In"}</button>
-                </form>
-            </div>
-        }
-    }
-    fn view_register_form(&self) -> Html {
-        
-        html! {
-            <div class="tab-pane fade pt-3" id="pills-register" role="tabpanel" aria-labelledby="pills-register-tab">
-
-            </div>
-        }
-    }
 }

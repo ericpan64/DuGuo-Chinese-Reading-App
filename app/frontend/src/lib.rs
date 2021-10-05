@@ -1,7 +1,5 @@
 use yew_router::prelude::*;
 
-pub const BASE_URL: &'static str = "http://localhost:8000";
-// pub mod components;
 pub mod pages;
 
 // TODO: merge Enums into centralized crate for shared "stdlib" values
