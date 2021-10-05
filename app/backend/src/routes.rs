@@ -20,6 +20,11 @@ pub fn sandbox() -> NamedFile {
     NamedFile::open(HTML_FILEPATH).unwrap()
 }
 
+#[get("/reader/<_doc_id>")]
+pub fn reader(_doc_id: &RawStr) -> NamedFile {
+    NamedFile::open(HTML_FILEPATH).unwrap()
+}
+
 #[get("/u/<_uid>")]
 pub fn profile(_uid: &RawStr) -> NamedFile {
     NamedFile::open(HTML_FILEPATH).unwrap()

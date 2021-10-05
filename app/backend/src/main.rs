@@ -41,6 +41,7 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             routes::feedback,
             routes::sandbox,
             routes::profile,
+            routes::reader,
         ])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../static")).rank(1))
         .launch();

@@ -25,6 +25,7 @@ use mongodb::{
 use rand::{self, Rng};
 use serde::{Serialize, Deserialize};
 use std::error::Error;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -153,6 +154,7 @@ impl User {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserDoc {
+    pub doc_id: String,
     username: String,
     pub title: String,
     pub body: String,
@@ -170,12 +172,13 @@ impl DatabaseItem for UserDoc {
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
     /// Note: this is not unique per document, a unique primary_key is username + title.
-    fn primary_key(&self) -> &str { return &self.username; }
+    fn primary_key(&self) -> &str { return &self.doc_id; }
 }
 
 impl UserDoc {
     /// Generates a new UserDoc. For title collisions, a new title is automatically generated (appended by -#).
     pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
+        let doc_id = Uuid::new_v4().to_string();
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
         let desired_title = desired_title.replace(" ", "");
         let tokenized_body_json = convert_string_to_tokenized_phrases(&body).await;
@@ -198,7 +201,7 @@ impl UserDoc {
             false => desired_title
         };
         let created_on = Utc::now().to_string();
-        let new_doc = UserDoc { username, title, body, tokenized_body_json, source, cn_type, cn_phonetics, created_on };
+        let new_doc = UserDoc { doc_id, username, title, body, tokenized_body_json, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
     /// Generates a new UserDoc with HTML-parsed title + text from the given URL.

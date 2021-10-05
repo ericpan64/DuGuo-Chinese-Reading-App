@@ -40,12 +40,12 @@ pub fn get_sandbox_doc(db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> 
     };
     return Json(json!{res});
 }
-/// /api/get-user-doc/<doc_title>
-#[get("/get-user-doc/<doc_title>")]
-pub fn get_user_doc(cookies: Cookies, db: State<Database>, doc_title: &RawStr) -> Json<JsonValue> {
+/// /api/get-user-doc/<doc_id>
+#[get("/get-user-doc/<doc_id>")]
+pub fn get_user_doc(cookies: Cookies, db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-    let doc_title = convert_rawstr_to_string(doc_title);
-    let res = match UserDoc::try_lookup_one(&db, doc!{"username": username, "title": doc_title}) {
+    let doc_id = convert_rawstr_to_string(doc_id);
+    let res = match UserDoc::try_lookup_one(&db, doc!{"username": username, "doc_id": doc_id}) {
         Some(doc) => doc,
         None => doc!{"error": "No document found"}
     };
@@ -95,6 +95,7 @@ pub fn logout(mut cookies: Cookies) -> Status {
     cookies.remove(removal_cookie);
     return Status::Ok;
 }
+// TODO: rename this
 /// /api/docs-to-csv
 #[get("/docs-to-csv")]
 pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
@@ -114,6 +115,7 @@ pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
         "created_on": field_vals[3].to_owned()
     }));
 }
+// TODO: rename this
 /// /api/vocab-to-csv
 #[get("/vocab-to-csv")]
 pub fn vocab_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
@@ -236,7 +238,7 @@ pub struct SandboxDocForm<'f> {
 }
 /// /api/upload-sandbox-doc
 #[post("/upload-sandbox-doc", data="<upload_doc>")]
-pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Form<SandboxDocForm<'_>>) -> Json<JsonValue> {
+pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Form<SandboxDocForm<'_>>) -> Redirect {
     let SandboxDocForm { body, url, cn_type, cn_phonetics } = upload_doc.into_inner();
     let body = convert_rawstr_to_string(body);
     let url = convert_rawstr_to_string(url);
@@ -246,11 +248,8 @@ pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Fo
         true => rt.block_on(SandboxDoc::from_url(url, cn_type, cn_phonetics)),
         false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, url))
     };
-    let res_json = match new_doc.try_insert(&db) {
-        Ok(uid) => Json(json!({"uid": uid})),
-        Err(e) => Json(json!({"error": e.to_string()}))
-    };
-    return res_json;
+    let doc_id = new_doc.try_insert(&db).unwrap();
+    return Redirect::to(uri!(Routes::reader: doc_id));
 }
 #[derive(FromForm)]
 pub struct UserVocabForm<'f> {
