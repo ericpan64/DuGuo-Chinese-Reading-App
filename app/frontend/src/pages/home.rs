@@ -1,4 +1,6 @@
+use crate::Route;
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 pub struct Home {
     link: ComponentLink<Self>,
@@ -62,7 +64,8 @@ impl Home {
                             <div class="col-lg-6" data-aos="fade-up">
                                 <h1 class="page-header-title">{"Learn how to read Chinese the right way"}</h1>
                                 <p class="page-header-text mb-5">{"DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!"}</p>
-                                <a class="btn btn-lg btn-primary font-weight-500 mr-3" href="#sandbox">{"Try the Sandbox"}<i class="ml-2" data-feather="arrow-right"></i></a><a class="btn btn-lg btn-primary-soft text-primary font-weight-500" href="#docs">{"Documentation"}</a>
+                                <RouterAnchor<Route> classes="btn btn-lg btn-primary font-weight-500 mr-3" route=Route::Sandbox>{"Try the Sandbox"}</RouterAnchor<Route>>
+                                <a class="btn btn-lg btn-primary-soft text-primary font-weight-500" href="/static/docs">{"Documentation"}</a>
                             </div>
                             <div class="col-lg-6 d-none d-lg-block" data-aos="fade-up" data-aos-delay="100"><img class="img-fluid" src="static/img/Insertion-sort-example.gif" /></div>
                         </div>
@@ -121,9 +124,8 @@ impl Home {
                                     onmouseout=self.link.callback(|_| Msg::NormalBaseDuey)>{"(and he'll leave you alone if you ask him to)"}</p>
                             </div>
                             <div class="list-group small mb-2">
-                                <a class="btn btn-lg btn-primary font-weight-500" href="#sandbox">{"Try it now!"}<i class="ml-2" data-feather="arrow-right"></i></a>
-                                <br/>
-                                <a class="btn btn-lg btn-primary-soft text-primary font-weight-500" href="#login">{"Create an Account"}</a>
+                                <RouterAnchor<Route> classes="btn btn-lg btn-primary font-weight-500 mb-2" route=Route::Sandbox>{"Try it now!"}</RouterAnchor<Route>>
+                                <RouterAnchor<Route> classes="btn btn-lg btn-primary-soft text-primary font-weight-500" route=Route::Login>{"Create an Account"}</RouterAnchor<Route>>
                             </div>
                         </div>
                     </div>
