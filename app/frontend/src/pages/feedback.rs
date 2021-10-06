@@ -1,6 +1,6 @@
 
 use yew::prelude::*;
-use yew::services::{ConsoleService, DialogService};
+use yew::services::DialogService;
 
 pub struct Feedback {
     link: ComponentLink<Self>,

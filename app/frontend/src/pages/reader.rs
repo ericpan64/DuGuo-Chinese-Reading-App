@@ -1,7 +1,17 @@
+use crate::{
+    CnPhrase,
+    CnPhonetics,
+    CnType,
+    components::PhraseSpan
+};
 use yew::prelude::*;
 
 pub struct Reader {
     link: ComponentLink<Self>,
+    phrase_list: Vec<CnPhrase>,
+    uid: String,
+    cn_type: CnType,
+    cn_phonetics: CnPhonetics
 }
 
 pub enum Msg {
@@ -12,11 +22,23 @@ pub enum Msg {
     ResetReader,
 }
 
+#[derive(Clone, Properties)]
+pub struct Props {
+    pub uid: String,
+}
+
 impl Component for Reader {
     type Message = Msg;
-    type Properties = ();
+    type Properties = Props;
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self { Self { link } }
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self { 
+        // TODO: take input URI and initialize phrase_list based on `api/get-sandbox-doc` endpoint
+        let phrase_list = Vec::<CnPhrase>::new();
+        let uid = props.uid;
+        let cn_type = CnType::Simplified;
+        let cn_phonetics = CnPhonetics::Pinyin;
+        Self { link, uid, phrase_list, cn_type, cn_phonetics }
+    }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         // TODO: implement phonetic showing
         // TODO: implement Reader start/stop
@@ -30,7 +52,7 @@ impl Component for Reader {
             <header class="page-header page-header-light bg-white">
                 <div class="page-header-content">
                     <div class="container">
-                        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#instructions">{"Instructions"}</button>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#instructions">{"Instructions"}</button>
                         <div id="instructions" class="collapse">
                             <div class="card card-body">
                                 <ul>
@@ -55,9 +77,18 @@ impl Component for Reader {
                     </div>
                     <div class="container pt-5">
                         <span class="你好ni3hao3" tabindex="0" data-bs-toggle="popover" data-bs-content="1. hello<br/>2. hi<br/>" title="你好 [ni3 hao3] <a role=&quot;button&quot; href=&quot;#~你好&quot;><img src=&quot;/static/icons/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#你好ni3hao3&quot;><img src=&quot;/static/icons/download.svg&quot;></img></a>" data-bs-html="true"><table><tr><td class="phonetic" name="你">{"nǐ"}</td><td class="phonetic" name="好">{"hǎo"}</td></tr><tr><td class="char">{"你"}</td><td class="char">{"好"}</td></tr></table></span>
+                        { for self.phrase_list.iter().map(|p| Self::generate_phrase_span(p.clone(), false, self.cn_type.clone(), self.cn_phonetics.clone())) }
                     </div>
                 </div>
             </header>
+        }
+    }
+}
+
+impl Reader {
+    fn generate_phrase_span(p: CnPhrase, has_learned: bool, cn_type: CnType, cn_phonetics: CnPhonetics) -> Html {
+        html! { 
+            <PhraseSpan phrase=p has_learned=has_learned cn_type=cn_type cn_phonetics=cn_phonetics /> 
         }
     }
 }

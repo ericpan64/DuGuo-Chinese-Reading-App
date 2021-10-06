@@ -1,14 +1,14 @@
 use yew::prelude::*;
-use super::super::{CnType, Phonetic};
+use super::super::{CnType, CnPhonetics};
 
 pub struct Sandbox {
     link: ComponentLink<Self>,
-    phonetic_type: Phonetic,
+    phonetic_type: CnPhonetics,
     cn_type: CnType,
 }
 
 pub enum Msg {
-    UpdatePhonetic(Phonetic),
+    UpdatePhonetic(CnPhonetics),
     UpdateCnType(CnType),
     SwitchToLoadingButton,
     SubmitForm,
@@ -18,7 +18,7 @@ impl Component for Sandbox {
     type Message = Msg;
     type Properties = ();
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let phonetic_type = Phonetic::Pinyin;
+        let phonetic_type = CnPhonetics::Pinyin;
         let cn_type = CnType::Simplified;
         Self { link, phonetic_type, cn_type }
     }
@@ -53,8 +53,8 @@ impl Component for Sandbox {
 impl Sandbox {
     fn view_header(&self) -> Html {
         let render_phonetic_text = match self.phonetic_type {
-            Phonetic::Pinyin => "Render Pinyin",
-            Phonetic::Zhuyin => "Render Zhuyin",
+            CnPhonetics::Pinyin => "Render Pinyin",
+            CnPhonetics::Zhuyin => "Render Zhuyin",
         };
         let render_cn_text = match self.cn_type {
             CnType::Simplified => "Render Simplified",
@@ -72,8 +72,8 @@ impl Sandbox {
                                 {render_phonetic_text}
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(Phonetic::Pinyin))>{"Render Pinyin"}</a></li>
-                                <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(Phonetic::Zhuyin))>{"Render Zhuyin (Bopomofo)"}</a></li>
+                                <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(CnPhonetics::Pinyin))>{"Render Pinyin"}</a></li>
+                                <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(CnPhonetics::Zhuyin))>{"Render Zhuyin (Bopomofo)"}</a></li>
                             </ul>
                         </span>
                         <span>
@@ -86,15 +86,21 @@ impl Sandbox {
                             </ul>
                         </span>
                         <br/><br/>
-                        <form action="/api/upload" id="upload" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
+                        <form action="/api/upload-sandbox-doc" id="upload" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
                             <textarea name="body" form="upload" rows="5" cols="35" required=true>{"希望这个网站能帮助您多读中文！"}</textarea>
+                            <input type="hidden" name="url" value=""/>
+                            <input type="hidden" name="cn_type" value={format!("{}", self.cn_type.as_str())}/>
+                            <input type="hidden" name="cn_phonetics" value={format!("{}", self.phonetic_type.as_str())}/>
                             <br/><br/>
                             <button id="upload-button" class="btn btn-outline-primary" type="submit">{"Upload Text"}</button>
                         </form>
                         <br/>
                         <p>{"Or try uploading a URL to a Chinese article (news, leisure, etc.). If you're feeling lucky, "}<a href="https://zh.wikipedia.org/wiki/Special:%E9%9A%8F%E6%9C%BA%E9%A1%B5%E9%9D%A2" target="_blank">{"here's"}</a>{" a link to a random Chinese Wikipedia article."}</p>
-                        <form class="form" action="/api/upload" id="sandbox-url-form" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
+                        <form class="form" action="/api/upload-sandbox-doc" id="sandbox-url-form" onsubmit=self.link.callback(|_| Msg::SwitchToLoadingButton) method="POST">
                             <input type="text" name="url" placeholder="Article URL" required=true />
+                            <input type="hidden" name="body" value=""/>
+                            <input type="hidden" name="cn_type" value={format!("{}", self.cn_type.as_str())}/>
+                            <input type="hidden" name="cn_phonetics" value={format!("{}", self.phonetic_type.as_str())}/>
                             <br/><br/>
                             <button id="url-upload-button" class="btn btn-outline-primary" type="submit">{"Upload using URL"}</button>
                         </form>

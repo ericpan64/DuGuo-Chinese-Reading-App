@@ -1,15 +1,15 @@
 use yew::prelude::*;
-use super::super::{CnType, Phonetic};
+use super::super::{CnType, CnPhonetics};
 
 pub struct Profile {
     link: ComponentLink<Self>,
-    phonetic_type: Phonetic,
+    phonetic_type: CnPhonetics,
     cn_type: CnType,
     uid: String,
 }
 
 pub enum Msg {
-    UpdatePhonetic(Phonetic), 
+    UpdatePhonetic(CnPhonetics), 
     UpdateCnType(CnType),
     SwitchToLoadingButton,
     DownloadDocs,
@@ -26,7 +26,7 @@ impl Component for Profile {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let phonetic_type = Phonetic::Pinyin;
+        let phonetic_type = CnPhonetics::Pinyin;
         let cn_type = CnType::Simplified;
         let uid = props.uid;
         Self { link, phonetic_type, cn_type, uid }
@@ -47,10 +47,10 @@ impl Component for Profile {
                         <h5>{"User Settings"}</h5>
                         <ul class="nav nav-pills">
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">{format!("Phonetic: {}", self.phonetic_type.as_str())}</a>
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">{format!("CnPhonetics: {}", self.phonetic_type.as_str())}</a>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(Phonetic::Pinyin))>{"View Pinyin"}</a></li>
-                                    <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(Phonetic::Zhuyin))>{"View Zhuyin (Bopomofo)"}</a></li>    
+                                    <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(CnPhonetics::Pinyin))>{"View Pinyin"}</a></li>
+                                    <li><a class="dropdown-item" onclick=self.link.callback(|_| Msg::UpdatePhonetic(CnPhonetics::Zhuyin))>{"View Zhuyin (Bopomofo)"}</a></li>    
                                 </ul>
                             </li>
                             <li class="nav-item dropdown">

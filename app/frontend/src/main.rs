@@ -29,7 +29,7 @@ impl Component for Model {
                                     Route::Login => { html! { <Login/> }},
                                     Route::Feedback => { html! {<Feedback/>}},
                                     Route::Sandbox => { html! {<Sandbox/>}},
-                                    Route::Reader => { html! {<Reader/>}},
+                                    Route::Reader(uid) => { html! {<Reader uid={uid} />}},
                                     Route::Profile(uid) => { 
                                         html! {<Profile uid={uid}/>}
                                     }
