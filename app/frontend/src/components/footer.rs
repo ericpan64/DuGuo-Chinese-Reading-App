@@ -1,4 +1,6 @@
+use crate::Route;
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 pub struct Footer { }
 
@@ -18,7 +20,7 @@ impl Component for Footer {
                             <div class="footer-brand mr-2">{"DuGuo"}
                                 <a class="icon-list-social-link" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App"><i class="fab fa-github"></i></a>
                             </div>
-                            <div class="mt-1">{"Designed using Start Bootstrap. \nBuilt using Yew + Rocket (Rust). \nSubmit anonymous feedback"}<a href="#/feedback">{" here."}</a></div>
+                            <div class="mt-1">{"Designed using Start Bootstrap. \nBuilt in Rust using Rocket + Yew. \nSubmit anonymous feedback "}<RouterAnchor<Route> route=Route::Feedback>{"here."}</RouterAnchor<Route>></div>
                         </div>
                     </div>
                 </footer>

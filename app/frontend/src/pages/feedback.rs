@@ -20,7 +20,7 @@ impl Component for Feedback {
                     <div class="container">
                         <h1>{"Feedback"}</h1>
                         <p>{"Let us know your thoughts below! Leave your contact info if you would like a response and/or are open to further discuss your thoughts."}</p>
-                        <p>{"To report more systemic bugs, please open a "}<a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">{"Github Issue."}</a></p>
+                        <p>{"To report more systemic bugs, please open a "}<a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">{"GitHub issue."}</a></p>
                         <textarea name="feedback" form="upload" rows="10" cols="100" required=true>{"Add your feedback here!"}</textarea>
                         <form id="upload" method="POST" action="/api/feedback" onsubmit=self.link.callback(|_: FocusEvent| { DialogService::alert("Thank you! 🙌")})>
                             <div class="form-group">

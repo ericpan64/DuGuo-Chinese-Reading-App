@@ -41,7 +41,7 @@ impl Component for Login {
             <div class="page-header-content">
                 <header class="page-header page-header-light bg-white">
                     <div class="container">
-                        <h1>{"Login / Register"}</h1>
+                        <h1>{"Account"}</h1>
                         <div class="alert alert-warning" role="alert">
                             {"Note that the following characters are not allowed: < > ! ( ) { } \" ' ; : \\ *"}
                         </div>

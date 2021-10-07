@@ -65,7 +65,7 @@ impl Home {
                                 <h1 class="page-header-title">{"Learn how to read Chinese the right way"}</h1>
                                 <p class="page-header-text mb-5">{"DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!"}</p>
                                 <RouterAnchor<Route> classes="btn btn-lg btn-primary font-weight-500 mr-3" route=Route::Sandbox>{"Try the Sandbox"}</RouterAnchor<Route>>
-                                <a class="btn btn-lg btn-primary-soft text-primary font-weight-500" href="/static/docs">{"Documentation"}</a>
+                                <RouterAnchor<Route> classes="btn btn-lg btn-primary-soft font-weight-500 mr-3" route=Route::Login>{"Create an Account"}</RouterAnchor<Route>>
                             </div>
                             <div class="col-lg-6 d-none d-lg-block" data-aos="fade-up" data-aos-delay="100"><img class="img-fluid" src="static/img/Insertion-sort-example.gif" /></div>
                         </div>
@@ -86,7 +86,7 @@ impl Home {
                         <div class="col-lg-4 mb-5 mb-lg-0">
                             <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/book-open.svg"/></div>
                             <h3>{"Read what you want"}</h3>
-                            <p class="mb-0">{"Upload arbitrary Chinese text into a context-rich learning environment. Get difficulty estimates based on the HSK framework."}</p>
+                            <p class="mb-0">{"Upload any Chinese text into a context-rich learning environment. Get difficulty estimates based on the HSK framework."}</p>
                         </div>
                         <div class="col-lg-4 mb-5 mb-lg-0">
                             <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/layers.svg"/></div>
@@ -95,8 +95,8 @@ impl Home {
                         </div>
                         <div class="col-lg-4">
                             <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/code.svg"/></div>
-                            <h3>{"Modify the code"}</h3>
-                            <p class="mb-0">{"This project is open-source and available on GitHub ("}<a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App" target = "_blank">{"link"}</a>{"). Issues, forks, and PRs welcome!"}</p>
+                            <h3>{"See the source code"}</h3>
+                            <p class="mb-0">{"This project is open-source and publicly available on GitHub ("}<a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App" target = "_blank">{"link"}</a>{"). Issues, forks, and PRs welcome!"}</p>
                         </div>
                     </div>
                 </div>
