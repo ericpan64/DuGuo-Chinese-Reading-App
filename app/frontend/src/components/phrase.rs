@@ -31,6 +31,9 @@ impl Component for PhraseSpan {
     fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self { 
         const VOICE_ICON: &str = "<img src=&quot;/static/img/volume-up-fill.svg&quot;></img>";
         const DOWNLOAD_ICON: &str = "<img src=&quot;/static/img/download.svg&quot;></img>";
+        if !props.phrase.lookup_success {
+            return Self::generate_not_found_phrase(props);
+        } 
         let uid = props.phrase.entry.uid.clone();
         let chars = match props.cn_type {
             CnType::Simplified => &props.phrase.entry.simp,
@@ -74,6 +77,16 @@ impl Component for PhraseSpan {
 }
 
 impl PhraseSpan {
+    fn generate_not_found_phrase(props: SpanProps) -> Self {
+        let uid = props.phrase.entry.uid.clone();
+        let chars = props.phrase.raw_phrase.clone();
+        let defn_html = String::from("Not found in CEDICT");
+        let title_html = format!("{} [{}] - Not found in CEDICT", chars, &props.phrase.raw_phonetics);
+        let phonetic_list: Vec<String> = Vec::new();
+        let char_list: Vec<String> = chars.chars().map(|c| c.to_string()).collect();
+        Self { uid, defn_html, title_html, phonetic_list, char_list, props  } 
+    }
+    
     fn format_defn_html(entry: &CnEnDictEntry) -> String {
         const DEFN_DELIM: char = '/'; // Used to separate the description for a single concept definition
         const MULTI_DEFN_DELIM: char = '$'; // Used when a single phrase represents multiple different concepts
