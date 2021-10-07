@@ -171,7 +171,6 @@ impl DatabaseItem for UserDoc {
         return vec!["username", "title", "body", "tokenized_body_json",
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
-    /// Note: this is not unique per document, a unique primary_key is username + title.
     fn primary_key(&self) -> &str { return &self.doc_id; }
 }
 

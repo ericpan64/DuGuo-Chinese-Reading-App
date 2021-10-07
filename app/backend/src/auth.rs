@@ -92,9 +92,10 @@ pub fn str_to_hashed_string(str_to_hash: &str, salt: &str) -> String {
 fn generate_jwt(db: &Database, username: String, password: String) -> Result<String, Box<dyn Error>> {
     let jwt_header: Header = Header::default();
     let jwt_encoding_key: EncodingKey = EncodingKey::from_secret(JWT_SECRET);
-    let pw_salt = User::get_values_from_query(&db, 
-        doc!{ "username": &username }, 
-        vec!["pw_salt"])[0].to_owned();
+    let pw_salt = String::from(User::try_lookup_one(&db, doc!{ "username": &username })
+        .unwrap()
+        .get_str("pw_salt")
+        .unwrap());
     let pw_hash = str_to_hashed_string(&password, &pw_salt);
     let cred = UserCredentials {
         username,

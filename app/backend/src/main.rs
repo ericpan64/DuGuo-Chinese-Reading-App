@@ -19,14 +19,12 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
         .manage(db)
         .manage(rt)
         .mount("/api/", routes![
-            api::get_sandbox_doc,
-            api::get_user_doc,
-            api::get_user_lists,
+            api::get_doc,
+            api::get_all_user_items,
+            api::get_user_vocab_string,
             api::delete_user_doc,
             api::delete_user_vocab,
             api::logout,
-            api::docs_to_csv,
-            api::vocab_to_csv,
             api::feedback,
             api::login,
             api::register,

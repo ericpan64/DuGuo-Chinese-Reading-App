@@ -12,12 +12,12 @@ use crate::{
     config::JWT_NAME,
     models::{
         public::{AppFeedback, SandboxDoc},
-        user::{User, UserDoc, UserVocab},
+        user::{User, UserDoc, UserVocab, UserVocabList},
         zh::{CnType, CnPhonetics}
     }
 };
 use mongodb::{
-    bson::doc,
+    bson::{doc, document::Document},
     sync::Database
 };
 use rocket::{
@@ -30,44 +30,54 @@ use rocket_contrib::{json, json::{Json, JsonValue}};
 use tokio::runtime::Handle;
 
 // /* GET */
-/// /api/sandbox/<doc_id>
-#[get("/get-sandbox-doc/<doc_id>")]
-pub fn get_sandbox_doc(db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
+/// /api/get-doc/<doc_id>
+/// Attempts UserDoc first, otherwise SandboxDoc
+#[get("/get-doc/<doc_id>")]
+pub fn get_doc(cookies: Cookies, db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
     let doc_id = convert_rawstr_to_string(doc_id);
-    let res = match SandboxDoc::try_lookup_one(&db, doc!{"doc_id": doc_id}) {
+    let mut user_doc_query: Option<Document> = None;
+    if let Some(username) = get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
+        user_doc_query = UserDoc::try_lookup_one(&db, doc!{"username": username, "doc_id": &doc_id});
+    }
+    let res: Document = match user_doc_query {
         Some(doc) => doc,
-        None => doc!{"error": "No document found"}
+        None => {
+            match SandboxDoc::try_lookup_one(&db, doc!{"doc_id": &doc_id}) {
+                Some(doc) => doc,
+                None => doc!{"error": "No document found"}
+            }
+        }
     };
     return Json(json!{res});
 }
-/// /api/get-user-doc/<doc_id>
-#[get("/get-user-doc/<doc_id>")]
-pub fn get_user_doc(cookies: Cookies, db: State<Database>, doc_id: &RawStr) -> Json<JsonValue> {
-    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
-    let doc_id = convert_rawstr_to_string(doc_id);
-    let res = match UserDoc::try_lookup_one(&db, doc!{"username": username, "doc_id": doc_id}) {
-        Some(doc) => doc,
-        None => doc!{"error": "No document found"}
-    };
-    return Json(json!{res});
-}
-/// /api/get-user-lists
-#[get("/get-user-lists")]
-pub fn get_user_lists(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
+/// /api/get-all-user-items
+#[get("/get-all-user-items")]
+pub fn get_all_user_items(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
     let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
     let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-    let doc_titles: Vec<String> = UserDoc::aggregate_all_values_from_query(&db,
+    let doc_list = UserDoc::try_lookup_all(&db,
         doc!{"username": &username},
-        vec!["title"]
-    )[0].to_owned(); // unpacks
+    ).unwrap();
     let vocab_list = UserVocab::try_lookup_all(&db,
         doc!{"username": &username}
     ).unwrap();
     return Json(json!({
         "cn_type": cn_type,
         "cn_phonetics": cn_phonetics,
-        "title_list": doc_titles, // Vec<String>
+        "doc_list": doc_list, // Vec<Document>
         "vocab_list": vocab_list, // Vec<Document>
+    }));
+}
+/// /api/get-user-vocab-string
+#[get("/get-user-vocab-string")]
+pub fn get_user_vocab_string(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
+    let username = get_username_from_cookie(&db, cookies.get(JWT_NAME)).unwrap();
+    let (cn_type, _) = User::get_user_settings(&db, &username);
+    let res = UserVocabList::try_lookup_one(&db, 
+        doc!{"username": username, "cn_type": cn_type.as_str()}
+    ).unwrap();
+    return Json(json!({
+        "res": res
     }));
 }
 /// /api/delete-doc/<doc_title>
@@ -94,48 +104,6 @@ pub fn logout(mut cookies: Cookies) -> Status {
     removal_cookie.set_path("/");
     cookies.remove(removal_cookie);
     return Status::Ok;
-}
-// TODO: rename this
-/// /api/docs-to-csv
-#[get("/docs-to-csv")]
-pub fn docs_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
-    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
-        Some(username) => {
-            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
-        },
-        None => doc! { "username": "" }
-    };
-    let fields: Vec<&str> = vec!["title", "body", "source", "created_on"];
-    let field_vals = UserDoc::aggregate_all_values_from_query(&db, query_doc, fields);
-    return Json(json!({
-        "title": field_vals[0].to_owned(),
-        "body": field_vals[1].to_owned(),
-        "source": field_vals[2].to_owned(),
-        "created_on": field_vals[3].to_owned()
-    }));
-}
-// TODO: rename this
-/// /api/vocab-to-csv
-#[get("/vocab-to-csv")]
-pub fn vocab_to_csv(cookies: Cookies, db: State<Database>) -> Json<JsonValue> {
-    let query_doc = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
-        Some(username) => {
-            let (cn_type, cn_phonetics) = User::get_user_settings(&db, &username);
-            doc! { "username": username, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str() }
-        },
-        None => doc! { "username": "" }
-    };
-    let fields: Vec<&str> = vec!["phrase", "phrase_phonetics", "def", "from_doc_title", "radical_map", "created_on"];
-    let field_vals = UserVocab::aggregate_all_values_from_query(&db, query_doc, fields);
-    return Json(json!({
-        "phrase": field_vals[0].to_owned(),
-        "phrase_phonetics": field_vals[1].to_owned(),
-        "def": field_vals[2].to_owned(),
-        "from_doc_title": field_vals[3].to_owned(),
-        "radical_map": field_vals[4].to_owned(),
-        "created_on": field_vals[5].to_owned()
-    }));
 }
 
 // /* POST */

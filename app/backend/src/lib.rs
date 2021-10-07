@@ -112,51 +112,6 @@ pub trait DatabaseItem {
         coll.update_one(self.as_document(), update_query, None)?;
         return Ok(());
     }
-    /// From the first result matching the query_doc, returns the values from input fields
-    /// as a Vec<String> (with matching indices as the input fields).
-    /// In the case of a failed lookup, a single item (String::new()) is returned in the Vec.
-    /// Thus, the len of resulting Vec is always == the len of the fields Vec.
-    fn get_values_from_query(db: &Database, query_doc: Document, fields: Vec<&str>) -> Vec<String> {
-        let coll = (*db).collection(Self::collection_name());
-        let valid_fields = Self::all_field_names();
-        let mut res_vec: Vec<String> = Vec::with_capacity(fields.len());
-        if let Some(doc) = coll.find_one(query_doc, None).unwrap() {
-            for key in fields {
-                if valid_fields.contains(&key) {
-                    res_vec.push(String::from(doc.get_str(key).unwrap()));
-                } else {
-                    res_vec.push(String::new());
-                }
-            }
-        } else {
-            for _ in fields {
-                res_vec.push(String::new());
-            }
-        }
-        return res_vec;
-    }
-    /// From all documents matching the query_doc, aggregates the values from the input fields
-    /// into a Vec<String> (with matching indices as the input fields).
-    /// If an input field is invalid, then the corresponding Vec<String> will be empty.
-    fn aggregate_all_values_from_query(db: &Database, query_doc: Document, fields: Vec<&str>) -> Vec<Vec<String>> {
-        let mut res_vec: Vec<Vec<String>> = Vec::with_capacity(fields.len());
-        for _ in 0..fields.len() {
-            res_vec.push(Vec::<String>::new());
-        }
-        let coll = (*db).collection(Self::collection_name());
-        let valid_fields = Self::all_field_names();
-        let cursor = coll.find(query_doc, None).unwrap();
-        for doc_ok in cursor {
-            let doc = doc_ok.unwrap();
-            for i in 0..fields.len() {
-                let key = fields[i];
-                if valid_fields.contains(&key) {
-                    res_vec[i].push(String::from(doc.get_str(key).unwrap()));
-                }
-            }
-        }
-        return res_vec;
-    }
     /* Requires Implementation */
     /// Returns the collection name in MongoDB where the objects should be stored.
     fn collection_name() -> &'static str;
