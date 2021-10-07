@@ -12,5 +12,6 @@ license = "MIT"
 [dependencies]
 yew = "0.18" # uses web-sys by default
 yew-router = "0.15.0"
-reqwest = "0.11.4"
 wasm-bindgen = "=0.2.74"
+serde = {version = "1.0.118", features = ["derive"]}
+anyhow = "1"

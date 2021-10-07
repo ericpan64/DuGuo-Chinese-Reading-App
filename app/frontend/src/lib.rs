@@ -1,10 +1,23 @@
 use yew_router::prelude::*;
+use serde::{Serialize, Deserialize};
 
 pub mod components;
 pub mod pages;
 
-// TODO: merge Enums into centralized crate for shared "stdlib" values
-#[derive(Clone, Default, PartialEq)]
+// TODO: merge Structs + Enums into centralized crate for shared "stdlib" values
+#[derive(Serialize, Deserialize, Debug)]
+// UserDoc is a SandboxDoc with extra traits
+pub struct SandboxDoc {
+    doc_id: String,
+    body: String,
+    tokenized_body_json: Vec<CnPhrase>,
+    source: String,
+    cn_type: CnType,
+    cn_phonetics: CnPhonetics,
+    created_on: String
+}
+
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct CnPhrase {
     pub entry: CnEnDictEntry,
     pub lookup_success: bool,
@@ -12,7 +25,7 @@ pub struct CnPhrase {
     pub raw_phonetics: String,
 }
 
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, Debug)]
 pub struct CnEnDictEntry {
     pub uid: String,
     pub trad: String,
@@ -24,7 +37,7 @@ pub struct CnEnDictEntry {
     pub radical_map: String
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub enum CnPhonetics {
     Zhuyin,
     Pinyin,
@@ -39,7 +52,7 @@ impl CnPhonetics {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub enum CnType {
     Traditional,
     Simplified,

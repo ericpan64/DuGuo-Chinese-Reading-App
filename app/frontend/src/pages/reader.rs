@@ -1,20 +1,28 @@
+use anyhow::Error;
 use crate::{
     CnPhrase,
     CnPhonetics,
     CnType,
+    SandboxDoc,
     components::PhraseSpan
+};
+use yew::format::{Json, Nothing};
+use yew::services::{
+    console::ConsoleService,
+    fetch::{FetchService, FetchTask, Request, Response}
 };
 use yew::prelude::*;
 
 pub struct Reader {
     link: ComponentLink<Self>,
     phrase_list: Vec<CnPhrase>,
-    uid: String,
     cn_type: CnType,
-    cn_phonetics: CnPhonetics
+    cn_phonetics: CnPhonetics,
+    ft: FetchTask
 }
 
 pub enum Msg {
+    DataReceived(Result<SandboxDoc, Error>),
     HideSavedPhonetics,
     HideAllPhonetics,
     ShowAllPhonetics,
@@ -24,7 +32,7 @@ pub enum Msg {
 
 #[derive(Clone, Properties)]
 pub struct Props {
-    pub uid: String,
+    pub doc_id: String,
 }
 
 impl Component for Reader {
@@ -32,17 +40,33 @@ impl Component for Reader {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self { 
-        // TODO: take input URI and initialize phrase_list based on `api/get-sandbox-doc` endpoint
+        let doc_id = props.doc_id;
+        let req = Request::get(format!("/api/get-doc/{}", &doc_id))
+            .body(Nothing)
+            .unwrap();
+        let callback = link.callback(|response: Response<Json<Result<SandboxDoc, Error>>>| {
+            let (_meta, Json(data)) = response.into_parts();
+            Msg::DataReceived(data)
+        });
+        let ft = FetchService::fetch(req, callback).unwrap();
+        // Set as placeholders
         let phrase_list = Vec::<CnPhrase>::new();
-        let uid = props.uid;
         let cn_type = CnType::Simplified;
         let cn_phonetics = CnPhonetics::Pinyin;
-        Self { link, uid, phrase_list, cn_type, cn_phonetics }
+        Self { link, ft, phrase_list, cn_type, cn_phonetics }
     }
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         // TODO: implement phonetic showing
         // TODO: implement Reader start/stop
         match msg {
+            Msg::DataReceived(data) => {
+                ConsoleService::log(&format!("DATA: {:?}", data));
+                let doc: SandboxDoc = data.unwrap();
+                self.phrase_list = doc.tokenized_body_json;
+                self.cn_type = doc.cn_type;
+                self.cn_phonetics = doc.cn_phonetics;
+                true
+            }
             _ => false
         }
     }
