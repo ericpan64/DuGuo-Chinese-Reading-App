@@ -29,8 +29,6 @@ impl Component for PhraseSpan {
     type Properties = SpanProps;
 
     fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self { 
-        const VOICE_ICON: &str = "<img src=&quot;/static/img/volume-up-fill.svg&quot;></img>";
-        const DOWNLOAD_ICON: &str = "<img src=&quot;/static/img/download.svg&quot;></img>";
         if !props.phrase.lookup_success {
             return Self::generate_not_found_phrase(props);
         } 
@@ -44,8 +42,8 @@ impl Component for PhraseSpan {
             CnPhonetics::Zhuyin => (&props.phrase.entry.zhuyin, &props.phrase.entry.zhuyin)
         };
         let defn_html = Self::format_defn_html(&props.phrase.entry);
-        let title_html = format!("{} [{}] <a role=&quot;button&quot; href=&quot;#~{}&quot;>{}</a> <a role=&quot;button&quot; href=&quot;#{}&quot;>{}</a>",
-            chars, defn_phonetics, props.phrase.entry.simp, VOICE_ICON, uid, DOWNLOAD_ICON
+        let title_html = format!("{} [{}]",
+            chars, defn_phonetics
         );
         let phonetic_list: Vec<String> = view_phonetics.split(" ").map(|s| String::from(s)).collect();
         let char_list: Vec<String> = chars.chars().map(|c| c.to_string()).collect();
@@ -62,10 +60,29 @@ impl Component for PhraseSpan {
     }
     fn view(&self) -> Html {
         html! {
-            <span class="m-1" tabindex="0" data-bs-toggle="popover" data-bs-content={self.defn_html.clone()} title={self.title_html.clone()}>
+            <span class="m-1" tabindex="0" data-bs-toggle="modal" data-bs-target={format!("#{}", &self.uid)}>
                 <ruby class="m-2" name={self.uid.clone()}>
                     { for self.char_list.iter().enumerate().map(|(i, p)| Self::generate_char_ruby(p.clone(), self.phonetic_list.get(i))) }
                 </ruby>
+                <div class="modal fade" id={self.uid.clone()} data-backdrop="static" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                {self.title_html.clone()}
+                                <button class="btn" data-bs-dismiss="modal" aria-label="Close"><img src="/static/img/x-lg.svg"/></button>
+                            </div>
+                            <div class="modal-body">
+                                {self.defn_html.clone()}
+                            </div>
+                            <div class="modal-footer">
+                            // TODO: make these buttons call API + send proper Yew message
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{"Close"}</button>
+                                <button type="button" class="btn btn-primary">{"Save vocab"}</button>
+                                <button type="button" class="btn btn-primary">{"Speech-to-text"}</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </span>
         }
     }
@@ -94,9 +111,9 @@ impl PhraseSpan {
             for (j, li) in defn_vec.iter().enumerate() {
                 res += format!("{}. {}", j+1, li).as_str();
                 if j != defn_vec.len() - 1 {
-                    res += "<br>";
+                    res += "\n";
                 } else if i != all_defns.len() - 1 {
-                    res += "<hr>"
+                    res += "|"
                 }
             }
         }
@@ -108,6 +125,6 @@ impl PhraseSpan {
             Some(s) => String::from(s),
             None => String::new()
         };
-        html! { <>{c}<rp>{"("}</rp><rt>{phonetic}</rt><rp>{")"}</rp></> }
+        html! { <>{c}<rp>{"("}</rp><rt class="mr-1">{phonetic}</rt><rp>{")"}</rp></> }
     }
 }

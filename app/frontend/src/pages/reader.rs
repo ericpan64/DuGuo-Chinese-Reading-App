@@ -100,7 +100,6 @@ impl Component for Reader {
                         </div>
                     </div>
                     <div class="container pt-5">
-                        <span class="你好ni3hao3" tabindex="0" data-bs-toggle="popover" data-bs-content="1. hello<br/>2. hi<br/>" title="你好 [ni3 hao3] <a role=&quot;button&quot; href=&quot;#~你好&quot;><img src=&quot;/static/icons/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#你好ni3hao3&quot;><img src=&quot;/static/icons/download.svg&quot;></img></a>" data-bs-html="true"><table><tr><td class="phonetic" name="你">{"nǐ"}</td><td class="phonetic" name="好">{"hǎo"}</td></tr><tr><td class="char">{"你"}</td><td class="char">{"好"}</td></tr></table></span>
                         { for self.phrase_list.iter().map(|p| Self::generate_phrase_span(p.clone(), false, self.cn_type.clone(), self.cn_phonetics.clone())) }
                     </div>
                 </div>
