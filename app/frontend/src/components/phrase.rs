@@ -62,15 +62,10 @@ impl Component for PhraseSpan {
     }
     fn view(&self) -> Html {
         html! {
-            <span class={self.uid.clone()} tabindex="0" data-bs-toggle="popover" data-bs-content={self.defn_html.clone()} title={self.title_html.clone()}>
-                <table name={self.uid.clone()}>
-                    <tr>
-                        { for self.phonetic_list.iter().enumerate().map(|(i, p)| Self::generate_phonetic_td(p.clone(), self.char_list[i].clone())) }
-                    </tr>
-                    <tr>
-                        { for self.char_list.iter().map(|c| Self::generate_char_td(c.clone())) }
-                    </tr>
-                </table>
+            <span class="m-1" tabindex="0" data-bs-toggle="popover" data-bs-content={self.defn_html.clone()} title={self.title_html.clone()}>
+                <ruby class="m-2" name={self.uid.clone()}>
+                    { for self.char_list.iter().enumerate().map(|(i, p)| Self::generate_char_ruby(p.clone(), self.phonetic_list.get(i))) }
+                </ruby>
             </span>
         }
     }
@@ -108,11 +103,11 @@ impl PhraseSpan {
         return res;
     }
 
-    fn generate_phonetic_td(p: String, c: String) -> Html {
-        html! { <td class="phonetic" name=c>{p}</td> }
-    }
-
-    fn generate_char_td(c: String) -> Html {
-        html! { <td class="char">{c}</td> }
+    fn generate_char_ruby(c: String, p: Option<&String>) -> Html {
+        let phonetic = match p {
+            Some(s) => String::from(s),
+            None => String::new()
+        };
+        html! { <>{c}<rp>{"("}</rp><rt>{phonetic}</rt><rp>{")"}</rp></> }
     }
 }
