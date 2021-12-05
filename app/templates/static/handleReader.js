@@ -1,4 +1,3 @@
-
 /// Configuration for button text
 /// Updates "read-start-stop" button
 const DEFAULT_MSG = 'Read Document Aloud';
@@ -11,6 +10,7 @@ document.onkeypress = (event) => {
         document.getElementById(START_STOP_BUTTON_ID).click();
     }
 }
+
 /// Handle Document Reader
 let is_reading = false;
 let span_index = 0;
