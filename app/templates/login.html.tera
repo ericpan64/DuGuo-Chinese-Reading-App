@@ -14,38 +14,35 @@
 {% endblock user_navbar %}
 {% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
-    <div class="container">
-        {% if username is defined %}
-        <h3>Currently logged-in as: {{username}}</h3>
-        {% endif %}
-        <div class="alert alert-warning" role="alert">
-            Note that the following characters are not allowed: < > ! ( ) { } " ' ; : \ *
-        </div>
-        <h1 class="h1">Login</h1>
-        <br>
-        <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
-            <input class="form-control" type="text" name="username" placeholder="Username" required>
-            <br>
-            <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
-            <br>
-            <button class="btn btn-outline-primary" type="submit">Log In</button>
-            <br>
-        </form>
-        <br>
-        <h1 class="h1">Register</h1>
-        <br>
-        <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
-            <input class="form-control" type="text" name="username" placeholder="Username" required>
-            <br>
-            <input class="form-control" type="email" name="email" placeholder="Email" required>
-            <br>
-            <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
-            <br>
-            <button class="btn btn-outline-primary" type="submit">Register</button>
-        </form>
-        <br>
-        <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
-        <br><br>
+    <div class="page-header-content">
+        <header class="page-header page-header-light bg-white">
+            <div class="container">
+                <h1>Account</h1>
+                <div class="alert alert-warning" role="alert">
+                    Note that the following characters are not allowed: < > ! ( ) { } \" ' ; : \\ *
+                </div>
+                <div class="container">
+                    <form class="pt-3" id="form">
+                        <div class="form-group">
+                            <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
+                        </div>
+                        <div class="form-group">
+                            <input id="pw-reg" class="form-control" type=self.get_pw_type() name="password" placeholder="Password (min 8 chars)" minlength="8" required=true/>
+                        </div>
+                        <div class="form-group">
+                            <input class="form-control" type="email" name="email" placeholder="Email (optional)"/>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                            <label class="form-check-label" for="showPwCheck" onclick="showPassword()">Show Password</label>
+                        </div>
+                        <button class="btn btn-outline-primary mr-1" onsubmit="attemptLogin(); return false;">Login</button>
+                        <button class="btn btn-outline-primary ml-1" onsubmit="attemptRegister(); return false;">Register</button>
+                        <input class="mt-1 mb-1 form-check-input" type="checkbox" onclick="showPassword()"> Show Password
+                    </form>
+                </div>
+            </div>
+        </header>
     </div>
     <script src="/static/handleLogins.js"></script>
 {% endblock content %}

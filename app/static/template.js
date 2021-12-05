@@ -30,6 +30,14 @@ let replaceButtonGroup = (msg) => {
     }
 }
 
+/// Loads the appropriate Duey image to id="duey"
+let loadDueyImage = (imgName) => {
+    let img = document.getElementById("duey");
+    if (img != null) {
+        img.setAttribute('src', `/static/duey/${imgName}`)
+    }
+}
+
 /**
  * Performs Text-to-Speech step with given phrase.
  * @param {String} phrase Chinese String to read.

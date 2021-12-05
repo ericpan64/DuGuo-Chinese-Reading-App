@@ -8,41 +8,51 @@
 {% endblock user_navbar %}
 {% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
-    <p>Try-out the app by uploading some text! Adjust settings based on how you would like the output to render.</p>
-    <span>
-        <button class="btn btn-primary dropdown-toggle" id="phonetic-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-        Use Pinyin
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <li><a class="dropdown-item" onclick="setType('pinyin')">Use Pinyin</a></li>
-        <li><a class="dropdown-item" onclick="setType('zhuyin')">Use Zhuyin (Bopomofo)</a></li>
-        </ul>
-    </span>
-    <span>
-        <button class="btn btn-primary dropdown-toggle" id="char-setting" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-        Use Simplified
-        </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <li><a class="dropdown-item" onclick="setType('simp')">Use Simplified</a></li>
-        <li><a class="dropdown-item" onclick="setType('trad')">Use Traditional</a></li>
-        </ul>
-    </span>
-    <br><br>
-    <form action="/api/sandbox-upload" id="upload" onsubmit="switchToLoadingButton('upload-button')" method="POST">
-        <textarea name="text" form="upload" rows="5" cols="35" required>希望这个网站能帮助您多读中文！</textarea>
-        <input type="hidden" name="cn_type" value="simp">
-        <input type="hidden" name="cn_phonetics" value="pinyin">
-        <br><br>
-        <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
-    </form>
-    <br>
-    <p>Or try uploading a URL to a Chinese article (news, leisure, etc.). If you're feeling lucky, <a href="https://zh.wikipedia.org/wiki/Special:%E9%9A%8F%E6%9C%BA%E9%A1%B5%E9%9D%A2" target="_blank">here's</a> a link to a random Chinese Wikipedia article.</p>
-    <form class="form" action="/api/sandbox-url-upload" id="sandbox-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
-        <input type="text" name="url" placeholder="Article URL" required>
-        <input type="hidden" name="cn_type" value="simp">
-        <input type="hidden" name="cn_phonetics" value="pinyin">
-        <br><br>
-        <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
-    </form>
+    <header class="page-header page-header-light bg-white">
+        <div class="page-header-content">
+            <div class="container">
+                <h1>Sandbox</h1>
+                <p>Try-out the app by uploading some text! Adjust settings based on how you would like the output to render.</p>
+                <p>Any Chinese text should render - by default the server attempts to lookup Simplified, and then Traditional.</p>
+                <span>
+                    <button class="btn btn-primary dropdown-toggle mr-2" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {render_phonetic_text}
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <li><a class="dropdown-item" onclick="setType('pinyin')">Render Pinyin</a></li>
+                        <li><a class="dropdown-item" onclick="setType('zhuyin')">Render Zhuyin (Bopomofo)</a></li>
+                    </ul>
+                </span>
+                <span>
+                    <button class="btn btn-primary dropdown-toggle ml-2" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {render_cn_text}
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <li><a class="dropdown-item" onclick="setType('simp')">Render Simplified</a></li>
+                        <li><a class="dropdown-item" onclick="setType('trad')">Render Traditional</a></li>
+                    </ul>
+                </span>
+                <br/><br/>
+                <form action="/api/upload-sandbox-doc" id="upload" onsubmit="switchToLoadingButton('upload-button')" method="POST">
+                    <textarea name="body" form="upload" rows="5" cols="35" required=true>希望这个网站能帮助您多读中文！</textarea>
+                    <input type="hidden" name="url" value=""/>
+                    <input type="hidden" name="cn_type" value="simp">
+                    <input type="hidden" name="cn_phonetics" value="pinyin">
+                    <br/><br/>
+                    <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
+                </form>
+                <br/>
+                <p>Or try uploading a URL to a Chinese article (news, leisure, etc.). If you're feeling lucky, <a href="https://zh.wikipedia.org/wiki/Special:%E9%9A%8F%E6%9C%BA%E9%A1%B5%E9%9D%A2" target="_blank">here's</a> a link to a random Chinese Wikipedia article.</p>
+                <form class="form" action="/api/upload-sandbox-doc" id="sandbox-url-form" onsubmit="switchToLoadingButton('upload-button')" method="POST">
+                    <input type="text" name="url" placeholder="Article URL" required=true />
+                    <input type="hidden" name="body" value=""/>
+                    <input type="hidden" name="cn_type" value="simp">
+                    <input type="hidden" name="cn_phonetics" value="pinyin">
+                    <br/><br/>
+                    <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
+                </form>
+            </div>
+        </div>
+    </header>
     <script src="/static/handleSandbox.js"></script>
 {% endblock content %}

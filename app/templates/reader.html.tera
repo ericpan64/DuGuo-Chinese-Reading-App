@@ -15,38 +15,37 @@
     {% if paragraph_html is undefined %}
         Document not found, check the document title!
     {% else %}
-        <div class="container">
-            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#instructions">Instructions</button>
-            <div id="instructions" class="collapse">
-                <div class="card card-body">
-                    <ul>
-                        <li><strong>Click</strong> on a phrase to view more information, speech-to-text, and save it to your dictionary. <strong>Click</strong> again to close a phrase.</li>
-                        <li>Once a phrase is highlighted, you can <strong>Tab</strong> to move to the next phrase, or <strong>Shift + Tab</strong> to move to the previous phrase.</li>
-                        <li>Use the <strong>r</strong> key to Start/Stop the Text-to-Speech reading.</li>
-                        <li>Press <strong>any key</strong> or <strong>scroll</strong> to close all active pop-ups.</li>
-                        <li>Use the buttons to toggle phonetics settings.</li>
-                    </ul>
+        <header class="page-header page-header-light bg-white">
+            <div class="page-header-content">
+                <div class="container">
+                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#instructions">Instructions</button>
+                    <div id="instructions" class="collapse">
+                        <div class="card card-body">
+                            <ul>
+                                <li>Click on a phrase to view more information, speech-to-text, and save it to your dictionary.</li>
+                                <li>Tab to move to the next phrase, Shift + Tab to move to the previous phrase.</li>
+                                <li>Press r to Start/Stop the Text-to-Speech reading.</li>
+                                <li>Press any key, click, or scroll to close all active pop-ups.</li>
+                                <li>Use the buttons to toggle phonetics settings.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <br/><br/>
+                    <div class="btn-group" role="group" aria-label="Settings for phonetics visibility.">
+                        <button id="hide-saved" class="btn btn-primary border border-light" onclick=hideSavedPhonetics(user_saved_char_list)>Hide Saved Phonetics</button>
+                        <button id="hide-all" class="btn btn-primary border border-light" onclick=hideAllPhonetics()>Hide All Phonetics</button>
+                        <button id="reset-all" class="btn btn-primary border border-light" onclick="resetAllPhonetics()">Show All Phonetics</button>
+                    </div>
+                    <div id="reader-btn-group" class="btn-group" role="group" aria-label="Settings for document reader.">
+                        <button id="read-start-stop" class="btn btn-primary border border-light" onclick="triggerReader()">Read Document Aloud</button>
+                        <button id="read-reset" class="btn btn-primary border border-light" onclick="resetReader()">Reset Reader Position</button>
+                    </div>
+                </div>
+                <div class="container pt-5">
+                    {{ paragraph_html | safe }}
                 </div>
             </div>
-            <br><br>
-            <div class="btn-group" role="group" aria-label="Settings for phonetics visibility.">
-                {% if cn_phonetics == "Zhuyin" %}
-                <button id="hide-saved" class="btn btn-primary" onclick="hideSavedPhonetics(user_saved_char_list)">Hide Saved Zhuyin</button>
-                <button id="hide-all" class="btn btn-primary" onclick="hideAllPhonetics()">Hide All Zhuyin</button>
-                <button id="reset-all" class="btn btn-primary" onclick="resetAllPhonetics()">Reset All Zhuyin</button>
-                {% else %}
-                <button id="hide-saved" class="btn btn-primary border border-light" onclick="hideSavedPhonetics(user_saved_char_list)">Hide Saved Pinyin</button>
-                <button id="hide-all" class="btn btn-primary border border-light" onclick="hideAllPhonetics()">Hide All Pinyin</button>
-                <button id="reset-all" class="btn btn-primary border border-light" onclick="resetAllPhonetics()">Reset All Pinyin</button>
-                {% endif %}
-            </div>
-            <div id="reader-btn-group" class="btn-group" role="group" aria-label="Settings for document reader.">
-                <button id="read-start-stop" class="btn btn-primary border border-light" onclick="triggerReader()">Read Document Aloud</button>
-                <button id="read-reset" class="btn btn-primary border border-light" onclick="resetReader()">Reset Reader Position</button>
-            </div>
-        </div>
-        <br>
-        {{ paragraph_html | safe }}
+        </header>
     {% endif %}
     <script>
         /// Document Title

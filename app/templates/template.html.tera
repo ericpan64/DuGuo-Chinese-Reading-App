@@ -15,32 +15,41 @@
         {% endblock head %}
     </head>
     <body class="container-fluid">
-        <nav class="navbar navbar-expand navbar-dark navbar-static-top bg-primary">
+        <nav class="navbar navbar-marketing navbar-expand-lg bg-white navbar-light fixed-top">
             <div class="container">
-                <ul class="navbar-nav">
-                    {% block user_navbar %}
-                    {% if username is undefined %}
-                    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
-                    <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
-                    {% else %}
-                    <li class="nav-item"><a class="nav-link" id="nav1" href="/">About</a></li>
-                    <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
-                    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
-                    {% endif %}
-                    {% endblock user_navbar %}
-                </ul>
-                <ul class="navbar-nav">
-                    {% block static_navbar %}
-                    <li class="nav-item"><a class="nav-link" id="nav4" href="/feedback">Feedback</a></li>
-                    <li class="nav-item"><a class="nav-link" id="nav5" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">Github</a></li>
-                    {% endblock static_navbar %}
-                </ul>      
+                <a href="/" class="navbar-brand text-primary" route=Route::Home>DuGuo (读国)</a>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav ml-auto mr-lg-5">
+                        <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
+                        {% block user_navbar %}
+                        <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
+                        <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
+                        {% else %}
+                        <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
+                        <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
+                        {% endif %}
+                        {% endblock user_navbar %}
+                    </ul>
+                    <a href="/login" class="btn font-weight-500 ml-lg-4 btn-primary">Login Now<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
+                </div>
             </div>
         </nav>
         <br>
         <div class="container">
             {% block content %}{% endblock content %}
+        </div>
+        <div id="layoutDefault_footer">
+            <footer class="footer pt-5 pb-5 mt-auto bg-light footer-light">
+                <div class="container">
+                    <div class="row">
+                        <div class="footer-brand mr-2">
+                            DuGuo
+                            <a class="icon-list-social-link" target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App"><i class="fab fa-github"></i></a>
+                        </div>
+                        <div class="mt-1">Designed using Start Bootstrap. \nBuilt in Rust using Rocket + Tera. \nSubmit anonymous feedback <a href="/feedback">here.</a></div>
+                    </div>
+                </div>
+            </footer>
         </div>
     </body>
     <script src="/static/template.js"></script>
