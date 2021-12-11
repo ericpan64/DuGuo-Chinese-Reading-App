@@ -24,7 +24,7 @@
                         {% block user_navbar %}
                         <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
                         <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
-                        {% else %}
+                        {% if username is defined %}
                         <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
                         <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
                         {% endif %}

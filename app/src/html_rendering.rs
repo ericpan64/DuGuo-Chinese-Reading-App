@@ -1,7 +1,7 @@
 /*
 /// Module for html rendering.
 /// 
-/// html.rs
+/// html_rendering.rs
 /// └── pub fn:
 ///     └── convert_string_to_tokenized_html
 ///     └── render_document_table
@@ -29,7 +29,8 @@ use std::{
 
 /* Public Functions */
 /// Organizes data from CnEnDictEntry, then renders the appropriate HTML.
-pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics, include_sound_link: bool, include_download_link: bool) -> String {
+pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
+    let (include_download_link, include_sound_link) = (true, true);
     let (phrase, char_list): (&str, Vec<char>) = match cn_type {
         CnType::Traditional => (&entry.trad, entry.trad.chars().collect()),
         CnType::Simplified => (&entry.simp, entry.simp.chars().collect())
@@ -120,10 +121,10 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
         } else {
             // For each phrase, lookup as CnEnDictEntry
             let entry = CnEnDictEntry::from_uid(&mut conn, uid).await;
-            if entry.lookup_failed() {
+            if !entry.lookup_succeeded() {
                 res += generate_html_for_not_found_phrase(phrase).as_str();
             } else {
-                res += render_phrase_html(&entry, cn_type, cn_phonetics, true, true).as_str();
+                res += render_phrase_html(&entry, cn_type, cn_phonetics).as_str();
             }
         }
     }

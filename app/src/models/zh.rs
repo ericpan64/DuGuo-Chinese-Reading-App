@@ -1,10 +1,11 @@
 /*
 /// Data Structures relating to Chinese text.
 /// 
-/// chinese.rs
+/// zh.rs
 /// ├── CnType: Enum
 /// ├── CnPhonetics: Enum
-/// └── CnEnDictEntry: Struct
+/// ├── CnEnDictEntry: Struct
+/// └── CnPhrase: Struct
 */
 
 use crate::CacheItem;
@@ -81,7 +82,7 @@ impl fmt::Display for CnPhonetics {
 }
 
 /* Structs */
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct CnEnDictEntry {
     pub uid: String,
     pub trad: String,
@@ -100,11 +101,11 @@ impl CacheItem for CnEnDictEntry {
 
 impl CnEnDictEntry {
     /// Looks up a CEDICT entry in Redis using the specified uid.
-    /// Defaults to generate_lookup_failed_entry().
+    /// Defaults to entry with error text.
     pub async fn from_uid(conn: &mut Connection, uid: String) -> Self {
         let query_map = (*conn).hgetall::<&str, HashMap<String, String>>(&uid).await.unwrap();
         let res = match query_map.len() {
-            0 => CnEnDictEntry::generate_lookup_failed_entry(&uid),
+            0 => CnEnDictEntry::generate_errored_entry(&uid),
             _ => CnEnDictEntry {
                     uid,
                     trad : query_map.get("trad").unwrap().to_owned(),
@@ -119,13 +120,13 @@ impl CnEnDictEntry {
         return res;
     }
     /// Returns true if object is a "failed lookup" entry, false otherwise.
-    pub fn lookup_failed(&self) -> bool {
-        return self.formatted_pinyin == "";
+    pub fn lookup_succeeded(&self) -> bool {
+        return self.formatted_pinyin != "";
     }
     /// Generates generic "failed lookup" entry.
     /// The uid is preserved so the failed case can be identified.
     /// The LOOKUP_ERROR_STR is used for compatibility with /api/delete-vocab/NA.
-    fn generate_lookup_failed_entry(uid: &str) -> Self {
+    fn generate_errored_entry(uid: &str) -> Self {
         const LOOKUP_ERROR_MSG: &str = "NA - Not found in database";
         const LOOKUP_ERROR_STR: &str = "NA";
         let res = CnEnDictEntry {
@@ -138,4 +139,12 @@ impl CnEnDictEntry {
         }; 
         return res;
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct CnPhrase {
+    pub entry: CnEnDictEntry,
+    pub lookup_success: bool,
+    pub raw_phrase: String,
+    pub raw_phonetics: String,
 }

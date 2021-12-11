@@ -1,6 +1,6 @@
 /*
 /// Data Structures related to a user account.
-/// 
+/// TODO: Add a UserSettings struct, include a Duey flag
 /// users.rs
 /// ├── User: Strict
 /// ├── UserDoc: Struct
@@ -12,11 +12,12 @@ use chrono::Utc;
 use crate::{
     DatabaseItem,
     scrape_text_from_url,
+    convert_string_to_tokenized_phrases,
+    html_rendering,
     auth::str_to_hashed_string,
     config::{USER_COLL_NAME, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, USER_VOCAB_LIST_COLL_NAME},
     connect_to_redis,
-    html as html_rendering,
-    models::zh::{CnType, CnPhonetics, CnEnDictEntry}
+    models::zh::{CnType, CnPhonetics, CnEnDictEntry, CnPhrase}
 };
 use mongodb::{
     bson::{doc, Bson, from_bson},
@@ -25,6 +26,7 @@ use mongodb::{
 use rand::{self, Rng};
 use serde::{Serialize, Deserialize};
 use std::error::Error;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -153,10 +155,12 @@ impl User {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UserDoc {
+    pub doc_id: String,
     username: String,
     pub title: String,
     pub body: String,
     pub body_html: String,
+    pub tokenized_body_json: Vec<CnPhrase>,
     pub source: String, 
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
@@ -166,19 +170,20 @@ pub struct UserDoc {
 impl DatabaseItem for UserDoc {
     fn collection_name() -> &'static str { return USER_DOC_COLL_NAME; }
     fn all_field_names() -> Vec<&'static str> {
-        return vec!["username", "title", "body", "body_html",
+        return vec!["username", "title", "body", "tokenized_body_json",
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
-    /// Note: this is not unique per document, a unique primary_key is username + title.
-    fn primary_key(&self) -> &str { return &self.username; }
+    fn primary_key(&self) -> &str { return &self.doc_id; }
 }
 
 impl UserDoc {
     /// Generates a new UserDoc. For title collisions, a new title is automatically generated (appended by -#).
     pub async fn new(db: &Database, username: String, desired_title: String, body: String, source: String) -> Self {
+        let doc_id = Uuid::new_v4().to_string();
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
-        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
         let desired_title = desired_title.replace(" ", "");
+        let body_html = html_rendering::convert_string_to_tokenized_html(&body, &cn_type, &cn_phonetics).await;
+        let tokenized_body_json = convert_string_to_tokenized_phrases(&body).await;
         // If title is non-unique, try appending digits until match
         let coll = (*db).collection(USER_DOC_COLL_NAME);
         let mut title_exists = (coll.find_one(doc! {"username": &username, "title": &desired_title, "cn_type": cn_type.as_str(), "cn_phonetics": cn_phonetics.as_str()}, None).unwrap()) != None;
@@ -198,7 +203,7 @@ impl UserDoc {
             false => desired_title
         };
         let created_on = Utc::now().to_string();
-        let new_doc = UserDoc { username, title, body, body_html, source, cn_type, cn_phonetics, created_on };
+        let new_doc = UserDoc { doc_id, username, title, body, body_html, tokenized_body_json, source, cn_type, cn_phonetics, created_on };
         return new_doc;
     }
     /// Generates a new UserDoc with HTML-parsed title + text from the given URL.
@@ -232,9 +237,9 @@ pub struct UserVocab {
     cn_type: CnType,
     cn_phonetics: CnPhonetics,
     pub phrase: String,
+    pub phrase_html: String,
     def: String, 
     phrase_phonetics: String, /// If pinyin: formatted pinyin
-    pub phrase_html: String,
     pub created_on: String,
     pub radical_map: String
 }
@@ -253,7 +258,7 @@ impl DatabaseItem for UserVocab {
             "cn_type", "cn_phonetics", "phrase", "def",
             "phrase_phonetics", "phrase_html", "created_on", "radical_map"];
     }
-    fn primary_key(&self) -> &str { return &self.phrase_html; }
+    fn primary_key(&self) -> &str { return &self.uid; } // TODO: add doc_title uniqueness distinction
 }
 
 impl UserVocab {
@@ -266,18 +271,18 @@ impl UserVocab {
         let entry = CnEnDictEntry::from_uid(&mut conn, saved_uid).await;
         let created_on = Utc::now().to_string();
         let radical_map = (&entry.radical_map).to_string();
-        let (phrase, def, phrase_phonetics, phrase_html) = UserVocab::extract_vocab_data(entry, &cn_type, &cn_phonetics);
+        let phrase_html = html_rendering::render_phrase_html(&entry, &cn_type, &cn_phonetics);
+        let (phrase, def, phrase_phonetics) = UserVocab::extract_vocab_data(entry, &cn_type, &cn_phonetics);
         let new_vocab = UserVocab { 
             uid, username, from_doc_title, def,
-            phrase, phrase_phonetics, phrase_html,
+            phrase, phrase_html, phrase_phonetics,
             cn_type, cn_phonetics, created_on, radical_map
         };
         return new_vocab;
     }
     /// Extracts relevant UserVocab data from CnEnDictEntry. Consumes CnEnDictEntry.
-    fn extract_vocab_data(entry: CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String, String) {
+    fn extract_vocab_data(entry: CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> (String, String, String) {
         // Order: (phrase, defn, phrase_phonetics, phrase_html)
-        let phrase_html = html_rendering::render_phrase_html(&entry, cn_type, cn_phonetics, true, false);
         let defn = entry.defn;
         let (phrase, phrase_phonetics) = match (cn_type, cn_phonetics) {
             (CnType::Traditional, CnPhonetics::Pinyin) => (entry.trad, entry.formatted_pinyin),
@@ -285,7 +290,7 @@ impl UserVocab {
             (CnType::Simplified, CnPhonetics::Pinyin) => (entry.simp, entry.formatted_pinyin),
             (CnType::Simplified, CnPhonetics::Zhuyin) => (entry.simp, entry.zhuyin)
         };
-        return (phrase, defn, phrase_phonetics, phrase_html);
+        return (phrase, defn, phrase_phonetics);
     }
     /// Attempts to delete the given UserVocab item.
     pub async fn try_delete(db: &Database, username: &str, uid: &str, cn_type: &CnType) -> bool {
@@ -327,8 +332,8 @@ impl UserVocab {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserVocabList {
     username: String,
-    unique_char_list: String,
-    unique_uid_list: String,
+    pub unique_char_list: String,
+    pub unique_uid_list: String,
     cn_type: CnType
 }
 
@@ -353,7 +358,7 @@ impl UserVocabList {
             }
         };
         let cn_type_str = cn_type.as_str();
-        let query_res = UserVocabList::try_lookup(db, doc! {"username": username, "cn_type": cn_type_str });
+        let query_res = UserVocabList::try_lookup_one(db, doc! {"username": username, "cn_type": cn_type_str });
         if let Some(doc) = query_res {
             // Update existing lists
             let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
@@ -382,7 +387,7 @@ impl UserVocabList {
     }
     /// Removes information in UserVocabList object from username based on phrase_to_remove.
     fn remove_from_user_vocab_list(db: &Database, username: &str, phrase_to_remove: &str, cn_type: &CnType, uid: &str) -> Result<(), Box<dyn Error>> {
-        let query_res = UserVocabList::try_lookup(db, doc! {"username": username, "cn_type": cn_type.as_str() });
+        let query_res = UserVocabList::try_lookup_one(db, doc! {"username": username, "cn_type": cn_type.as_str() });
         if let Some(doc) = query_res {
             let prev_doc: UserVocabList = from_bson(Bson::Document(doc)).unwrap();
             let mut unique_char_list = prev_doc.unique_char_list.clone();

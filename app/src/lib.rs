@@ -1,51 +1,38 @@
 /*
 /// Trait definitions and General purpose helper functions.
-/// 
-/// lib.rs
-/// ├── CacheItem: Trait
-/// ├── DatabaseItem: Trait
-/// |
-/// └── pub fn:
-///     └── connect_to_mongodb
-///     └── connect_to_redis
-///     └── convert_rawstr_to_string
-///     └── scrape_text_from_url
-///     └── launch_rocket
 */
-
 #![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use] extern crate rocket;
 
-/// Module handling user authentication and cookies.
 pub mod auth;
-/// Module with config &str values.
 pub mod config;
-/// Module that handles HTML rendering. Often used with alias "html_rendering".
-pub mod html;
-/// Module defining all data structures and associated functions.
 pub mod models;
-/// Module defining all of the Rocket web endpoints.
+pub mod api;
 pub mod routes;
+pub mod html_rendering;
 
-use crate::config::{DB_NAME, DB_URI, REDIS_URI};
+use crate::{
+    config::{DB_URI, DB_NAME, REDIS_URI, TOKENIZER_HOSTNAME, TOKENIZER_PORT},
+    models::{
+        zh::{CnEnDictEntry, CnPhrase}
+    }
+};
 use mongodb::{
     bson::{self, doc, document::Document, Bson},
     sync::Database
 };
 use reqwest;
 use rocket::http::RawStr;
-use rocket_contrib::{
-    templates::Template,
-    serve::StaticFiles
-};
 use serde::Serialize;
 use scraper;
 use std::{
     error::Error,
-    marker::Sized
+    marker::Sized,
+    io::prelude::*,
+    net::TcpStream
 };
 use redis::aio::Connection;
-use tokio::runtime::Runtime;
+
 
 /* Traits */
 /// An object that can be found in Redis (using a uid).
@@ -83,9 +70,23 @@ pub trait DatabaseItem {
         return bson::to_bson(self).unwrap();
     }
     /// Attempts to lookup a full Document based on the provided query Document.
-    fn try_lookup(db: &Database, query_doc: Document) -> Option<Document> where Self: Sized {
+    fn try_lookup_one(db: &Database, query_doc: Document) -> Option<Document> where Self: Sized {
         let coll = (*db).collection(Self::collection_name());
         return coll.find_one(query_doc, None).unwrap();
+    }
+    /// Attempts to lookup Vec<Document> based on the provided query Document.
+    fn try_lookup_all(db: &Database, query_doc: Document) -> Option<Vec<Document>> where Self: Sized {
+        let coll = (*db).collection(Self::collection_name());
+        let cursor = coll.find(query_doc, None).unwrap();
+        let mut docs: Vec<Document> = Vec::new();
+        for doc_res in cursor {
+            docs.push(doc_res.unwrap());
+        }
+        let res = match docs.len() {
+            0 => None,
+            _ => Some(docs)
+        };
+        return res;
     }
     /// Attempts to insert the object into MongoDB.
     fn try_insert(&self, db: &Database) -> Result<String, Box<dyn Error>> where Self: Serialize {
@@ -110,51 +111,6 @@ pub trait DatabaseItem {
         let update_query = doc! { "$set": update_doc };
         coll.update_one(self.as_document(), update_query, None)?;
         return Ok(());
-    }
-    /// From the first result matching the query_doc, returns the values from input fields
-    /// as a Vec<String> (with matching indices as the input fields).
-    /// In the case of a failed lookup, a single item (String::new()) is returned in the Vec.
-    /// Thus, the len of resulting Vec is always == the len of the fields Vec.
-    fn get_values_from_query(db: &Database, query_doc: Document, fields: Vec<&str>) -> Vec<String> {
-        let coll = (*db).collection(Self::collection_name());
-        let valid_fields = Self::all_field_names();
-        let mut res_vec: Vec<String> = Vec::with_capacity(fields.len());
-        if let Some(doc) = coll.find_one(query_doc, None).unwrap() {
-            for key in fields {
-                if valid_fields.contains(&key) {
-                    res_vec.push(String::from(doc.get_str(key).unwrap()));
-                } else {
-                    res_vec.push(String::new());
-                }
-            }
-        } else {
-            for _ in fields {
-                res_vec.push(String::new());
-            }
-        }
-        return res_vec;
-    }
-    /// From all documents matching the query_doc, aggregates the values from the input fields
-    /// into a Vec<String> (with matching indices as the input fields).
-    /// If an input field is invalid, then the corresponding Vec<String> will be empty.
-    fn aggregate_all_values_from_query(db: &Database, query_doc: Document, fields: Vec<&str>) -> Vec<Vec<String>> {
-        let mut res_vec: Vec<Vec<String>> = Vec::with_capacity(fields.len());
-        for _ in 0..fields.len() {
-            res_vec.push(Vec::<String>::new());
-        }
-        let coll = (*db).collection(Self::collection_name());
-        let valid_fields = Self::all_field_names();
-        let cursor = coll.find(query_doc, None).unwrap();
-        for doc_ok in cursor {
-            let doc = doc_ok.unwrap();
-            for i in 0..fields.len() {
-                let key = fields[i];
-                if valid_fields.contains(&key) {
-                    res_vec[i].push(String::from(doc.get_str(key).unwrap()));
-                }
-            }
-        }
-        return res_vec;
     }
     /* Requires Implementation */
     /// Returns the collection name in MongoDB where the objects should be stored.
@@ -206,40 +162,50 @@ pub async fn scrape_text_from_url(url: &str) -> (String, String) {
     return (title_text, body_text);
 }
 
-/// Starts the Rocket web server and corresponding services. Called in main.rs.
-/// Note: the Tokio version is deliberately set to 0.2.24 to match the MongoDB 1.1.1 driver.
-/// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
-pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
-    let db = connect_to_mongodb()?;
-    let rt = Runtime::new().unwrap();
-    let rt = rt.handle().clone();
-    rocket::ignite()
-        .attach(Template::fairing())
-        .manage(db)
-        .manage(rt)
-        .mount("/", routes![
-            routes::primary::index, 
-            routes::primary::login, 
-            routes::primary::sandbox, 
-            routes::primary::sandbox_upload, 
-            routes::primary::sandbox_url_upload, 
-            routes::primary::sandbox_view_doc, 
-            routes::primary::feedback, 
-            routes::primary::feedback_form,
-            routes::users::login_form, 
-            routes::users::register_form, 
-            routes::users::user_profile, 
-            routes::users::user_doc_upload, 
-            routes::users::user_url_upload,
-            routes::users::user_view_doc,
-            routes::users::user_vocab_upload,
-            routes::users::delete_user_doc,
-            routes::users::delete_user_vocab,
-            routes::users::update_settings,
-            routes::users::documents_to_csv_json,
-            routes::users::vocab_to_csv_json,
-            routes::users::logout_user])
-        .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
-        .launch();
-    return Ok(());
+/// Renders the HTML using the given CnType and CnPhonetics.
+/// Refer to tokenizer_string() for formatting details.
+pub async fn convert_string_to_tokenized_phrases(s: &str) -> Vec<CnPhrase> {
+    const PHRASE_DELIM: char = '$';
+    const PINYIN_DELIM: char = '`';
+    let mut conn = connect_to_redis().await.unwrap();
+    let tokenized_string = tokenize_string(s.to_string()).expect("Tokenizer connection error");
+    let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
+    // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
+    let mut res = Vec::with_capacity(n_phrases);
+    for token in tokenized_string.split(PHRASE_DELIM) {
+        let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
+        let raw_phrase = token_vec[0].to_string(); // If Chinese, then Simplified
+        let raw_phonetics = token_vec[1].to_string();
+        let uid = CnEnDictEntry::generate_uid(vec![&raw_phrase,&raw_phonetics]);
+        let entry = CnEnDictEntry::from_uid(&mut conn, uid).await;
+        let lookup_success = entry.lookup_succeeded();
+        let curr_phrase = CnPhrase {
+            entry,
+            lookup_success,
+            raw_phrase,
+            raw_phonetics
+        };
+        res.push(curr_phrase);
+    }
+    return res;
+}
+
+/// Connect to tokenizer service and tokenizes the string. The delimiters are $ and ` since neither character appears in CEDICT.
+/// The format of the string is: "phrase1`raw_pinyin$phrase2`raw_pinyin2$ ..."
+/// The string is written to the TCP stream until completion.
+/// From the tokenizer, 2 messages are sent: 
+///     1) A u64 (as bytes) indicating the size of the tokenizer results
+///     2) The tokenizer result string (as bytes)
+fn tokenize_string(mut s: String) -> std::io::Result<String> {
+    s = s.replace("  ", ""); // remove excess whitespace for tokenization, keep newlines. "  " instead of " " to preserve non-Chinese text
+    let mut stream = TcpStream::connect(format!("{}:{}", TOKENIZER_HOSTNAME, TOKENIZER_PORT))?;
+    stream.write_all(s.as_bytes())?;
+    let mut header_bytes = [0; 64];
+    stream.read_exact(&mut header_bytes)?;
+    let n_bytes: usize = String::from_utf8(header_bytes.to_vec()).unwrap()
+        .trim().parse::<usize>().unwrap();
+    let mut tokenized_bytes = vec![0; n_bytes];
+    stream.read_exact(&mut tokenized_bytes)?;
+    let res = String::from_utf8(tokenized_bytes).unwrap();
+    return Ok(res);
 }

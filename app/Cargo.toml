@@ -18,15 +18,14 @@ hex = "0.3.1"
 serde = "1.0.118"
 jsonwebtoken = "7.2.0"
 chrono = "0.4.19"
-reqwest = { version = "0.10.2", features = ["blocking"] }
+reqwest = { version = "0.10.2", features = ["json"] }
 scraper = "0.12.0"
 redis = { version = "0.17.0", features = ["tokio-comp"] }
 regex = "1"
 rand = "0.8.0"
-itertools = "0.10.0"
 
 # Docs: https://api.rocket.rs/v0.4/rocket_contrib/
 [dependencies.rocket_contrib]
 version = "0.4.6"
 default-features = false
-features = ["tera_templates", "serve", "json"]
+features = ["serve", "json", "tera_templates"]
