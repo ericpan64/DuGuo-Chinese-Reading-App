@@ -3,11 +3,9 @@
 {% block head %} {{ super() }} {% endblock head %}
 {% block user_navbar %} 
     {% if username is undefined %}
-    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
     <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
     <li class="nav-item"><a class="nav-link active" id="nav3" href="/login">Login</a></li>
     {% else %}
-    <li class="nav-item"><a class="nav-link" id="nav1" href="/">About</a></li>
     <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
     <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
     {% endif %}
@@ -37,12 +35,10 @@
                             <label class="form-check-label" for="showPwCheck" onclick="showPassword()">Show Password</label>
                         </div>
                         <button class="btn btn-outline-primary mr-1" onsubmit="attemptLogin(); return false;">Login</button>
-                        <button class="btn btn-outline-primary ml-1" onsubmit="attemptRegister(); return false;">Register</button>
-                        <input class="mt-1 mb-1 form-check-input" type="checkbox" onclick="showPassword()"> Show Password
-                    </form>
+                        <button class="btn btn-outline-primary ml-1" onsubmit="attemptRegister(); return false;">Register</button>                    </form>
                 </div>
             </div>
         </header>
     </div>
-    <script src="/static/handleLogins.js"></script>
+    <script src="/static/js/handleLogins.js"></script>
 {% endblock content %}

@@ -68,7 +68,7 @@
         let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
         {% endif %}
     </script>
-    <script src="/static/handlePopups.js"></script>
-    <script src="/static/handleReader.js"></script>
-    <script src="/static/handlePhonetics.js"></script>
+    <script src="/static/js/handlePopups.js"></script>
+    <script src="/static/js/handleReader.js"></script>
+    <script src="/static/js/handlePhonetics.js"></script>
 {% endblock content %}

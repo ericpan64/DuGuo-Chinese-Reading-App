@@ -3,11 +3,9 @@
 {% block head %} {{ super() }} {% endblock head %}
 {% block user_navbar %}
     {% if username is undefined %}
-    <li class="nav-item"><a class="nav-link active" id="nav1" href="/">Home</a></li>
     <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
     <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
     {% else %}
-    <li class="nav-item"><a class="nav-link active" id="nav1" href="/">About</a></li>
     <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
     <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
     {% endif %}
@@ -51,7 +49,7 @@
                 </div>
                 <div class="col-lg-4">
                     <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/code.svg"/></div>
-                    <h3>See the source code</h3>
+                    <h3>View the source code</h3>
                     <p class="mb-0">This project is open-source and publicly available on GitHub (<a href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App" target = "_blank">link</a>). Check it out and consider contributing!</p>
                 </div>
             </div>
@@ -66,7 +64,7 @@
                 <div class="col-lg-8">
                     <div class="text-center mb-5" data-aos="fade-up">
                         <h2>Learn with your friends, including Duey!</h2>
-                        <img width="200em" id="duey" src="/static/duey/duey_base_normal.png"
+                        <img width="200em" id="duey" src="/static/img/duey/duey_base_normal.png"
                             onmouseover="loadDueyImg('duey_extra_normal.png')"
                             onmouseout="loadDueyImg('duey_base_normal.png')"
                             alt="Duey, the DuGuo mascot!"/>
@@ -93,5 +91,5 @@
     let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
     {% endif %}
     </script>
-    <script src="/static/handlePopups.js"></script>
+    <script src="/static/js/handlePopups.js"></script>
 {% endblock content %}

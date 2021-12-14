@@ -2,7 +2,6 @@
 {% block title %} Sandbox {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block user_navbar %}
-    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
     <li class="nav-item"><a class="nav-link active" id="nav2" href="/sandbox">Sandbox</a></li>
     <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
 {% endblock user_navbar %}
@@ -16,7 +15,7 @@
                 <p>Any Chinese text should render - by default the server attempts to lookup Simplified, and then Traditional.</p>
                 <span>
                     <button class="btn btn-primary dropdown-toggle mr-2" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {render_phonetic_text}
+                        Render Pinyin
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                         <li><a class="dropdown-item" onclick="setType('pinyin')">Render Pinyin</a></li>
@@ -25,7 +24,7 @@
                 </span>
                 <span>
                     <button class="btn btn-primary dropdown-toggle ml-2" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        {render_cn_text}
+                        Render Simplified
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                         <li><a class="dropdown-item" onclick="setType('simp')">Render Simplified</a></li>
@@ -54,5 +53,5 @@
             </div>
         </div>
     </header>
-    <script src="/static/handleSandbox.js"></script>
+    <script src="/static/js/handleSandbox.js"></script>
 {% endblock content %}

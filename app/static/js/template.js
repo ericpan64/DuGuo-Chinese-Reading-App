@@ -31,10 +31,10 @@ let replaceButtonGroup = (msg) => {
 }
 
 /// Loads the appropriate Duey image to id="duey"
-let loadDueyImage = (imgName) => {
+let loadDueyImg = (imgName) => {
     let img = document.getElementById("duey");
     if (img != null) {
-        img.setAttribute('src', `/static/duey/${imgName}`)
+        img.setAttribute('src', `/static/img/duey/${imgName}`)
     }
 }
 
