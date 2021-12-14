@@ -9,8 +9,6 @@
         }
     </style>
 {% endblock head %}
-{% block user_navbar %} {{ super() }} {% endblock user_navbar %}
-{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     {% if paragraph_html is undefined %}
         Document not found, check the document title!

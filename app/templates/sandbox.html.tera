@@ -1,11 +1,6 @@
 {% extends "template" %}
 {% block title %} Sandbox {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
-{% block user_navbar %}
-    <li class="nav-item"><a class="nav-link active" id="nav2" href="/sandbox">Sandbox</a></li>
-    <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
-{% endblock user_navbar %}
-{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     <header class="page-header page-header-light bg-white">
         <div class="page-header-content">

@@ -21,14 +21,16 @@
                         <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
                         {% block user_navbar %}
                         <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
-                        <li class="nav-item"><a class="nav-link" id="nav3" href="/login">Login</a></li>
                         {% if username is defined %}
                         <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
-                        <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
                         {% endif %}
                         {% endblock user_navbar %}
                     </ul>
+                    {% if username is defined %}
+                    <a href="/api/logout" class="nav-link">Logout</a>
+                    {% else %}
                     <a href="/login" class="btn font-weight-500 ml-lg-4 btn-primary">Login Now<img class="ml-2" src="/static/img/arrow-right.svg"/></a>
+                    {% endif %}
                 </div>
             </div>
         </nav>

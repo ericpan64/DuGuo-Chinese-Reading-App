@@ -9,11 +9,6 @@
         }
     </style>
 {% endblock head %}
-{% block user_navbar %}
-    <li class="nav-item"><a class="nav-link active" id="nav2" href="/u/{{username}}">Profile</a></li>
-    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
-{% endblock user_navbar %}
-{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
     {% if username is undefined %}
     <p>
