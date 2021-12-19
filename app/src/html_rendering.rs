@@ -131,7 +131,7 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     return res;
 }
 
-/// Renders the UserDoc table for userprofile.html.tera.
+/// Renders the UserDoc table for profile.html.tera.
 pub fn render_document_table(db: &Database, username: &str) -> String {
     // get all documents for user
     const TRASH_ICON: &str = "/static/icons/trash.svg";
@@ -173,7 +173,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
     return res;
 }
 
-/// Renders the UserVocab table for userprofile.html.tera.
+/// Renders the UserVocab table for profile.html.tera.
 pub fn render_vocab_table(db: &Database, username: &str) -> String {
     const TRASH_ICON: &str = "/static/icons/trash.svg";
     let coll = (*db).collection(USER_VOCAB_COLL_NAME);

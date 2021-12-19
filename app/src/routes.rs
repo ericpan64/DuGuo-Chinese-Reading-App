@@ -110,7 +110,7 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
     if User::check_if_username_exists(&db, &username) == true {
         context.insert("username", username); 
     }
-    return Template::render("userprofile", context);
+    return Template::render("profile", context);
 }
 
 /// /u/<raw_username>/<doc_title>
