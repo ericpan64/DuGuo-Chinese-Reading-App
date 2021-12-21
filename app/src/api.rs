@@ -80,7 +80,7 @@ pub fn get_user_vocab_string(cookies: Cookies, db: State<Database>) -> Json<Json
         "res": res
     }));
 }
-/// /api/delete-doc/<doc_title>
+/// /api/delete-user-doc/<doc_title>
 #[get("/delete-user-doc/<doc_title>")]
 pub fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, doc_title: &RawStr) -> Status {
     let title = convert_rawstr_to_string(doc_title);
@@ -88,7 +88,7 @@ pub fn delete_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>,
     rt.block_on(UserDoc::try_delete(&db, &username, &title));
     return Status::Ok;
 }
-/// /api/delete-vocab/<vocab_uid>
+/// /api/delete-user-vocab/<vocab_uid>
 #[get("/delete-user-vocab/<vocab_uid>")]
 pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, vocab_uid: &RawStr) -> Status {
     let phrase_uid = convert_rawstr_to_string(vocab_uid);
@@ -99,11 +99,11 @@ pub fn delete_user_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle
 }
 /// /api/logout
 #[get("/logout")]
-pub fn logout(mut cookies: Cookies) -> Status {
+pub fn logout(mut cookies: Cookies) -> Redirect {
     let mut removal_cookie = Cookie::named(JWT_NAME);
     removal_cookie.set_path("/");
     cookies.remove(removal_cookie);
-    return Status::Ok;
+    return Redirect::to("/");
 }
 
 // /* POST */
@@ -173,27 +173,27 @@ pub struct UserDocForm<'f> {
 }
 /// /api/upload-user-doc
 #[post("/upload-user-doc", data="<upload_doc>")]
-pub fn upload_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, upload_doc: Form<UserDocForm<'_>>) -> Status {
+pub fn upload_user_doc(cookies: Cookies, db: State<Database>, rt: State<Handle>, upload_doc: Form<UserDocForm<'_>>) -> Redirect {
     let UserDocForm { title, source, body, url } = upload_doc.into_inner();
-    let title = convert_rawstr_to_string(title);
+    let desired_title = convert_rawstr_to_string(title);
     let body = convert_rawstr_to_string(body);
     let source = convert_rawstr_to_string(source);
     let url = convert_rawstr_to_string(url);
     let res_status = match get_username_from_cookie(&db, cookies.get(JWT_NAME)) {
         Some(username) => { 
             let new_doc = match url.as_str() != "" {
-                true => rt.block_on(UserDoc::from_url(&db, username, url)),
-                false => rt.block_on(UserDoc::new(&db, username, title, body, source))
+                true => rt.block_on(UserDoc::from_url(&db, username.clone(), url)),
+                false => rt.block_on(UserDoc::new(&db, username.clone(), desired_title, body, source))
             };
             match new_doc.try_insert(&db) {
-                Ok(_) => Status::Accepted,
+                Ok(doc_title) => Redirect::to(uri!(Routes::user_doc: &username, doc_title)),
                 Err(e) => {
                     eprintln!("Exception when inserting doc: {:?}", e);
-                    Status::UnprocessableEntity
+                    Redirect::to(uri!(Routes::user_profile: &username))
                 }
             }
         },
-        None => Status::Unauthorized
+        None => Redirect::to("/")
     };
     return res_status;
 }
@@ -217,7 +217,7 @@ pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Fo
         false => rt.block_on(SandboxDoc::new(body, cn_type, cn_phonetics, url))
     };
     let doc_id = new_doc.try_insert(&db).unwrap();
-    return Redirect::to(uri!(Routes::sandbox_view_doc: doc_id));
+    return Redirect::to(uri!(Routes::sandbox_doc: doc_id));
 }
 #[derive(FromForm)]
 pub struct UserVocabForm<'f> {

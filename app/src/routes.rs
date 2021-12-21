@@ -52,6 +52,15 @@ pub fn login(cookies: Cookies, db: State<Database>) -> Template {
     return Template::render("login", context);
 }
 
+/// /about
+#[get("/about")]
+pub fn about(cookies: Cookies, db: State<Database>) -> Template {
+    let mut context: HashMap<&str, String> = HashMap::new();
+    add_user_cookie_to_context(&cookies, &db, &mut context);
+    return Template::render("about", context);
+}
+
+
 /// /sandbox
 #[get("/sandbox")]
 pub fn sandbox(cookies: Cookies, db: State<Database>) -> Template {
@@ -62,7 +71,7 @@ pub fn sandbox(cookies: Cookies, db: State<Database>) -> Template {
 
 /// /sandbox/<doc_id>
 #[get("/sandbox/<doc_id>")]
-pub fn sandbox_view_doc(db: State<Database>, doc_id: &RawStr) -> Template {
+pub fn sandbox_doc(db: State<Database>, doc_id: &RawStr) -> Template {
     let mut context: HashMap<&str, &str> = HashMap::new();
     let doc_id = convert_rawstr_to_string(doc_id);
     let query_doc = SandboxDoc::try_lookup_one(&db, 
@@ -115,7 +124,7 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
 
 /// /u/<raw_username>/<doc_title>
 #[get("/u/<raw_username>/<doc_title>")]
-pub fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
+pub fn user_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, doc_title: &RawStr) -> Template {
     let mut context: HashMap<&str, String> = HashMap::new(); // `String` needed b/c lifetimes
     let username = convert_rawstr_to_string(raw_username);
     // Compare username with logged-in username from JWT
@@ -129,11 +138,16 @@ pub fn user_view_doc(cookies: Cookies, db: State<Database>, raw_username: &RawSt
                     doc!{ "username": &username, "title": &title})
                     .unwrap();
                 let doc_html = doc_html_res.get_str("body_html").unwrap();
-                let user_vocab_res = UserVocabList::try_lookup_one(&db, 
-                    doc! { "username": &username, "cn_type": cn_type.as_str() })
-                    .unwrap();
-                let user_char_list_string = user_vocab_res.get_str("unique_char_list").unwrap();
-                let user_uid_list_string = user_vocab_res.get_str("unique_uid_list").unwrap();
+                let mut user_char_list_string = String::new();
+                let mut user_uid_list_string = String::new();
+                match UserVocabList::try_lookup_one(&db, 
+                    doc! { "username": &username, "cn_type": cn_type.as_str() }) {
+                        Some(res) => {
+                            user_char_list_string += res.get_str("unique_char_list").unwrap();
+                            user_uid_list_string += res.get_str("unique_uid_list").unwrap();
+                        },
+                        None => { }
+                };
                 context.insert("paragraph_html", String::from(doc_html));
                 context.insert("user_char_list_string", String::from(user_char_list_string));
                 context.insert("user_uid_list_string", String::from(user_uid_list_string));

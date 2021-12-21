@@ -1,5 +1,5 @@
 /// Performs POST request to /api/login (defined in users.rs)
-let attemptLogin = () => {
+let attemptLogin = (formId) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/login", true);
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -16,26 +16,14 @@ let attemptLogin = () => {
     xhr.onerror = () => {
         alert("Error when trying to login. Try again and/or open a Github issue");
     }
-    let formData = new FormData(document.getElementById("login-form"));
+    let formData = new FormData(document.getElementById(formId));
     let params = new URLSearchParams(formData);
     console.log(params.toString())
     xhr.send(params.toString());
 }
 
-/// Notify user if they try to use a character that is not allowed.
-let getForbiddenChars = (pw) => {
-    const invalid_chars = new Set(['<', '>', '!', '(', ')', '{', '}', '"' , '\'', ';', ':', '\\', '*']);
-    let res = "";
-    for (i in pw) {
-        if (invalid_chars.has(pw[i])) {
-            res += pw[i];
-        }
-    }
-    return res;
-}
-
 /// Performs POST request to /api/register (defined in users.rs)
-let attemptRegister = () => {
+let attemptRegister = (formId) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/register");
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -52,25 +40,18 @@ let attemptRegister = () => {
     xhr.onerror = () => {
         alert("Error when trying to register. Try again and/or open a Github issue");
     }
-    let formData = new FormData(document.getElementById("register-form"));
-    let invalid_chars = getForbiddenChars(formData.get("password"));
-    if (invalid_chars) {
-        alert(`Registration failed, password contained the following forbidden characters: ${invalid_chars}`);
-    }
+    let formData = new FormData(document.getElementById(formId));
     let params = new URLSearchParams(formData);
     console.log(params.toString())
     xhr.send(params.toString());
 }
 
 /// Toggle password visibility in form
-let showPassword = () => {
-    let login_pw = document.getElementById("pw-login")
-    let reg_pw = document.getElementById("pw-reg")
-    if (login_pw.type == "password") {
-        login_pw.type = "text"
-        reg_pw.type = "text"
+let showPassword = (fieldId) => {
+    let pw_field = document.getElementById(fieldId)
+    if (pw_field.type === "password") {
+        pw_field.type = "text"
     } else {
-        login_pw.type = "password"
-        reg_pw.type = "password"
+        pw_field.type = "password"
     }
 }

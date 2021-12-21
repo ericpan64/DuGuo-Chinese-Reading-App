@@ -1,5 +1,5 @@
 {% extends "template" %}
-{% block title %}{% if username is undefined %}Home{% else %}About{% endif %}{% endblock title %}
+{% block title %} Home {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
 {% block content %}
     <header class="page-header page-header-light bg-white">
@@ -9,10 +9,10 @@
                     <div class="col-lg-6" data-aos="fade-up">
                         <h1 class="page-header-title">Learn how to read Chinese the right way</h1>
                         <p class="page-header-text mb-5">DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!</p>
-                        <a href="/sandbox" class="btn btn-lg btn-primary font-weight-500 mr-3">Try the Sandbox</a>
                         {% if username is defined %}
-                        <h3 class="font-weight-500 mr-3">Logged in as: {{username}}</h3>
+                        <a href="/u/{{username}}" class="btn btn-lg btn-primary font-weight-500 mr-3">Go to your profile</a>
                         {% else %}
+                        <a href="/sandbox" class="btn btn-lg btn-primary font-weight-500 mr-3">Try the Sandbox</a>
                         <a href="/login" class="btn btn-lg btn-primary-soft font-weight-500 mr-3">Create an Account</a>
                         {% endif %}
                     </div>
@@ -30,7 +30,7 @@
                 <div class="col-lg-4 mb-5 mb-lg-0">
                     <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/book-open.svg"/></div>
                     <h3>Read what you want</h3>
-                    <p class="mb-0">Upload any Chinese text into a context-rich learning environment. Get difficulty estimates based on the HSK framework.</p>
+                    <p class="mb-0">Upload any Chinese text into a context-rich learning environment.</p>
                 </div>
                 <div class="col-lg-4 mb-5 mb-lg-0">
                     <div class="icon-stack icon-stack-xl bg-gradient-primary-to-secondary text-white mb-4"><img src="/static/img/layers.svg"/></div>
@@ -64,7 +64,7 @@
                     </div>
                     <div class="list-group small mb-2">
                         {% if username is defined %}
-                        <a href="/u/{{username}}">Go to your profile!</a>
+                        <a href="/u/{{username}}" class="btn btn-lg btn-primary font-weight-500 mb-2">Go to your profile!</a>
                         {% else %}
                         <a href="/sandbox" class="btn btn-lg btn-primary font-weight-500 mb-2">Try it now!</a>
                         <a href="/login" class="btn btn-lg btn-primary-soft text-primary font-weight-500">Create an Account</a>

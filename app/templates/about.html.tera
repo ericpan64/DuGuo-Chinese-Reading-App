@@ -1,0 +1,21 @@
+{% extends "template" %}
+{% block title %} About {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block user_navbar %} {{ super() }} {% endblock user_navbar %}
+{% block content %}
+    <header class="page-header page-header-light bg-white">
+        <div class="page-header-content">
+            <div class="container">
+                <h1>About</h1>
+                <p>
+                    DuGuo started from Georgia Tech's OMSCS EdTech class (Chinese Reading Machine)
+                </p>
+                <h2>Mission</h2>
+                <p>
+                    Provide accessible and tailored Chinese education to improve Chinese literacy and cross-cultural connection
+                </p>
+
+            </div>
+        </div>
+    </header>
+{% endblock content %}

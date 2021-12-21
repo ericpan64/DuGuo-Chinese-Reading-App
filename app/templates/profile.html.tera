@@ -22,55 +22,68 @@
             <header class="page-header page-header-light bg-white">
                 <div class="page-header-content">
                     <div class="container">
-                        <h1>{{username}}</h1>
+                        <h1>欢迎  {{username}}!</h1>
                             <hr/>
-                            <h5>User Settings</h5>
-                            <ul class="nav nav-pills">
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                                        {% if cn_phonetics == "Zhuyin" %}
-                                        Use Zhuyin
-                                        {% else %}
-                                        Use Pinyin
-                                        {% endif %}
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#$pinyin">Use Pinyin</a></li>
-                                        <li><a class="dropdown-item" href="#$zhuyin">Use Zhuyin (Bopomofo)</a></li>
-                                    </ul>
+                            <h4>Settings</h4>
+                            <span>
+                                <button class="btn btn-primary dropdown-toggle mr-2" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if cn_phonetics == "Zhuyin" %}
+                                    Render Zhuyin
+                                    {% else %}
+                                    Render Pinyin
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <li><a class="dropdown-item" href="#$pinyin">Render Pinyin</a></li>
+                                    <li><a class="dropdown-item" href="#$zhuyin">Render Zhuyin (Bopomofo)</a></li>
+                                </ul>
+                            </span>
+                            <span>
+                                <button class="btn btn-primary dropdown-toggle ml-2" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if cn_type == "Traditional" %}
+                                    Render Traditional
+                                    {% else %}
+                                    Render Simplified
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <li><a class="dropdown-item" href="#$simp">Render Simplified</a></li>
+                                    <li><a class="dropdown-item" href="#$trad">Render Traditional</a></li>
+                                </ul>
+                            </span>
+                            <h4 class="mt-4">Upload</h4>
+                            <ul class="nav nav-pills" id="upload-tabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="upload-text-tab" data-bs-toggle="pill" data-bs-target="#pills-text" role="tab" aria-controls="pills-text" aria-selected="true">Upload Text</a>
                                 </li>
-                                <li class="nav-item dropdown">
-                                    <a class="ml-2 nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                                        {% if cn_type == "Traditional" %}
-                                        Use Traditional
-                                        {% else %}
-                                        Use Simplified
-                                        {% endif %}
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#$simp">Use Simplified</a></li>
-                                        <li><a class="dropdown-item" href="#$trad">Use Traditional</a></li>
-                                    </ul>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="upload-url-tab" data-bs-toggle="pill" data-bs-target="#pills-url" role="tab" aria-controls="pills-url" aria-selected="false">Upload Url</a>
                                 </li>
                             </ul>
-            
-                            <h4 class="mt-4">Upload Document</h4>
+                            <div class="tab-content" id="pills-tabContent-userContent">
+                                <div class="tab-pane fade show active pt-3" id="pills-text" role="tabpanel" aria-labelledby="pills-text">
+                                    <form class="form" action="/api/upload-user-doc" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
+                                        <input class="mt-2" type="text" name="title" placeholder="Title (required)" required=true/><br/>
+                                        <input class="mt-2" type="text" name="source" placeholder="Source"/>
+                                        <input name="url" hidden/>
+                                        <textarea class="mt-2 form-control" name="body" form="user-doc-form" rows="2" cols="15" required=true></textarea>
+                                        <button id="doc-upload-button" class="mt-2 btn btn-outline-primary" type="submit">Upload</button>
+                                    </form>
+                                </div>
+                                <div class="tab-pane fade pt-3" id="pills-url" role="tabpanel" aria-labelledby="pills-text">
+                                    <form class="form" action="/api/upload-user-doc" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                                        <input name="title" hidden/>
+                                        <input name="source" hidden/>
+                                        <input name="body" hidden/>
+                                        <input class="mt-2" type="text" name="url" placeholder="a-valid-url.com" required=true/>
+                                        <br>
+                                        <button id="url-upload-button" class="mt-2 btn btn-outline-primary" type="submit">Upload</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <h4 class="mt-4">Saved Data</h4>
                             <hr/>
-                            <h5>Parse from URL</h5>
-                            <form class="form" action="/api/upload" id="user-url-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
-                                <input type="text" name="url" placeholder="Document URL" required=true/>
-                                <button id="url-upload-button" class="ml-2 btn btn-outline-primary" type="submit">Upload URL</button>
-                            </form>
-                            <h5>Copy & Paste</h5>
-                            <form class="form" action="/api/upload" id="user-doc-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
-                                <input class="mt-2" type="text" name="title" placeholder="Document Title" required=true/><br/>
-                                <input class="mt-2" type="text" name="source" placeholder="Document Source (optional)"/>
-                                <textarea class="mt-2 form-control" name="body" form="user-doc-form" rows="2" cols="15" required=true></textarea>
-                                <button id="doc-upload-button" class="mt-2 btn btn-outline-primary" type="submit">Upload Text</button>
-                            </form>
-                            <h4 class="mt-4">View Documents + Vocab</h4>
-                            <hr/>
-                            <ul class="nav nav-pills nav-fill" id="pills-tabs" role="tablist">
+                            <ul class="nav nav-pills" id="pills-tabs" role="tablist">
                                 <li class="nav-item">
                                     <a class="nav-link active" id="pills-docs-tab" data-bs-toggle="pill" data-bs-target="#pills-docs" role="tab" aria-controls="pills-docs" aria-selected="true">View Documents</a>
                                 </li>

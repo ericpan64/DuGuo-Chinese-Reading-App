@@ -173,7 +173,7 @@ impl DatabaseItem for UserDoc {
         return vec!["username", "title", "body", "tokenized_body_json",
             "source", "cn_type", "cn_phonetics", "created_on"]
     }
-    fn primary_key(&self) -> &str { return &self.doc_id; }
+    fn primary_key(&self) -> &str { return &self.title; }
 }
 
 impl UserDoc {

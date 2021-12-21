@@ -39,12 +39,13 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             ])
         .mount("/", routes![
             routes::index,
+            routes::about,
             routes::login,
             routes::sandbox,
-            routes::sandbox_view_doc,
+            routes::sandbox_doc,
             routes::feedback,
             routes::user_profile,
-            routes::user_view_doc,
+            routes::user_doc,
         ])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
         .launch();

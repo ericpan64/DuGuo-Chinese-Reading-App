@@ -36,14 +36,15 @@
                     <button id="upload-button" class="btn btn-outline-primary" type="submit">Upload Text</button>
                 </form>
                 <br/>
-                <p>Or try uploading a URL to a Chinese article (news, leisure, etc.). If you're feeling lucky, <a href="https://zh.wikipedia.org/wiki/Special:%E9%9A%8F%E6%9C%BA%E9%A1%B5%E9%9D%A2" target="_blank">here's</a> a link to a random Chinese Wikipedia article.</p>
-                <form class="form" action="/api/upload-sandbox-doc" id="sandbox-url-form" onsubmit="switchToLoadingButton('upload-button')" method="POST">
-                    <input type="text" name="url" placeholder="Article URL" required=true />
+                <p>Or try uploading a URL to a Chinese article (news, leisure, etc.).
+                <form class="form" action="/api/upload-sandbox-doc" id="sandbox-url-form" onsubmit="switchToLoadingButton(urlButtonId)" method="POST">
+                    <input id="urlField" type="text" name="url" placeholder="Article URL" required=true />
                     <input type="hidden" name="body" value=""/>
                     <input type="hidden" name="cn_type" value="simp">
                     <input type="hidden" name="cn_phonetics" value="pinyin">
                     <br/><br/>
-                    <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload using URL</button>
+                    <button id="url-upload-button" class="btn btn-outline-primary" type="submit">Upload URL</button>
+                    <button id="lucky-button" class="btn btn-outline-primary" onclick="processLuckyButton('lucky-button')" type="submit">I'm feeling lucky!</button>
                 </form>
             </div>
         </div>

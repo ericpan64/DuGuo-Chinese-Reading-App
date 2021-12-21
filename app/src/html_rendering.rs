@@ -30,64 +30,50 @@ use std::{
 /* Public Functions */
 /// Organizes data from CnEnDictEntry, then renders the appropriate HTML.
 pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
-    let (include_download_link, include_sound_link) = (true, true);
-    let (phrase, char_list): (&str, Vec<char>) = match cn_type {
-        CnType::Traditional => (&entry.trad, entry.trad.chars().collect()),
-        CnType::Simplified => (&entry.simp, entry.simp.chars().collect())
+    const SOUND_ICON: &str = "/static/img/volume-up-fill.svg";
+    const DOWNLOAD_ICON: &str = "/static/img/download.svg";
+    let (phrase, char_list, phonetic_str, phonetic_list): (&str, Vec<char>) = match cn_type {
+        CnType::Traditional => (&entry.trad, entry.trad.chars().collect(), &entry.raw_pinyin, entry.formatted_pinyin.split(' ').collect()),
+        CnType::Simplified => (&entry.simp, entry.simp.chars().collect(), &entry.zhuyin, entry.zhuyin.split(' ').collect())
     };
-    // Rendering Helper Fn (keep as closure to retain context)
-    let perform_phrase_render = |phrase: &str, phonetic_str: &str, char_list: Vec<char>, phonetic_list: Vec<&str>| -> String {
-        const SOUND_ICON: &str = "/static/icons/volume-up-fill.svg";
-        const DOWNLOAD_ICON: &str = "/static/icons/download.svg";
-        let mut res = String::with_capacity(2500);
-        // Start <span> (popup config)
-        res += format!("<span class=\"{}\" tabindex=\"0\"", entry.uid).as_str();
-        res += format!(" data-bs-toggle=\"popover\" data-bs-content=\"{}\"", format_defn_html(entry)).as_str();
-        res += format!(" title=\"{} [{}]", phrase, phonetic_str).as_str();
-        if include_sound_link {
-            res += format!(" <a role=&quot;button&quot; href=&quot;#~{}&quot;>", phrase).as_str();
-            res += format!("<img src=&quot;{}&quot;></img>", SOUND_ICON).as_str();
-            res += "</a>";
-        }
-        if include_download_link {
-            res += format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;>", entry.uid).as_str();
-            res += format!("<img src=&quot;{}&quot;></img>", DOWNLOAD_ICON).as_str();
-            res += "</a>";
-        }
-        res += "\"";
-        res += " data-bs-html=\"true\">";
-        // Start <table> entry (phrase with phonetics)
-        // add phonetic row
-        res += "<table>";
-        res += "<tr>";
-        for i in 0..char_list.len() {
-            res += format!("<td class=\"phonetic\" name=\"{}\">", char_list[i]).as_str();
-            res += phonetic_list[i];
-            res += "</td>";
-        }
-        res += "</tr>";
-        // add phrase row
-        res += "<tr>";
-        for i in 0..char_list.len() {
-            res += "<td class=\"char\">";
-            res += &char_list[i].to_string();
-            res += "</td>";
-        }
-        res += "</tr>";
-        res += "</table>";
-        res += "</span>";
-        return res;
-    };
-    let res = match cn_phonetics {
-        CnPhonetics::Pinyin => {
-            let pinyin_list: Vec<&str> = entry.formatted_pinyin.split(' ').collect();
-            perform_phrase_render(phrase, &entry.raw_pinyin, char_list, pinyin_list)
-        },
-        CnPhonetics::Zhuyin => {
-            let zhuyin_list: Vec<&str> = entry.zhuyin.split(' ').collect();
-            perform_phrase_render(phrase, &entry.zhuyin, char_list, zhuyin_list)
-        }
-    };
+    let mut res = String::with_capacity(2500);
+    // Start <span> (popup config)
+    res += format!("<span class=\"{}\" tabindex=\"0\"", entry.uid).as_str();
+    res += format!(" data-bs-toggle=\"popover\" data-bs-content=\"{}\"", format_defn_html(entry)).as_str();
+    res += format!(" title=\"{} [{}]", phrase, phonetic_str).as_str();
+    if include_sound_link {
+        res += format!(" <a role=&quot;button&quot; href=&quot;#~{}&quot;>", phrase).as_str();
+        res += format!("<img src=&quot;{}&quot;></img>", SOUND_ICON).as_str();
+        res += "</a>";
+    }
+    if include_download_link {
+        res += format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;>", entry.uid).as_str();
+        res += format!("<img src=&quot;{}&quot;></img>", DOWNLOAD_ICON).as_str();
+        res += "</a>";
+    }
+    res += "\"";
+    res += " data-bs-html=\"true\">";
+    // Start <table> entry (phrase with phonetics)
+    // add phonetic row
+    res += "<table>";
+    res += "<tr>";
+    for i in 0..char_list.len() {
+        res += format!("<td class=\"phonetic\" name=\"{}\">", char_list[i]).as_str();
+        res += phonetic_list[i];
+        res += "</td>";
+    }
+    res += "</tr>";
+    // add phrase row
+    res += "<tr>";
+    for i in 0..char_list.len() {
+        res += "<td class=\"char\">";
+        res += &char_list[i].to_string();
+        res += "</td>";
+    }
+    res += "</tr>";
+    res += "</table>";
+    res += "</span>";
+
     return res;
 }
 
@@ -101,6 +87,8 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
     let n_phrases = tokenized_string.matches(PHRASE_DELIM).count();
     // Estimate pre-allocated size: max ~2100 chars per phrase (conservitively 2500), 1 usize per char
     let mut res = String::with_capacity(n_phrases * 2500);
+    // TODO: track set of unique entries, then iterate at end to generate modals
+    // TODO: refactor to Add ruby tags accordingly
     for token in tokenized_string.split(PHRASE_DELIM) {
         let token_vec: Vec<&str> = token.split(PINYIN_DELIM).collect();
         let phrase = token_vec[0]; // If Chinese, then Simplified
@@ -121,6 +109,7 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
         } else {
             // For each phrase, lookup as CnEnDictEntry
             let entry = CnEnDictEntry::from_uid(&mut conn, uid).await;
+            // TODO: add entry to set
             if !entry.lookup_succeeded() {
                 res += generate_html_for_not_found_phrase(phrase).as_str();
             } else {
@@ -128,13 +117,14 @@ pub async fn convert_string_to_tokenized_html(s: &str, cn_type: &CnType, cn_phon
             }
         }
     }
+    // Add modals
     return res;
 }
 
 /// Renders the UserDoc table for profile.html.tera.
 pub fn render_document_table(db: &Database, username: &str) -> String {
     // get all documents for user
-    const TRASH_ICON: &str = "/static/icons/trash.svg";
+    const TRASH_ICON: &str = "/static/img/trash.svg";
     let coll = (*db).collection(USER_DOC_COLL_NAME);
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
@@ -151,7 +141,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
                 let UserDoc { title, created_on, source, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap(); 
-                let delete_button = format!("<a href=\"/api/delete-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
+                let delete_button = format!("<a href=\"/api/delete-user-doc/{}\"><img src={}></img></a>", &title, TRASH_ICON);
                 let title = format!("<a href=\"/u/{}/{}\">{}</a>", &username, &title, &title);
                 // only format as link if it's a URL
                 let source = match url_re.is_match(&source) {
@@ -175,7 +165,7 @@ pub fn render_document_table(db: &Database, username: &str) -> String {
 
 /// Renders the UserVocab table for profile.html.tera.
 pub fn render_vocab_table(db: &Database, username: &str) -> String {
-    const TRASH_ICON: &str = "/static/icons/trash.svg";
+    const TRASH_ICON: &str = "/static/img/trash.svg";
     let coll = (*db).collection(USER_VOCAB_COLL_NAME);
     let (cn_type, cn_phonetics) = User::get_user_settings(db, username);
     let mut res = String::new();
@@ -192,7 +182,7 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
                 let user_doc = item.unwrap();
                 let UserVocab { uid, from_doc_title, phrase_html, created_on, radical_map, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
                 let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
-                let delete_button = format!("<a href=\"/api/delete-vocab/{}\"><img src={}></img></a>", uid, TRASH_ICON);
+                let delete_button = format!("<a href=\"/api/delete-user-vocab/{}\"><img src={}></img></a>", uid, TRASH_ICON);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);
                 res += &row;
             }
@@ -253,15 +243,17 @@ fn is_english_phrase(s: &str) -> bool {
     return s.len() == s.chars().count();
 }
 
-/// A weak check to distinguish phrases with Chinese puntuation.
-/// Chinese punctuation is a Chinese char (3 bytes) that should be skipped in processing.
+/// Identifies phrases with Chinese puntuation.
+/// Chinese punctuation is a Chinese char that shouldn't be processed as a phrase.
 fn has_chinese_punctuation(s: &str) -> bool {
-    const PUNCT: [char; 15] = ['（', '）', '“', '”', '、', '，', '。', '《', '》', '：', '！', '？','￥', '—', '；'];
     let mut res = false;
     for c in s.chars() {
-        if PUNCT.contains(&c) {
-            res = true;
-            break;
+        match *(&c) {
+            '\u{3000}'..='\u{303D}' => {
+                res = true;
+                break;
+            },
+            _ => {}
         }
     }
     return res;
@@ -281,4 +273,13 @@ fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     res += "</table>";
     res += "</span>";
     return res;
+}
+
+/// Generates inline <rp>, <rt> tags for char
+fn generate_char_ruby(c: String, p: Option<&String>) -> Html {
+    let phonetic = match p {
+        Some(s) => String::from(s),
+        None => String::new()
+    };
+    html! { <>{c}<rp>{"("}</rp><rt class="mr-1">{phonetic}</rt><rp>{")"}</rp></> }
 }
