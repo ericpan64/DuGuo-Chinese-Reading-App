@@ -16,7 +16,7 @@
                         <a href="/login" class="btn btn-lg btn-primary-soft font-weight-500 mr-3">Create an Account</a>
                         {% endif %}
                     </div>
-                    <div class="col-lg-6 d-none d-lg-block" data-aos="fade-up" data-aos-delay="100"><img class="img-fluid" src="static/img/Insertion-sort-example.gif" /></div>
+                    <div class="col-lg-6 d-none d-lg-block" data-aos="fade-up" data-aos-delay="100"><img class="img-fluid" src="static/img/demo.gif" /></div>
                 </div>
             </div>
         </div>

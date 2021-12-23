@@ -7,8 +7,8 @@
         <div class="page-header-content">
             <div class="container">
                 <h1>Feedback</h1>
-                <p>Let us know your thoughts below! Leave your contact info if you would like a response and/or are open to further discuss your thoughts.</p>
-                <p>To report more systemic bugs, please open a <a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">GitHub issue.</a></p>
+                <p>Share your thoughts below! Leave your contact info if you would like a response and/or are open to further discuss your thoughts.</p>
+                <p>To report more systemic bugs or specific feature requests, please open a GitHub issue <a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues">here</a>.</p>
                 <textarea name="feedback" form="upload" rows="10" cols="100" required=true>Add your feedback here!</textarea>
                 <form id="upload" method="POST" action="/api/feedback" onsubmit="alert('Thank you! 🙌')">
                     <div class="form-group">

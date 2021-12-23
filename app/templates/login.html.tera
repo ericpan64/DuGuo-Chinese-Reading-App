@@ -6,53 +6,52 @@
         <header class="page-header page-header-light bg-white">
             <div class="container">
                 <h1>Account</h1>
-                <div class="container">
-
-                    <ul class="nav nav-pills" role="tablist">
-                        <li class="nav-item">
-                          <a class="nav-link active" aria-controls="login-tab" data-bs-toggle="pill" role="tab" aria-selected="true" data-bs-target="#login-tab">Login</a>
-                        </li>
-                        <li class="nav-item">
-                          <a class="nav-link" aria-controls="register-tab" data-bs-toggle="pill" role="tab" aria-selected="false" data-bs-target="#register-tab">Register</a>
-                        </li>
-                    </ul>
-                    <div class="tab-content" id="pills-tabContent-userContent">
-                        <div class="tab-pane fade show active pt-3" id="login-tab" role="tabpanel" aria-labelledby="login-tab">
-                            <form class="pt-3" id="login-form" onsubmit="attemptLogin('login-form'); return false;">
-                                <div class="form-group">
-                                    <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
-                                </div>
-                                <div class="form-group">
-                                    <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" minlength="8" required=true/>
-                                </div>
-                                <input class="form-control" type="email" name="email" value="" hidden/>
-                                <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="showPwCheck"/>
-                                    <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-login')">Show Password</label>
-                                </div>
-                                <button class="btn btn-outline-primary mr-1" >Submit</button>
-                            </form>
-                        </div>
-                        <div class="tab-pane fade pt-3" id="register-tab" role="tabpanel" aria-labelledby="register-tab">
-                            <form class="pt-3" id="register-form" onsubmit="attemptRegister('register-form'); return false;">
-                                <div class="form-group">
-                                    <input class="form-control" type="text" name="username" placeholder="Username" required/>
-                                </div>
-                                <div class="form-group">
-                                    <input id="pw-register" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required/>
-                                </div>
-                                <div class="form-group">
-                                    <input class="form-control" type="email" name="email" placeholder="Email" required/>
-                                </div>
-                                <div class="form-check mb-2">
-                                    <input type="checkbox" class="form-check-input" id="showPwCheck"/>
-                                    <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-register')">Show Password</label>
-                                </div>
-                                <button class="btn btn-outline-primary mr-1" >Submit</button>
-                            </form>
-                        </div>
+                <p>Note that passwords are securely stored (<a href="https://en.wikipedia.org/wiki/Cryptographic_hash_function">hashed</a> with a <a href="https://en.wikipedia.org/wiki/Salt_(cryptography)">salt</a>), so I don't even know what you put!</p>
+                <ul class="nav nav-pills" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-controls="login-tab" data-bs-toggle="pill" role="tab" aria-selected="true" data-bs-target="#login-tab">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-controls="register-tab" data-bs-toggle="pill" role="tab" aria-selected="false" data-bs-target="#register-tab">Register</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent-userContent">
+                    <div class="tab-pane fade show active pt-3" id="login-tab" role="tabpanel" aria-labelledby="login-tab">
+                        <form class="pt-3" id="login-form" onsubmit="attemptLogin('login-form'); return false;">
+                            <div class="form-group">
+                                <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
+                            </div>
+                            <div class="form-group">
+                                <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" minlength="8" required=true/>
+                            </div>
+                            <input class="form-control" type="email" name="email" value="" hidden/>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                                <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-login')">Show Password</label>
+                            </div>
+                            <button class="btn btn-outline-primary mr-1" >Submit</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade pt-3" id="register-tab" role="tabpanel" aria-labelledby="register-tab">
+                        <form class="pt-3" id="register-form" onsubmit="attemptRegister('register-form'); return false;">
+                            <div class="form-group">
+                                <input class="form-control" type="text" name="username" placeholder="Username" required/>
+                            </div>
+                            <div class="form-group">
+                                <input id="pw-register" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required/>
+                            </div>
+                            <div class="form-group">
+                                <input class="form-control" type="email" name="email" placeholder="Email" required/>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                                <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-register')">Show Password</label>
+                            </div>
+                            <button class="btn btn-outline-primary mr-1" >Submit</button>
+                        </form>
                     </div>
                 </div>
+
             </div>
         </header>
     </div>
