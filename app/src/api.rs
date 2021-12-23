@@ -224,7 +224,7 @@ pub struct UserVocabForm<'f> {
     phrase_uid: &'f RawStr,
     from_doc_title: &'f RawStr,
 }
-/// /api/vocab
+/// /api/upload-vocab
 #[post("/upload-vocab", data="<user_vocab>")]
 pub fn upload_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
     let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();

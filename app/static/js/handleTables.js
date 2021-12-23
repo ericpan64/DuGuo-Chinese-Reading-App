@@ -26,17 +26,18 @@ let perform_download = (csv, anchor_id, filename) => {
 /// Formats GET request to /api/docs-to-csv and downloads as .csv
 let download_doc_table_as_csv = (anchor_id) => {
     let xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/docs-to-csv");
+    xhr.open("GET", "/api/get-all-user-items");
     xhr.onreadystatechange = () => {
         if (xhr.readyState == 4 && xhr.status == 200) {
             let csv_header = 'title,body,source,created_on\n';
             let csv_body = '';
             let json = JSON.parse(xhr.response);
-            for (i = 0; i < json.title.length; i++) {
-                let title = escape_formatting(json.title[i]);
-                let body = escape_formatting(json.body[i]);
-                let source = escape_formatting(json.source[i]);
-                let created_on = escape_formatting(json.created_on[i]);
+            let json_list = json.doc_list;
+            for (i = 0; i < json_list.length; i++) {
+                let title = escape_formatting(json_list[i].title);
+                let body = escape_formatting(json_list[i].body);
+                let source = escape_formatting(json_list[i].source);
+                let created_on = escape_formatting(json_list[i].created_on);
                 csv_body += `${title},${body},${source},${created_on}\n`;
             }
             let csv = csv_header + csv_body;
@@ -49,20 +50,22 @@ let download_doc_table_as_csv = (anchor_id) => {
 /// Formats GET request to /api/vocab-to-csv and downloads as .csv
 let download_vocab_table_as_csv = (anchor_id) => {
     let xhr = new XMLHttpRequest();
-    xhr.open("GET", "/api/vocab-to-csv");
+    xhr.open("GET", "/api/get-all-user-items");
     xhr.onreadystatechange = () => {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            let csv_header = 'phrase,phonetics,definition,radical_map,from_doc_title,saved_on\n';
+            let csv_header = 'phrase,phonetics,definition,radical_map,from_doc_title,saved_on,phrase_html\n';
             let csv_body = '';
             let json = JSON.parse(xhr.response);
-            for (i = 0; i < json.phrase.length; i++) {
-                let phrase = escape_formatting(json.phrase[i]);
-                let phonetics = escape_formatting(json.phrase_phonetics[i]);
-                let def = escape_formatting(json.def[i]);
-                let radical_map = escape_formatting(json.radical_map[i]);
-                let from_doc = escape_formatting(json.from_doc_title[i]);
-                let created_on = escape_formatting(json.created_on[i]);
-                csv_body += `${phrase},${phonetics},${def},${radical_map},${from_doc},${created_on}\n`;
+            let json_list = json.vocab_list;
+            for (i = 0; i < json_list.length; i++) {
+                let phrase = escape_formatting(json_list[i].phrase);
+                let phonetics = escape_formatting(json_list[i].phrase_phonetics);
+                let def = escape_formatting(json_list[i].def);
+                let radical_map = escape_formatting(json_list[i].radical_map);
+                let from_doc = escape_formatting(json_list[i].from_doc_title);
+                let created_on = escape_formatting(json_list[i].created_on);
+                let phrase_html = escape_formatting(json_list[i].phrase_html);
+                csv_body += `${phrase},${phonetics},${def},${radical_map},${from_doc},${created_on},${phrase_html}\n`;
             }
             let csv = csv_header + csv_body;
             perform_download(csv, anchor_id, 'duguo-vocab.csv');

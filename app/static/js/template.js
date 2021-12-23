@@ -82,12 +82,12 @@ let postUserSetting = (hash_string) => {
 }
 
 /**
- * Sends POST request to /api/vocab (defined in users.rs).
+ * Sends POST request to /api/upload-vocab (defined in users.rs).
  * @param {String} hash_string Phrase uid (currently: simplified+raw_pinyin)
  */
 let postNewVocab = (hash_string) => {
     let xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/vocab");
+    xhr.open("POST", "/api/upload-vocab");
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     let params = `phrase_uid=${hash_string}&from_doc_title=${document.title}`;
     xhr.onload = () => {
@@ -97,7 +97,7 @@ let postNewVocab = (hash_string) => {
             finally { switchOffWordVisibility(hash_string); }
             
         } else {
-            alert(`Error when adding ${hash_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should provide some feedback :-)`);
+            alert(`Error when adding ${hash_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should open a GitHub issue!`);
         }
     }
     xhr.onerror = () => {
