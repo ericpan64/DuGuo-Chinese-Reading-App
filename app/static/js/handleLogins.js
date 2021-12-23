@@ -10,11 +10,11 @@ let attemptLogin = (formId) => {
         } else if (xhr.status == 401) {
             alert("Login attempt failed, try again.");
         } else {
-            alert("Error when trying to login. Try again and/or open a Github issue");
+            alert("Error when trying to login. Try again and/or open a GitHub issue");
         }
     }
     xhr.onerror = () => {
-        alert("Error when trying to login. Try again and/or open a Github issue");
+        alert("Error when trying to login. Try again and/or open a GitHub issue");
     }
     let formData = new FormData(document.getElementById(formId));
     let params = new URLSearchParams(formData);
@@ -34,11 +34,11 @@ let attemptRegister = (formId) => {
         } else if (xhr.status == 422) {
             alert('Registration failed, username and/or email are taken. Try again.');
         } else {
-            alert('Error when trying to register. Try again and/or open a Github issue');
+            alert('Error when trying to register. Try again and/or open a GitHub issue');
         }
     }
     xhr.onerror = () => {
-        alert("Error when trying to register. Try again and/or open a Github issue");
+        alert("Error when trying to register. Try again and/or open a GitHub issue");
     }
     let formData = new FormData(document.getElementById(formId));
     let params = new URLSearchParams(formData);

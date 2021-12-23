@@ -76,7 +76,7 @@ let postUserSetting = (hash_string) => {
         window.location.reload();
     }      
     xhr.onerror = () => {
-        alert(`Error when updating setting. Try again and/or open a Github issue`);
+        alert(`Error when updating setting. Try again and/or open a GitHub issue`);
     }
     xhr.send(params);
 }
@@ -101,7 +101,7 @@ let postNewVocab = (hash_string) => {
         }
     }
     xhr.onerror = () => {
-        alert(`Error when adding ${hash_string} to dictionary. Try again and/or open a Github issue`);
+        alert(`Error when adding ${hash_string} to dictionary. Try again and/or open a GitHub issue`);
     }
     xhr.send(params);
 }
