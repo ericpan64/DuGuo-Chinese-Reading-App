@@ -32,7 +32,7 @@ use std::{
 pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
     const SOUND_ICON: &str = "/static/img/volume-up-fill.svg";
     const DOWNLOAD_ICON: &str = "/static/img/download.svg";
-    let (phrase, char_list, phonetic_str, phonetic_list): (&str, Vec<char>) = match cn_type {
+    let (phrase, char_list, phonetic_str, phonetic_list): (&str, Vec<char>, &str, Vec<&str>) = match cn_type {
         CnType::Traditional => (&entry.trad, entry.trad.chars().collect(), &entry.raw_pinyin, entry.formatted_pinyin.split(' ').collect()),
         CnType::Simplified => (&entry.simp, entry.simp.chars().collect(), &entry.zhuyin, entry.zhuyin.split(' ').collect())
     };
@@ -41,16 +41,15 @@ pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics:
     res += format!("<span class=\"{}\" tabindex=\"0\"", entry.uid).as_str();
     res += format!(" data-bs-toggle=\"popover\" data-bs-content=\"{}\"", format_defn_html(entry)).as_str();
     res += format!(" title=\"{} [{}]", phrase, phonetic_str).as_str();
-    if include_sound_link {
-        res += format!(" <a role=&quot;button&quot; href=&quot;#~{}&quot;>", phrase).as_str();
-        res += format!("<img src=&quot;{}&quot;></img>", SOUND_ICON).as_str();
-        res += "</a>";
-    }
-    if include_download_link {
-        res += format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;>", entry.uid).as_str();
-        res += format!("<img src=&quot;{}&quot;></img>", DOWNLOAD_ICON).as_str();
-        res += "</a>";
-    }
+
+    res += format!(" <a role=&quot;button&quot; href=&quot;#~{}&quot;>", phrase).as_str();
+    res += format!("<img src=&quot;{}&quot;></img>", SOUND_ICON).as_str();
+    res += "</a>";
+
+    res += format!(" <a role=&quot;button&quot; href=&quot;#{}&quot;>", entry.uid).as_str();
+    res += format!("<img src=&quot;{}&quot;></img>", DOWNLOAD_ICON).as_str();
+    res += "</a>";
+
     res += "\"";
     res += " data-bs-html=\"true\">";
     // Start <table> entry (phrase with phonetics)
@@ -275,11 +274,11 @@ fn generate_html_for_not_found_phrase(phrase: &str) -> String {
     return res;
 }
 
-/// Generates inline <rp>, <rt> tags for char
-fn generate_char_ruby(c: String, p: Option<&String>) -> Html {
-    let phonetic = match p {
-        Some(s) => String::from(s),
-        None => String::new()
-    };
-    html! { <>{c}<rp>{"("}</rp><rt class="mr-1">{phonetic}</rt><rp>{")"}</rp></> }
-}
+// /// Generates inline <rp>, <rt> tags for char
+// fn generate_char_ruby(c: String, p: Option<&String>) -> Html {
+//     let phonetic = match p {
+//         Some(s) => String::from(s),
+//         None => String::new()
+//     };
+//     html! { <>{c}<rp>{"("}</rp><rt class="mr-1">{phonetic}</rt><rp>{")"}</rp></> }
+// }
