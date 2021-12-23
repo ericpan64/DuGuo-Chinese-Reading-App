@@ -18513,6 +18513,15 @@ body {
 }
 
 @font-face {
+    font-family: "MaShanZheng";
+    src: url("/static/fonts/ma_shan_zheng/MaShanZheng-Regular.ttf");
+    font-weight: 100;
+    font-style: normal;
+}
+.fancy-zhongwen {
+    font-family: "MaShanZheng";
+}
+@font-face {
   font-family: "Metropolis";
   src: url("/static/fonts/metropolis/Metropolis-Thin.otf");
   font-weight: 100;
