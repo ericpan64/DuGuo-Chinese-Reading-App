@@ -32,9 +32,13 @@ use std::{
 pub fn render_phrase_html(entry: &CnEnDictEntry, cn_type: &CnType, cn_phonetics: &CnPhonetics) -> String {
     const SOUND_ICON: &str = "/static/img/volume-up-fill.svg";
     const DOWNLOAD_ICON: &str = "/static/img/download.svg";
-    let (phrase, char_list, phonetic_str, phonetic_list): (&str, Vec<char>, &str, Vec<&str>) = match cn_type {
-        CnType::Traditional => (&entry.trad, entry.trad.chars().collect(), &entry.raw_pinyin, entry.formatted_pinyin.split(' ').collect()),
-        CnType::Simplified => (&entry.simp, entry.simp.chars().collect(), &entry.zhuyin, entry.zhuyin.split(' ').collect())
+    let (phrase, char_list): (&str, Vec<char>) = match cn_type {
+        CnType::Traditional => (&entry.trad, entry.trad.chars().collect()),
+        CnType::Simplified => (&entry.simp, entry.simp.chars().collect())
+    };
+    let (phonetic_str, phonetic_list): (&str, Vec<&str>) = match cn_phonetics {
+        CnPhonetics::Pinyin => (&entry.raw_pinyin, entry.formatted_pinyin.split(' ').collect()),
+        CnPhonetics::Zhuyin => (&entry.zhuyin, entry.zhuyin.split(' ').collect())
     };
     let mut res = String::with_capacity(2500);
     // Start <span> (popup config)
