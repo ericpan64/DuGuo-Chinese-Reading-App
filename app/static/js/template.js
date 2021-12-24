@@ -89,7 +89,14 @@ let postNewVocab = (hash_string) => {
     let xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/upload-vocab");
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    let params = `phrase_uid=${hash_string}&from_doc_title=${document.title}`;
+    let from_sandbox = window.location.href.includes('/sandbox/');
+    let params = `phrase_uid=${hash_string}&from_sandbox=${from_sandbox}`;
+    if (from_sandbox) {
+        let doc_uuid = window.location.href.split('/').pop();
+        params += `&from_doc_title=${doc_uuid}`;
+    } else {
+        params += `&from_doc_title=${document.title}`;
+    }
     xhr.onload = () => {
         if (xhr.status == 202) {
             alert(`Successfully added ${hash_string} to your dictionary!`);

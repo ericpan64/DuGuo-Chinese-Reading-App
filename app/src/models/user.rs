@@ -241,7 +241,8 @@ pub struct UserVocab {
     def: String, 
     phrase_phonetics: String, /// If pinyin: formatted pinyin
     pub created_on: String,
-    pub radical_map: String
+    pub radical_map: String,
+    pub from_sandbox: bool
 }
 
 impl DatabaseItem for UserVocab {
@@ -263,7 +264,7 @@ impl DatabaseItem for UserVocab {
 
 impl UserVocab {
     /// Looks-up UserVocab in Redis cache. If CEDICT match is found, then stores appropriate data.
-    pub async fn new(db: &Database, username: String, saved_uid: String, from_doc_title: String) -> Self {
+    pub async fn new(db: &Database, username: String, saved_uid: String, from_doc_title: String, from_sandbox: bool) -> Self {
         // For lookup, try user-specified first
         let mut conn = connect_to_redis().await.unwrap();
         let (cn_type, cn_phonetics) = User::get_user_settings(db, &username);
@@ -276,7 +277,8 @@ impl UserVocab {
         let new_vocab = UserVocab { 
             uid, username, from_doc_title, def,
             phrase, phrase_html, phrase_phonetics,
-            cn_type, cn_phonetics, created_on, radical_map
+            cn_type, cn_phonetics, created_on, radical_map,
+            from_sandbox
         };
         return new_vocab;
     }

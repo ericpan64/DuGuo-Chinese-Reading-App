@@ -223,17 +223,19 @@ pub fn upload_sandbox_doc(db: State<Database>, rt: State<Handle>, upload_doc: Fo
 pub struct UserVocabForm<'f> {
     phrase_uid: &'f RawStr,
     from_doc_title: &'f RawStr,
+    from_sandbox: bool,
 }
 /// /api/upload-vocab
 #[post("/upload-vocab", data="<user_vocab>")]
 pub fn upload_vocab(cookies: Cookies, db: State<Database>, rt: State<Handle>, user_vocab: Form<UserVocabForm<'_>>) -> Status {
-    let UserVocabForm { phrase_uid, from_doc_title } = user_vocab.into_inner();
+    let UserVocabForm { phrase_uid, from_doc_title, from_sandbox } = user_vocab.into_inner();
     let phrase = convert_rawstr_to_string(phrase_uid);
     let from_doc_title = convert_rawstr_to_string(from_doc_title);
+    
     let username_from_cookie = get_username_from_cookie(&db, cookies.get(JWT_NAME));
     let res_status = match username_from_cookie {
         Some(username) => { 
-            let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title));
+            let new_vocab = rt.block_on(UserVocab::new(&db, username, phrase, from_doc_title, from_sandbox));
             match new_vocab.try_insert(&db) {
                 Ok(_) => Status::Accepted,
                 Err(_) => Status::ExpectationFailed

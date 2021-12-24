@@ -71,17 +71,18 @@ pub fn sandbox(cookies: Cookies, db: State<Database>) -> Template {
 
 /// /sandbox/<doc_id>
 #[get("/sandbox/<doc_id>")]
-pub fn sandbox_doc(db: State<Database>, doc_id: &RawStr) -> Template {
-    let mut context: HashMap<&str, &str> = HashMap::new();
+pub fn sandbox_doc(cookies: Cookies, db: State<Database>, doc_id: &RawStr) -> Template {
+    let mut context: HashMap<&str, String> = HashMap::new();
+    add_user_cookie_to_context(&cookies, &db, &mut context);
     let doc_id = convert_rawstr_to_string(doc_id);
     let query_doc = SandboxDoc::try_lookup_one(&db, 
         doc!{ "doc_id": doc_id }
     ).unwrap();
     let body_html = query_doc.get_str("body_html").unwrap();
     let cn_phonetics = query_doc.get_str("cn_phonetics").unwrap();
-    context.insert("cn_phonetics", cn_phonetics);
+    context.insert("cn_phonetics", String::from(cn_phonetics));
     if body_html != "" {
-        context.insert("paragraph_html", body_html);
+        context.insert("paragraph_html", String::from(body_html));
     }
     return Template::render("reader", context);
 }

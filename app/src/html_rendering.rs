@@ -183,8 +183,11 @@ pub fn render_vocab_table(db: &Database, username: &str) -> String {
             for item in cursor {
                 // unwrap BSON document
                 let user_doc = item.unwrap();
-                let UserVocab { uid, from_doc_title, phrase_html, created_on, radical_map, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
-                let from_doc_title = format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title);
+                let UserVocab { uid, from_doc_title, phrase_html, created_on, radical_map, from_sandbox, .. } = bson::from_bson(Bson::Document(user_doc)).unwrap();
+                let from_doc_title = match from_sandbox {
+                    true => format!("<a href=\"../{}/{}\">{}</a>", "sandbox", from_doc_title, "Sandbox"),
+                    false => format!("<a href=\"{}/{}\">{}</a>", username, from_doc_title, from_doc_title)
+                };
                 let delete_button = format!("<a href=\"/api/delete-user-vocab/{}\"><img src={}></img></a>", uid, TRASH_ICON);
                 let row = format!("<tr><td>{}</td><td>{}</td><td style\"white-space: pre\">{}</td><td>{}</td><td>{}</td></tr>\n", phrase_html, &from_doc_title, radical_map, &created_on[0..10], &delete_button);
                 res += &row;
