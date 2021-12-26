@@ -1,0 +1,13 @@
+{% extends "template" %}
+{% block title %} Error: {{error_number}} {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+    <header class="page-header page-header-light bg-white">
+        <div class="page-header-content">
+            <div class="container">
+                <h1>Error: {{error_number}}</h1>
+
+            </div>
+        </div>
+    </header>
+{% endblock content %}

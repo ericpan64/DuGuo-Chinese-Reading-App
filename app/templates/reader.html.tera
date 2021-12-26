@@ -38,6 +38,7 @@
                         <button id="read-start-stop" class="btn btn-primary border border-light" onclick="triggerReader()">Read Document Aloud</button>
                         <button id="read-reset" class="btn btn-primary border border-light" onclick="resetReader()">Reset Reader Position</button>
                     </div>
+                    <button id="toggle-duey" class="btn btn-primary border border-light" onclick="toggleDuey('duey-corner-div')">Toggle Duey</button>
                 </div>
                 <div class="container pt-5">
                     {{ paragraph_html | safe }}
@@ -62,4 +63,25 @@
     </script>
     <script src="/static/js/handleReader.js"></script>
     <script src="/static/js/handlePhonetics.js"></script>
+    <div class="container-fluid" id="duey-corner-div">
+        <img class="duey-corner" width="200em" id="duey" src="/static/img/duey/duey_base_normal.png"
+        onmouseover="loadDueyImg('duey_extra_normal.png')"
+        onmouseout="loadDueyImg('duey_base_normal.png')"
+        onclick="loadDueyReactions(clicked); clicked+=1;"
+        alt="Duey, the DuGuo mascot!"/>
+        <script>
+            let clicked = 0;
+            let loadDueyReactions = (clicked) => {
+                let duey_click_img = 'duey_base_confused.png';
+                if (clicked % 5 == 2 || clicked % 5 == 3) {
+                    duey_click_img = 'duey_extra_confused.png';
+                } else if (clicked % 5 == 4) {
+                    duey_click_img = 'duey_extra_surprised.png';
+                } else {
+                    duey_click_img = 'duey_base_confused.png';
+                }
+                loadDueyImg(duey_click_img);
+            }
+        </script>
+    </div>
 {% endblock content %}

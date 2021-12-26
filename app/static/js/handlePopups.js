@@ -32,6 +32,7 @@ let close_active_popovers = (event) => {
     if (event.key == 'Tab') {
         document.activeElement.click();
     }
+    loadDueyImg('duey_base_normal.png');
 }
 
 /// Popover close triggers

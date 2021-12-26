@@ -99,10 +99,10 @@ let postNewVocab = (hash_string) => {
     }
     xhr.onload = () => {
         if (xhr.status == 202) {
+            loadDueyImg('duey_extra_happy.png');
             alert(`Successfully added ${hash_string} to your dictionary!`);
             try { user_saved_uid_list = user_saved_uid_list.concat(hash_string); } 
             finally { switchOffWordVisibility(hash_string); }
-            
         } else {
             alert(`Error when adding ${hash_string} to dictionary.\n\nEither you aren't logged-in, you've already saved this phrase from this doc, or you should open a GitHub issue!`);
         }

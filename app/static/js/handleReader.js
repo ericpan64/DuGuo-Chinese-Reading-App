@@ -47,3 +47,10 @@ let resetReader = () => {
     document.activeElement.blur();
     set_start_stop_button_text(DEFAULT_MSG);
 }
+let toggleDuey = (corner_div_id) => {
+    let e = document.getElementById(corner_div_id);
+    if (e.hidden === true) {
+        loadDueyImg('duey_extra_normal.png');
+    }
+    e.hidden = !e.hidden;
+}

@@ -21671,3 +21671,8 @@ section {
   color: #a7aeb8;
   font-size: 0.8rem;
 }
+.duey-corner {
+    bottom: 0%;
+	right: 0%;
+	position: absolute;
+}
