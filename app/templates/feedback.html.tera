@@ -1,7 +1,6 @@
 {% extends "template" %}
 {% block title %} Feedback {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
-{% block user_navbar %} {{ super() }} {% endblock user_navbar %}
 {% block content %}
     <header class="page-header page-header-light bg-white">
         <div class="page-header-content">
