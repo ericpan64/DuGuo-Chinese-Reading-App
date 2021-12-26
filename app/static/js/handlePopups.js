@@ -37,3 +37,4 @@ let close_active_popovers = (event) => {
 /// Popover close triggers
 document.onkeyup = close_active_popovers;
 document.onscroll = close_active_popovers;
+document.oncontextmenu = close_active_popovers;

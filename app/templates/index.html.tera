@@ -74,12 +74,5 @@
             </div>
         </div>
     </div>
-    <script>
-    {% if user_uid_list_string is undefined%}
-    let user_saved_uid_list = [];
-    {% else %}
-    let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
-    {% endif %}
-    </script>
     <script src="/static/js/handlePopups.js"></script>
 {% endblock content %}

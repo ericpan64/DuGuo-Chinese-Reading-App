@@ -251,11 +251,16 @@ fn is_english_phrase(s: &str) -> bool {
 
 /// Identifies phrases with Chinese puntuation.
 /// Chinese punctuation is a Chinese char that shouldn't be processed as a phrase.
+/// Unicode ranges from: https://jrgraphix.net/r/Unicode/
 fn has_chinese_punctuation(s: &str) -> bool {
     let mut res = false;
     for c in s.chars() {
         match *(&c) {
             '\u{3000}'..='\u{303D}' => {
+                res = true;
+                break;
+            },
+            '\u{FF00}'..='\u{FFEF}' => {
                 res = true;
                 break;
             },

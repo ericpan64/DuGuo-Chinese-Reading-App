@@ -111,7 +111,17 @@ pub fn user_profile(cookies: Cookies, db: State<Database>, raw_username: &RawStr
                 context.insert("doc_table", doc_html);
                 context.insert("vocab_table", vocab_html);
                 context.insert("cn_type", cn_type.to_string());
-                context.insert("cn_phonetics", cn_phonetics.to_string());           
+                context.insert("cn_phonetics", cn_phonetics.to_string());
+
+                let mut user_uid_list_string = String::new();
+                match UserVocabList::try_lookup_one(&db, 
+                    doc! { "username": &username, "cn_type": cn_type.as_str() }) {
+                        Some(res) => {
+                            user_uid_list_string += res.get_str("unique_uid_list").unwrap();
+                        },
+                        None => { }
+                };
+                context.insert("user_uid_list_string", String::from(user_uid_list_string));   
             }
             context.insert("logged_in_username", s);
         },

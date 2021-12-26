@@ -12,6 +12,13 @@
         {# Bootstrap Tags #}
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         {% endblock head %}
+        <script>
+            {% if user_uid_list_string is undefined%}
+            let user_saved_uid_list = [];
+            {% else %}
+            let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
+            {% endif %}
+        </script>
     </head>
     <body style="min-height: 100vh; display: flex; flex-direction: column;">
         <nav class="navbar navbar-marketing navbar-expand-lg bg-white navbar-light fixed-top">

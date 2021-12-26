@@ -39,7 +39,7 @@ services:
       - 6379:6379
     volumes:
       - redis-data:/data
-  tokenizer-server:
+  duguo-tokenizer:
     build:
       context: ./data_services
       dockerfile: Dockerfile
@@ -52,13 +52,13 @@ services:
       - redis
     # volumes:
     #   - ~/GitHub/DuGuo-Chinese-Reading-App/data_services:/token-server
-  rocket-web-server:
+  duguo-app:
     build:
       context: ./app
       dockerfile: Dockerfile
     container_name: duguo-app
     depends_on:
-      - tokenizer-server
+      - duguo-tokenizer
     ports:
       - 0.0.0.0:8000:8000 # Needs to be non-localhost binding for Windows/Mac. See: https://github.com/docker/for-win/issues/197
     # volumes:

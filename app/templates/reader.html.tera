@@ -23,7 +23,7 @@
                                 <li>Click on a phrase to view more information, speech-to-text, and save it to your dictionary.</li>
                                 <li>Tab to move to the next phrase, Shift + Tab to move to the previous phrase.</li>
                                 <li>Press r to Start/Stop the Text-to-Speech reading.</li>
-                                <li>Press any key, click, or scroll to close all active pop-ups.</li>
+                                <li>Press any key, right-click, or scroll to close all active pop-ups.</li>
                                 <li>Use the buttons to toggle phonetics settings.</li>
                             </ul>
                         </div>
@@ -58,12 +58,6 @@
         let user_saved_char_list = [];
         {% else %}
         let user_saved_char_list = "{{user_char_list_string}}".split(',');
-        {% endif %}
-        /// Remove download links from saved phrases
-        {% if user_uid_list_string is undefined%}
-        let user_saved_uid_list = [];
-        {% else %}
-        let user_saved_uid_list = "{{user_uid_list_string}}".split(',');
         {% endif %}
     </script>
     <script src="/static/js/handlePopups.js"></script>
