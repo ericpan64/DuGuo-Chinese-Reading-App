@@ -60,7 +60,6 @@
         let user_saved_char_list = "{{user_char_list_string}}".split(',');
         {% endif %}
     </script>
-    <script src="/static/js/handlePopups.js"></script>
     <script src="/static/js/handleReader.js"></script>
     <script src="/static/js/handlePhonetics.js"></script>
 {% endblock content %}

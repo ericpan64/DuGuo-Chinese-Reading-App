@@ -8,7 +8,11 @@
                 <div class="row align-items-center">
                     <div class="col-lg-6" data-aos="fade-up">
                         <h1 class="page-header-title">Learn how to read Chinese the right way</h1>
-                        <p class="page-header-text mb-5">DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 再见 to outdated 课本!</p>
+                        <p class="page-header-text mb-5">DuGuo is an open-source web app for learning Chinese reading. Pick content you care about, measure your progress, and say 
+                            <span class="再见zai4jian4" tabindex="0" data-bs-toggle="popover" data-bs-content="1. goodbye<br>2. see you again later" title="再见 [zai4 jian4] <a role=&quot;button&quot; href=&quot;#~再见&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#再见zai4jian4&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">再见</span> 
+                            to outdated 
+                            <span class="课本ke4ben3" tabindex="0" data-bs-toggle="popover" data-bs-content="1. textbook<br>2. CL:本[ben3]" title="课本 [ke4 ben3] <a role=&quot;button&quot; href=&quot;#~课本&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#课本ke4ben3&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">课本</span>
+                        !</p>
                         {% if username is defined %}
                         <a href="/u/{{username}}" class="btn btn-lg btn-primary font-weight-500 mr-3">Go to your profile</a>
                         {% else %}
@@ -58,7 +62,8 @@
                             onmouseover="loadDueyImg('duey_extra_normal.png')"
                             onmouseout="loadDueyImg('duey_base_normal.png')"
                             alt="Duey, the DuGuo mascot!"/>
-                        <p class="lead">Share source links with your friends to sync collaboration and learning. In the meanwhile, Duey (对龙) is here to keep you company and cheer you on!</p>
+                        <p class="lead">Share source links with your friends to sync collaboration and learning. In the meanwhile, Duey (<span class="对龙dui4long2" tabindex="0" data-bs-toggle="popover" data-bs-content="1. Duey, the DuGuo dragon 🐲!<br>2. Direct translation: Correct Dragon" title="对龙 [dui4 long2] <a role=&quot;button&quot; href=&quot;#~对龙&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#对龙dui4long2&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">对龙</span>)
+                            is here to keep you company and cheer you on!</p>
                         <p onmouseover="loadDueyImg('duey_extra_surprised.png')"
                             onmouseout="loadDueyImg('duey_base_normal.png')">(and he'll leave you alone if you ask him to)</p>
                     </div>
@@ -74,5 +79,4 @@
             </div>
         </div>
     </div>
-    <script src="/static/js/handlePopups.js"></script>
 {% endblock content %}

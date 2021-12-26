@@ -74,5 +74,6 @@
             once: true,
         });
     </script>
+    <script src="/static/js/handlePopups.js"></script>
     <script src="/static/js/template.js"></script>
 </html>

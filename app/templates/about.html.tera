@@ -8,7 +8,9 @@
             <div class="container">
                 <h1>About</h1>
                 <p>
-                    DuGuo (读国) originated from Georgia Tech's OMSCS EdTech class (Spring 2019). It was adopted from the Chinese Reading Machine (中文读机) which was a Flask-based application (and an incredibly helpful starting point).
+                    DuGuo (<span class="读国du2guo2" tabindex="0" data-bs-toggle="popover" data-bs-content="1. An open-source application to facilitate Chinese reading. Stems from 读 (to read) and 国 (country)<br>2. An extended implementation of the 中文读机 which was originally developed by Martin Kess from the OMSCS Education Technology class" title="读国 [du2 guo2] <a role=&quot;button&quot; href=&quot;#~读国&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#读国du2guo2&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">读国</span>)
+                    originated from Georgia Tech's OMSCS EdTech class (Spring 2019). It was adopted from the Chinese Reading Machine (<span class="中文读机Zhong1wen2du2ji1" tabindex="0" data-bs-toggle="popover" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class" title="中文读机 [Zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#中文读机Zhong1wen2du2ji1&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) 
+                    which was a Flask-based application (and an incredibly helpful starting point).
                 </p>
                 <p>
                     When I picked up this project, I really knew nothing about web dev. Since then, with help from many people and online resources, I've learned a ton though still don't have much experience in web dev. Most of this site uses vanilla JS and DOM-manipulation and will likely stay that way for a while.

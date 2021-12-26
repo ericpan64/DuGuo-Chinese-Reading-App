@@ -22,7 +22,10 @@
             <header class="page-header page-header-light bg-white">
                 <div class="page-header-content">
                     <div class="container">
-                        <h1>欢迎  {{username}}!</h1>
+                        <h1>
+                            <span class="欢迎huan1ying2" tabindex="0" data-bs-toggle="popover" data-bs-content="1. to welcome<br>2. welcome" title="欢迎 [huan1 ying2] <a role=&quot;button&quot; href=&quot;#~欢迎&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#欢迎huan1ying2&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">欢迎</span>
+                              {{username}}!
+                        </h1>
                             <hr/>
                             <h4>Settings</h4>
                             <span>
@@ -110,6 +113,5 @@
         {% endif%}
     {% endif %}
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
-    <script src="/static/js/handlePopups.js"></script>
     <script src="/static/js/handleTables.js"></script>
 {% endblock content %}
