@@ -14,7 +14,7 @@ pub static USER_VOCAB_COLL_NAME: &str = "vocab";
 pub static USER_VOCAB_LIST_COLL_NAME: &str = "vocab-list";
 pub static USER_FEEDBACK_COLL_NAME: &str = "feedback";
 pub static TOKENIZER_PORT: u16 = 8881;
-pub static TOKENIZER_HOSTNAME: &str = "tokenizer-server"; // tokenizer-server=Container name from docker-compose.yml
+pub static TOKENIZER_HOSTNAME: &str = "duguo-tokenizer"; // Container name from docker-compose.yml
 pub static JWT_NAME: &str = "duguo-代币";
 pub static JWT_SECRET: &[u8; 20] = b"somesupersecretthing";
 pub static JWT_LIFETIME: i64 = 24 * 7; // 1 week (match with Rocket cookie length)
