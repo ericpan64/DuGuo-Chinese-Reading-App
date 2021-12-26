@@ -172,3 +172,18 @@ pub fn user_doc(cookies: Cookies, db: State<Database>, raw_username: &RawStr, do
     }
     return Template::render("reader", context);
 }
+/* Custom Error Handlers */
+/// Loads custom 404 error page
+#[catch(404)]
+pub fn not_found() -> Template {
+    let mut context: HashMap<&str, &str> = HashMap::new();
+    context.insert("error_number", "404");
+    return Template::render("error", context);
+}
+/// Loads custom 500 error page
+#[catch(500)]
+pub fn internal_error() -> Template {
+    let mut context: HashMap<&str, &str> = HashMap::new();
+    context.insert("error_number", "500");
+    return Template::render("error", context);
+}

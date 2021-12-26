@@ -11,6 +11,11 @@ use rocket_contrib::{
 };
 use tokio::runtime::Runtime;
 use std::error::Error;
+
+/// Catches a 404 error
+
+/// Catches a 500 error
+
 /// Starts the Rocket web server and corresponding services.
 /// Note: the Tokio version is deliberately set to 0.2.24 to match the MongoDB 1.1.1 driver.
 /// No new Tokio runtimes should be created in other functions and since they can lead to runtime panics.
@@ -46,6 +51,10 @@ pub fn launch_rocket() -> Result<(), Box<dyn Error>> {
             routes::feedback,
             routes::user_profile,
             routes::user_doc,
+        ])
+        .register(catchers![
+            routes::not_found,
+            routes::internal_error,
         ])
         .mount("/static", StaticFiles::from(concat!(env!("CARGO_MANIFEST_DIR"), "/static")))
         .launch();
