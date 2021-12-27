@@ -1,11 +1,5 @@
 /*
 /// Data Structures related to a user account.
-/// TODO: Add a UserSettings struct, include a Duey flag
-/// users.rs
-/// ├── User: Strict
-/// ├── UserDoc: Struct
-/// ├── UserVocab: Struct
-/// └── UserVocabList: Struct
 */
 
 use chrono::Utc;

@@ -1,8 +1,5 @@
 /*
 /// Data Structures not associated with a User account.
-/// public.rs
-/// ├── SandboxDoc: Strict
-/// └── AppFeedback: Struct
 */
 
 use chrono::Utc;

@@ -1,16 +1,6 @@
 /*
 /// General route handling. 
 /// Expected form inputs are stored as Structs and defined above the corresponding route.
-/// 
-/// routes.rs
-/// ├── GET
-/// |   └── /
-/// |   └── /login
-/// |   └── /sandbox
-/// |   └── /sandbox/<doc_id>
-/// |   └── /feedback
-/// |   └── /u/<username>
-/// |   └── /u/<username>/<doc_title>
 */
 
 use crate::{

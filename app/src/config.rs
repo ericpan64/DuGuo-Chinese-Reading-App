@@ -1,5 +1,5 @@
 /*
-/// This file is a "dummy" config file provided for reference and if you want to deploy the app locally.
+/// This file is a "dummy" config file provided for reference and for deploying the app locally.
 /// All confidential information is absent from this document.
 */
 

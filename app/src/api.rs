@@ -107,7 +107,6 @@ pub fn logout(mut cookies: Cookies) -> Redirect {
 }
 
 // /* POST */
-/// Matches definition in feedback.html.tera.
 #[derive(FromForm)]
 pub struct AppFeedbackForm<'f> {
     feedback: &'f RawStr,

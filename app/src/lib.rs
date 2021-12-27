@@ -1,14 +1,21 @@
 /*
 /// Trait definitions and General purpose helper functions.
 */
+
 #![feature(proc_macro_hygiene, decl_macro)]
 #[macro_use] extern crate rocket;
 
+/// Module handling user authentication and cookies
 pub mod auth;
+/// Centralized config file provided for reference and deployment
 pub mod config;
+/// Custom data models (Structs and Enums)
 pub mod models;
+/// API Routes
 pub mod api;
+/// Primary Routes (user-facing)
 pub mod routes;
+/// Module for server-side html rendering (e.g. phrase rendering)
 pub mod html_rendering;
 
 use crate::{

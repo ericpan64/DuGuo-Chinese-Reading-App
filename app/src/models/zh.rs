@@ -1,11 +1,5 @@
 /*
 /// Data Structures relating to Chinese text.
-/// 
-/// zh.rs
-/// ├── CnType: Enum
-/// ├── CnPhonetics: Enum
-/// ├── CnEnDictEntry: Struct
-/// └── CnPhrase: Struct
 */
 
 use crate::CacheItem;

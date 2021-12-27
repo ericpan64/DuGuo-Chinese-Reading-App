@@ -1,11 +1,5 @@
 /*
-/// Module for html rendering.
-/// 
-/// html_rendering.rs
-/// └── pub fn:
-///     └── convert_string_to_tokenized_html
-///     └── render_document_table
-///     └── render_vocab_table
+/// Module for server-side html rendering (e.g. phrase rendering)
 */
 
 use crate::{
