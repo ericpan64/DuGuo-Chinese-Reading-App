@@ -6,4 +6,5 @@ app/temp
 app/src/config.rs
 data_services/config.py
 app/Cargo.lock
-app/templates/static/docs
+app/static/docs
+app/static/css

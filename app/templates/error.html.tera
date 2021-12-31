@@ -1,0 +1,22 @@
+{% extends "template" %}
+{% block title %} Error: {{error_number}} {% endblock title %}
+{% block head %} {{ super() }} {% endblock head %}
+{% block content %}
+    <header class="page-header page-header-light bg-white">
+        <div class="page-header-content">
+            <div class="container">
+                <h1>HTTP Error {{error_number}}</h1>
+                {% if error_number == "500" %}
+                <img width="200em" id="duey" src="/static/img/duey/duey_extra_worried.png"
+                alt="Duey, the DuGuo mascot!"/>
+                <p>There was an error on our end, sorry about that!</p>
+                {% elif error_number == "404" %}
+                <img width="200em" id="duey" src="/static/img/duey/duey_extra_confused.png"
+                alt="Duey, the DuGuo mascot!"/>
+                <p>The page you're looking for doesn't seem to exist!</p>
+                {% endif %}
+                <p>Submit feedback <a href="/feedback">here</a> and/or open a GitHub issue <a target="_blank" href="https://github.com/ericpan64/DuGuo-Chinese-Reading-App">here</a>.</p>
+            </div>
+        </div>
+    </header>
+{% endblock content %}
