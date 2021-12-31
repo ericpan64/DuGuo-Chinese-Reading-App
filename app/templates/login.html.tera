@@ -1,51 +1,59 @@
 {% extends "template" %}
 {% block title %} Login / Register {% endblock title %}
 {% block head %} {{ super() }} {% endblock head %}
-{% block user_navbar %} 
-    {% if username is undefined %}
-    <li class="nav-item"><a class="nav-link" id="nav1" href="/">Home</a></li>
-    <li class="nav-item"><a class="nav-link" id="nav2" href="/sandbox">Sandbox</a></li>
-    <li class="nav-item"><a class="nav-link active" id="nav3" href="/login">Login</a></li>
-    {% else %}
-    <li class="nav-item"><a class="nav-link" id="nav1" href="/">About</a></li>
-    <li class="nav-item"><a class="nav-link" id="nav2" href="/u/{{username}}">Profile</a></li>
-    <li class="nav-item"><a class="nav-link" id="nav3" href="/api/logout">Logout</a></li>
-    {% endif %}
-{% endblock user_navbar %}
-{% block static_navbar %} {{ super() }} {% endblock static_navbar %}
 {% block content %}
-    <div class="container">
-        {% if username is defined %}
-        <h3>Currently logged-in as: {{username}}</h3>
-        {% endif %}
-        <div class="alert alert-warning" role="alert">
-            Note that the following characters are not allowed: < > ! ( ) { } " ' ; : \ *
-        </div>
-        <h1 class="h1">Login</h1>
-        <br>
-        <form id="login-form" id="login" onsubmit="attemptLogin(); return false;">
-            <input class="form-control" type="text" name="username" placeholder="Username" required>
-            <br>
-            <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" required>
-            <br>
-            <button class="btn btn-outline-primary" type="submit">Log In</button>
-            <br>
-        </form>
-        <br>
-        <h1 class="h1">Register</h1>
-        <br>
-        <form id="register-form" id="register" onsubmit="attemptRegister(); return false;">
-            <input class="form-control" type="text" name="username" placeholder="Username" required>
-            <br>
-            <input class="form-control" type="email" name="email" placeholder="Email" required>
-            <br>
-            <input id="pw-reg" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
-            <br>
-            <button class="btn btn-outline-primary" type="submit">Register</button>
-        </form>
-        <br>
-        <input class="form-check-input" type="checkbox" onclick="showPassword()"> Show Password
-        <br><br>
+    <div class="page-header-content">
+        <header class="page-header page-header-light bg-white">
+            <div class="container">
+                <h1>Account</h1>
+                <p>Note that passwords are securely stored (<a href="https://en.wikipedia.org/wiki/Cryptographic_hash_function">hashed</a> with a <a href="https://en.wikipedia.org/wiki/Salt_(cryptography)">salt</a>), so I don't even know what you put!</p>
+                <ul class="nav nav-pills" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-controls="login-tab" data-bs-toggle="pill" role="tab" aria-selected="true" data-bs-target="#login-tab">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" aria-controls="register-tab" data-bs-toggle="pill" role="tab" aria-selected="false" data-bs-target="#register-tab">Register</a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="pills-tabContent-userContent">
+                    <div class="tab-pane fade show active pt-3" id="login-tab" role="tabpanel" aria-labelledby="login-tab">
+                        <form class="pt-3" id="login-form" onsubmit="attemptLogin('login-form'); return false;">
+                            <div class="form-group">
+                                <input class="form-control" type="text" name="username" placeholder="Username" required=true/>
+                            </div>
+                            <div class="form-group">
+                                <input id="pw-login" class="form-control" type="password" name="password" placeholder="Password" minlength="8" required=true/>
+                            </div>
+                            <input class="form-control" type="email" name="email" value="" hidden/>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                                <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-login')">Show Password</label>
+                            </div>
+                            <button class="btn btn-outline-primary mr-1" >Submit</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade pt-3" id="register-tab" role="tabpanel" aria-labelledby="register-tab">
+                        <form class="pt-3" id="register-form" onsubmit="attemptRegister('register-form'); return false;">
+                            <div class="form-group">
+                                <input class="form-control" type="text" name="username" placeholder="Username" required/>
+                            </div>
+                            <div class="form-group">
+                                <input id="pw-register" class="form-control" type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required/>
+                            </div>
+                            <div class="form-group">
+                                <input class="form-control" type="email" name="email" placeholder="Email" required/>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" id="showPwCheck"/>
+                                <label class="form-check-label" for="showPwCheck" onclick="showPassword('pw-register')">Show Password</label>
+                            </div>
+                            <button class="btn btn-outline-primary mr-1" >Submit</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </header>
     </div>
-    <script src="/static/handleLogins.js"></script>
+    <script src="/static/js/handleLogins.js"></script>
 {% endblock content %}

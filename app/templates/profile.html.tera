@@ -1,0 +1,117 @@
+{% extends "template" %}
+{% block title %}Profile{% endblock title %}
+{% block head %} 
+    {{ super() }}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.css"/>
+    <style>
+        table {
+            text-align: center;
+        }
+    </style>
+{% endblock head %}
+{% block content %}
+    {% if username is undefined %}
+    <p>
+        Profile not found
+    </p>
+    {% else %}
+    <h1>{{ username }}</h1>
+        {% if logged_in_username is undefined %}
+            <p> Log-in to view documents + vocab! </p>
+        {% elif logged_in_username == username %}
+            <header class="page-header page-header-light bg-white">
+                <div class="page-header-content">
+                    <div class="container">
+                        <h1>
+                            <span class="欢迎huan1ying2" tabindex="0" data-bs-toggle="popover" data-bs-content="1. to welcome<br>2. welcome" title="欢迎 [huan1 ying2] <a role=&quot;button&quot; href=&quot;#~欢迎&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#欢迎huan1ying2&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">欢迎</span>
+                              {{username}}!
+                        </h1>
+                            <hr/>
+                            <h4>Settings</h4>
+                            <span>
+                                <button class="btn btn-primary dropdown-toggle mr-2" id="phonetic-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if cn_phonetics == "Zhuyin" %}
+                                    Render Zhuyin
+                                    {% else %}
+                                    Render Pinyin
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <li><a class="dropdown-item" href="#$pinyin">Render Pinyin</a></li>
+                                    <li><a class="dropdown-item" href="#$zhuyin">Render Zhuyin (Bopomofo)</a></li>
+                                </ul>
+                            </span>
+                            <span>
+                                <button class="btn btn-primary dropdown-toggle ml-2" id="char-setting" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {% if cn_type == "Traditional" %}
+                                    Render Traditional
+                                    {% else %}
+                                    Render Simplified
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <li><a class="dropdown-item" href="#$simp">Render Simplified</a></li>
+                                    <li><a class="dropdown-item" href="#$trad">Render Traditional</a></li>
+                                </ul>
+                            </span>
+                            <h4 class="mt-4">Upload</h4>
+                            <ul class="nav nav-pills" id="upload-tabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="upload-text-tab" data-bs-toggle="pill" data-bs-target="#pills-text" role="tab" aria-controls="pills-text" aria-selected="true">Upload Text</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="upload-url-tab" data-bs-toggle="pill" data-bs-target="#pills-url" role="tab" aria-controls="pills-url" aria-selected="false">Upload Url</a>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="pills-tabContent-userContent">
+                                <div class="tab-pane fade show active pt-3" id="pills-text" role="tabpanel" aria-labelledby="pills-text">
+                                    <form class="form" action="/api/upload-user-doc" id="user-doc-form" onsubmit="switchToLoadingButton('doc-upload-button')" method="POST">
+                                        <input class="mt-2" type="text" name="title" placeholder="Title (required)" required=true/><br/>
+                                        <input class="mt-2" type="text" name="source" placeholder="Source"/>
+                                        <input name="url" hidden/>
+                                        <textarea class="mt-2 form-control" name="body" form="user-doc-form" rows="2" cols="15" required=true></textarea>
+                                        <button id="doc-upload-button" class="mt-2 btn btn-outline-primary" type="submit">Upload</button>
+                                    </form>
+                                </div>
+                                <div class="tab-pane fade pt-3" id="pills-url" role="tabpanel" aria-labelledby="pills-text">
+                                    <form class="form" action="/api/upload-user-doc" id="user-url-form" onsubmit="switchToLoadingButton('url-upload-button')" method="POST">
+                                        <input name="title" hidden/>
+                                        <input name="source" hidden/>
+                                        <input name="body" hidden/>
+                                        <input class="mt-2" type="text" name="url" placeholder="a-valid-url.com" required=true/>
+                                        <br>
+                                        <button id="url-upload-button" class="mt-2 btn btn-outline-primary" type="submit">Upload</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <h4 class="mt-4">Saved Data</h4>
+                            <hr/>
+                            <ul class="nav nav-pills" id="pills-tabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="pills-docs-tab" data-bs-toggle="pill" data-bs-target="#pills-docs" role="tab" aria-controls="pills-docs" aria-selected="true">View Documents</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="pills-vocab-tab" data-bs-toggle="pill" data-bs-target="#pills-vocab" role="tab" aria-controls="pills-vocab" aria-selected="false">View Vocab</a>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="pills-tabContent-userContent">
+                                <div class="tab-pane fade show active pt-3" id="pills-docs" role="tabpanel" aria-labelledby="pills-docs-tab">
+                                    {{ doc_table | safe }}
+                                    <button class="btn btn-outline-primary" onclick="download_doc_table_as_csv('hidden-download-a')">Export Documents as .csv</button>
+                                </div>
+                                <div class="tab-pane fade pt-3" id="pills-vocab" role="tabpanel" aria-labelledby="pills-vocab-tab">
+                                    {{ vocab_table | safe }}
+                                    <button class="btn btn-outline-primary" onclick="download_vocab_table_as_csv('hidden-download-a')">Export Vocab as .csv</button>
+                                </div>
+                            </div>
+                            <a id="hidden-download-a" hidden></a>
+                    </div>
+                </div>
+            </header>
+                {% else %}
+            <p> Currently viewing other user. </p>
+        {% endif%}
+    {% endif %}
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/jq-3.3.1/dt-1.10.23/r-2.2.7/datatables.min.js"></script>
+    <script src="/static/js/handleTables.js"></script>
+{% endblock content %}

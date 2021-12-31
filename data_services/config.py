@@ -22,6 +22,7 @@ USER_VOCAB_LIST_COLL_NAME = 'vocab-list'
 DB_URI = 'mongodb://root:example@mongodb:27017/'
 REDIS_HOST = 'redis-cache' # from docker-compose
 REDIS_PORT = 6379
+REDIS_PASSWORD = '' # empty by default for local deployment
 
 # tokenserver.py
 TOKENIZER_HOST = '0.0.0.0' # Opt for numeric address when possible

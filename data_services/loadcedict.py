@@ -4,7 +4,7 @@ from pypinyin import Style
 import pandas as pd
 import redis
 from config import DB_NAME, DB_URI, USER_COLL_NAME, USER_DOC_COLL_NAME, USER_VOCAB_COLL_NAME, USER_VOCAB_LIST_COLL_NAME
-from config import REDIS_HOST, REDIS_PORT, SORTED_CEDICT_CSV_PATH, RADICALS_OUTPUT_PATH
+from config import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, SORTED_CEDICT_CSV_PATH, RADICALS_OUTPUT_PATH
 
 def init_mongodb():
     """
@@ -130,7 +130,7 @@ if __name__ == '__main__':
         print('Generated indices in mongoDB')
     except:
         print('Skipping mongoDB index generation...')
-    conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    conn = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
     print("Waiting for Redis load...")
     redis_loaded = False
     while not redis_loaded:
