@@ -8,3 +8,4 @@ data_services/config.py
 app/Cargo.lock
 app/static/docs
 app/static/css
+docker-compose.localdev.yml
