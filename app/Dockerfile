@@ -1,12 +1,12 @@
 FROM rustlang/rust:nightly-slim
 WORKDIR /app
 COPY . .
-EXPOSE 8000
-RUN apt-get update
-RUN apt-get install -y\
+RUN apt-get update &&\
+    apt-get install -y\
     libssl-dev\
     pkg-config
 RUN cargo clean
+EXPOSE 8000
 
 # Testing
 RUN cargo build
