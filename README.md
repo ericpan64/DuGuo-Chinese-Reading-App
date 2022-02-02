@@ -1,6 +1,10 @@
 # DuGuo
+**DuGuo is under construction - will be prototyping some ideas, if you're interested in contributing then let me know and happy to collaborate!**
+
 [![docs: 0.2.0](https://img.shields.io/badge/Docs-0.2.0-blue)](https://duguo.app/static/doc/duguo/index.html)
 [![License: AGPL](https://img.shields.io/badge/License-AGPL-yellow.svg)](https://www.gnu.org/licenses/agpl-3.0.en.html)
+
+[<img src="app/static/img/demo.gif" alt="DuGuo demo gif" width="350">](app/static/img/demo.gif)
 
 ## Overview
 DuGuo is an open-source web application that allows users to read Chinese text in an interactive learning environment. The main features include:
@@ -11,8 +15,6 @@ DuGuo is an open-source web application that allows users to read Chinese text i
 - ... other ideas tbd - view + contribute in the [Issues](https://github.com/ericpan64/DuGuo-Chinese-Reading-App/issues) tab!
 
 This app is designed in particular for L2 (second-language) learners, though hopefully it is useful for all levels of Chinese learning! 
-
-Check it out at [duguo.app](https://duguo.app)! "Production" is hosted on GCP while this repository contains all code and configuration to run an instance locally using docker-compose (from the root directory, run `docker-compose up`).
 
 ### Tech Stack
 The app has 2 microservices:
