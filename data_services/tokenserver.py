@@ -124,10 +124,7 @@ def tokenize_str(s):
                 else:
                     raw_pinyin_lower = ' '.join(pypinyin_list).lower()
                     cedict_res_df = cedict_phrase_df.loc[raw_pinyin_lower, :]
-                    if phrase in token_entities:
-                        cedict_res_df.sort_values(acending=True, inplace=True)
-                    else:
-                        cedict_res_df.sort_values(acending=False, inplace=True)
+                    cedict_res_df.sort_values(acending=phrase in token_entities, inplace=True)
                     raw_pinyin = cedict_res_df.raw_pinyin.iloc[0]
             except:
                 raw_pinyin = ' '.join(pypinyin_list)
