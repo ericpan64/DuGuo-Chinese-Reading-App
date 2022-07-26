@@ -1,0 +1,33 @@
+<script>
+
+</script>
+
+<body>
+    <header class="page-header page-header-light bg-white">
+        <div class="page-header-content">
+            <div class="container">
+                <h1>About</h1>
+                <p>
+                    DuGuo ()
+                    originated from Georgia Tech's OMSCS EdTech class (Spring 2019). It was adopted from the Chinese Reading Machine (<span class="中文读机Zhong1wen2du2ji1" tabindex="0" data-bs-toggle="popover" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class" title="中文读机 [Zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#中文读机Zhong1wen2du2ji1&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) 
+                    which was a Flask-based application (and an incredibly helpful starting point).
+                </p>
+                <p>
+                    When I picked up this project, I really knew nothing about web dev. Since then, with help from many people and online resources, I've learned a ton though still don't have much experience in web dev. Most of this site uses vanilla JS and DOM-manipulation and will likely stay that way for a while.
+                </p>
+                <p>
+                    Regardless, there are many interesting technologies and concepts that I find exciting (e.g. WASM) and will try to incorporate them into this application when possible! I really am a backend engineer though. That dabbles in frontend. Please enjoy (and/or suggest updates for) any frontend hacks you stumble across.
+                </p>
+                <h2>Mission</h2>
+                <p>
+                    Provide accessible and tailored Chinese education to improve Chinese literacy and cross-cultural connection, and have some fun with it!
+                </p>
+                <h2>Acknowledgements</h2>
+                <p>
+                    Marked in the code/docs whenever it comes-up, though as with any software project, this relies heavily on many software libraries and projects that are charitably developed and maintained, and I greatly appreciate the many people behind these efforts. Also thank you to AWS for a lovely year of free-tier and to GCP for my next year.
+                </p>
+                <p>Last Updated: 12/22/21 by Eric Pan</p>
+            </div>
+        </div>
+    </header>
+</body>

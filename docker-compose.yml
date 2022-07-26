@@ -31,27 +31,6 @@ services:
       - 8081:8081
     depends_on:
       - mongodb
-  redis:
-    image: redis
-    container_name: redis-cache
-    restart: always
-    ports:
-      - 6379:6379
-    volumes:
-      - redis-data:/data
-  duguo-tokenizer:
-    build:
-      context: ./data_services
-      dockerfile: Dockerfile
-    container_name: duguo-tokenizer
-    restart: on-failure
-    ports:
-      - 8881:8881
-    depends_on:
-      - mongodb
-      - redis
-    # volumes:
-    #   - ~/GitHub/DuGuo-Chinese-Reading-App/data_services:/token-server
   duguo-app:
     build:
       context: ./app
