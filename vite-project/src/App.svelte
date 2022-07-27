@@ -1,6 +1,7 @@
 <script lang="ts">
   import logo from './assets/svelte.png'
   import Counter from './lib/Counter.svelte'
+  import CnPhrase from './lib/components/CnPhrase.svelte'
 </script>
 
 <main>
@@ -12,6 +13,8 @@
   <p>
     Visit <a href="https://svelte.dev">svelte.dev</a> to learn how to build Svelte
     apps.
+
+    <CnPhrase phrase="读国"/>
   </p>
 
   <p>

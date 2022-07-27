@@ -1,5 +1,5 @@
 <script>
-
+  import CnPhrase from '../components/CnPhrase.svelte'
 </script>
 
 <body>
@@ -8,8 +8,8 @@
             <div class="container">
                 <h1>About</h1>
                 <p>
-                    DuGuo ()
-                    originated from Georgia Tech's OMSCS EdTech class (Spring 2019). It was adopted from the Chinese Reading Machine (<span class="中文读机Zhong1wen2du2ji1" tabindex="0" data-bs-toggle="popover" data-bs-content="1. The predecessor of DuGuo (读国). Developed by Martin Kess in the OMSCS Education Technology class" title="中文读机 [Zhong1 wen2 du2 ji1] <a role=&quot;button&quot; href=&quot;#~中文读机&quot;><img src=&quot;/static/img/volume-up-fill.svg&quot;></img></a> <a role=&quot;button&quot; href=&quot;#中文读机Zhong1wen2du2ji1&quot;><img src=&quot;/static/img/download.svg&quot;></img></a>" data-bs-html="true">中文读机</span>) 
+                    DuGuo (<CnPhrase phrase="读国" />)
+                    originated from Georgia Tech's OMSCS EdTech class (Spring 2019). It was adopted from the Chinese Reading Machine (<CnPhrase phrase="中文读机" />) 
                     which was a Flask-based application (and an incredibly helpful starting point).
                 </p>
                 <p>
