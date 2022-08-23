@@ -1,4 +1,3 @@
 #!/bin/bash
-python cedict_to_csv.py
-python loadcedict.py
-python tokenserver.py
+python scripts/radicals_to_csv.py
+python scripts/cedict_to_csv.py

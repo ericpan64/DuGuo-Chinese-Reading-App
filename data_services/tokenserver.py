@@ -10,7 +10,7 @@ import pandas as pd
 from pypinyin import pinyin as pfmt
 from pypinyin import Style
 import opencc
-from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF, SORTED_CEDICT_CSV_PATH
+from config import TOKENIZER_HOST, TOKENIZER_PORT, MAX_BUF, PROCESSED_CEDICT_CSV_PATH
 
 # NLP import from: https://spacy.io/models/zh
 nlp = spacy.load("zh_core_web_sm")
@@ -25,7 +25,7 @@ IPV4 = socket.AF_INET
 TCP = socket.SOCK_STREAM
 
 # Create CEDICT_DF, CEDICT_SET (used for more accurate pinyin lookup)
-CEDICT_DF = pd.read_csv(SORTED_CEDICT_CSV_PATH)
+CEDICT_DF = pd.read_csv(PROCESSED_CEDICT_CSV_PATH)
 CEDICT_SET = set(CEDICT_DF.loc[:, 'simp'])
 CEDICT_DF['raw_pinyin_lower'] = CEDICT_DF.loc[:, 'raw_pinyin'].apply(str.lower)
 CEDICT_DF.set_index(['simp', 'raw_pinyin_lower'], inplace=True)
