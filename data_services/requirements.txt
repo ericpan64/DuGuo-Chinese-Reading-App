@@ -4,4 +4,4 @@ pypinyin==0.40.0
 pymongo==3.11.2
 dnspython==2.1.0
 opencc==1.1.0
-redis==3.5.3
+redis==4.4.4
