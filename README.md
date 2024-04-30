@@ -1,5 +1,5 @@
 # DuGuo
-**DuGuo is under construction - will be prototyping some ideas, if you're interested in contributing then let me know and happy to collaborate!**
+**DuGuo will be reincarinated (at some point) with some LLM hooks in a new repo - will be prototyping some ideas, if you're interested in contributing then let me know and happy to collaborate!**
 
 [![docs: 0.2.0](https://img.shields.io/badge/Docs-0.2.0-blue)](https://duguo.app/static/doc/duguo/index.html)
 [![License: AGPL](https://img.shields.io/badge/License-AGPL-yellow.svg)](https://www.gnu.org/licenses/agpl-3.0.en.html)
